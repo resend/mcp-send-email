@@ -102,17 +102,43 @@ server.tool(
       throw new Error("replyTo argument must be provided.");
     }
 
-    const response = await resend.emails.send({
+    console.error(`Debug - Sending email with from: ${fromEmailAddress}`);
+    
+    // Explicitly structure the request with all parameters to ensure they're passed correctly
+    const emailRequest: {
+      to: string;
+      subject: string;
+      text: string;
+      from: string;
+      replyTo: string | string[];
+      html?: string;
+      scheduledAt?: string;
+    } = {
       to,
       subject,
-      scheduledAt,
       text,
-      html,
       from: fromEmailAddress,
       replyTo: replyToEmailAddresses,
-    });
+    };
+    
+    // Add optional parameters conditionally
+    if (html) {
+      emailRequest.html = html;
+    }
+    
+    if (scheduledAt) {
+      emailRequest.scheduledAt = scheduledAt;
+    }
+    
+    console.error(`Email request: ${JSON.stringify(emailRequest)}`);
+
+    const response = await resend.emails.send(emailRequest);
+
+    // Log complete response for debugging
+    console.error(`Resend API response: ${JSON.stringify(response)}`);
 
     if (response.error) {
+      console.error(`Email failed to send with error: ${JSON.stringify(response.error)}`);
       throw new Error(
         `Email failed to send: ${JSON.stringify(response.error)}`
       );
@@ -122,7 +148,7 @@ server.tool(
       content: [
         {
           type: "text",
-          text: `Email sent successfully! ${JSON.stringify(response.data)}`,
+          text: `Email sent successfully! From: ${fromEmailAddress}, ID: ${JSON.stringify(response.data)}`,
         },
       ],
     };
