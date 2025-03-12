@@ -53,6 +53,18 @@ server.tool(
       .describe(
         "HTML email content. When provided, the plain text argument MUST be provided as well."
       ),
+    cc: z
+      .string()
+      .email()
+      .array()
+      .optional()
+      .describe("Optional array of CC email addresses"),
+    bcc: z
+      .string()
+      .email()
+      .array()
+      .optional()
+      .describe("Optional array of BCC email addresses"),
     scheduledAt: z
       .string()
       .optional()
@@ -84,7 +96,7 @@ server.tool(
         }
       : {}),
   },
-  async ({ from, to, subject, text, html, replyTo, scheduledAt }) => {
+  async ({ from, to, subject, text, html, replyTo, scheduledAt, cc, bcc }) => {
     const fromEmailAddress = from ?? senderEmailAddress;
     const replyToEmailAddresses = replyTo ?? replierEmailAddresses;
 
@@ -113,6 +125,8 @@ server.tool(
       replyTo: string | string[];
       html?: string;
       scheduledAt?: string;
+      cc?: string[];
+      bcc?: string[];
     } = {
       to,
       subject,
@@ -128,6 +142,14 @@ server.tool(
     
     if (scheduledAt) {
       emailRequest.scheduledAt = scheduledAt;
+    }
+    
+    if (cc) {
+      emailRequest.cc = cc;
+    }
+    
+    if (bcc) {
+      emailRequest.bcc = bcc;
     }
     
     console.error(`Email request: ${JSON.stringify(emailRequest)}`);

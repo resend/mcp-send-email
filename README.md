@@ -10,6 +10,14 @@ Built with:
 - [Anthropic MCP](https://docs.anthropic.com/en/docs/agents-and-tools/mcp)
 - [Cursor](https://cursor.so/)
 
+## Features
+
+- Send plain text and HTML emails
+- Schedule emails for future delivery
+- Add CC and BCC recipients
+- Configure reply-to addresses
+- Customizable sender email (requires verification)
+
 ## Important Note About Sender Email
 
 Resend requires that you verify domain ownership or email addresses before sending. Even if you specify a `--sender` parameter or `from` field in the email request, Resend will only use email addresses that you've verified in their dashboard. 
