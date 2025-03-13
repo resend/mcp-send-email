@@ -15,14 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Sender email handling with Resend's API
-- Improved error reporting with detailed error messages
 - Type definitions for email request object
 
 ### Changed
 - Enhanced console logging for easier troubleshooting
 - Updated documentation with Resend's email verification requirements
 
-## [1.0.0] - 2023-03-12
+## [1.0.0] - 2025-02-24
 ### Added
 - Initial release
 - Basic email sending functionality

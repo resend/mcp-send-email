@@ -58,13 +58,13 @@ server.tool(
       .email()
       .array()
       .optional()
-      .describe("Optional array of CC email addresses"),
+      .describe("Optional array of CC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself"),
     bcc: z
       .string()
       .email()
       .array()
       .optional()
-      .describe("Optional array of BCC email addresses"),
+      .describe("Optional array of BCC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself"),
     scheduledAt: z
       .string()
       .optional()
@@ -156,11 +156,7 @@ server.tool(
 
     const response = await resend.emails.send(emailRequest);
 
-    // Log complete response for debugging
-    console.error(`Resend API response: ${JSON.stringify(response)}`);
-
     if (response.error) {
-      console.error(`Email failed to send with error: ${JSON.stringify(response.error)}`);
       throw new Error(
         `Email failed to send: ${JSON.stringify(response.error)}`
       );
@@ -170,7 +166,7 @@ server.tool(
       content: [
         {
           type: "text",
-          text: `Email sent successfully! From: ${fromEmailAddress}, ID: ${JSON.stringify(response.data)}`,
+          text: `Email sent successfully! ID: ${JSON.stringify(response.data)}`,
         },
       ],
     };

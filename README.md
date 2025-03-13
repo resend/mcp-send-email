@@ -18,16 +18,6 @@ Built with:
 - Configure reply-to addresses
 - Customizable sender email (requires verification)
 
-## Important Note About Sender Email
-
-Resend requires that you verify domain ownership or email addresses before sending. Even if you specify a `--sender` parameter or `from` field in the email request, Resend will only use email addresses that you've verified in their dashboard. 
-
-If emails are being sent from `me@yoko.dev` despite configuring a different address, you need to:
-
-1. Go to the [Resend Dashboard](https://resend.com/domains)
-2. Add and verify your domain or specific email addresses
-3. Then use the verified email address as your sender
-
 **DEMO**
 
 https://github.com/user-attachments/assets/8c05cbf0-1664-4b3b-afb1-663b46af3464
