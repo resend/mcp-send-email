@@ -166,7 +166,7 @@ server.tool(
       content: [
         {
           type: "text",
-          text: `Email sent successfully! ID: ${JSON.stringify(response.data)}`,
+          text: `Email sent successfully! ${JSON.stringify(response.data)}`,
         },
       ],
     };
