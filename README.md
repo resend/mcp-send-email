@@ -4,6 +4,10 @@
 
 This is a simple MCP server that sends emails using Resend's API. Why? Now you can let Cursor or Claude Desktop compose emails for you and send it right away without having to copy and paste the email content.
 
+<a href="https://glama.ai/mcp/servers/55pe0fq14l">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/55pe0fq14l/badge" alt="Email Sending MCP server" />
+</a>
+
 Built with:
 
 - [Resend](https://resend.com/)
