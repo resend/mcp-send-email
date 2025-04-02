@@ -14,16 +14,44 @@ const apiKey = argv.key || process.env.RESEND_API_KEY;
 // Optional.
 const senderEmailAddress = argv.sender || process.env.SENDER_EMAIL_ADDRESS;
 
-// Get reply to email addresses from command line argument or fall back to environment variable
-let replierEmailAddresses: string[] = [];
+// Get sender name from command line argument or fall back to environment variable
+// Optional.
+const senderName = argv.sendername || process.env.SENDER_NAME;
 
-if (Array.isArray(argv["reply-to"])) {
-  replierEmailAddresses = argv["reply-to"];
-} else if (typeof argv["reply-to"] === "string") {
-  replierEmailAddresses = [argv["reply-to"]];
-} else if (process.env.REPLY_TO_EMAIL_ADDRESSES) {
-  replierEmailAddresses = process.env.REPLY_TO_EMAIL_ADDRESSES.split(",");
+// Get reply to email addresses, BCC email addresses, and CC email addresses from command line argument or fall back to environment variable
+let replierEmailAddresses: string[] = [];
+let bccEmailAddresses: string[] = [];
+let ccEmailAddresses: string[] = [];
+
+function parseArrayOrStringParam(
+  cliParam: string | string[] | undefined,
+  envParam: string | undefined,
+  delimiter: string = ","
+): string[] {
+  if (Array.isArray(cliParam)) {
+    return cliParam;
+  } else if (typeof cliParam === "string") {
+    return [cliParam];
+  } else if (envParam) {
+    return envParam.split(delimiter);
+  }
+  return [];
 }
+
+replierEmailAddresses = parseArrayOrStringParam(
+  argv["reply-to"],
+  process.env.REPLY_TO_EMAIL_ADDRESSES
+);
+
+bccEmailAddresses = parseArrayOrStringParam(
+  argv["bcc"],
+  process.env.BCC_EMAIL_ADDRESSES
+);
+
+ccEmailAddresses = parseArrayOrStringParam(
+  argv["cc"],
+  process.env.CC_EMAIL_ADDRESSES
+);
 
 if (!apiKey) {
   console.error(
@@ -58,13 +86,17 @@ server.tool(
       .email()
       .array()
       .optional()
-      .describe("Optional array of CC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself"),
+      .describe(
+        "Optional array of CC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself"
+      ),
     bcc: z
       .string()
       .email()
       .array()
       .optional()
-      .describe("Optional array of BCC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself"),
+      .describe(
+        "Optional array of BCC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself"
+      ),
     scheduledAt: z
       .string()
       .optional()
@@ -97,8 +129,24 @@ server.tool(
       : {}),
   },
   async ({ from, to, subject, text, html, replyTo, scheduledAt, cc, bcc }) => {
-    const fromEmailAddress = from ?? senderEmailAddress;
+    // If sender name is provided, use it to format the from email address
+    // e.g. "John Doe <john.doe@example.com>"
+    const fromEmailAddress =
+      from ??
+      (senderName
+        ? `${senderName} <${senderEmailAddress}>`
+        : senderEmailAddress);
     const replyToEmailAddresses = replyTo ?? replierEmailAddresses;
+
+    // Combine provided BCC addresses with any default BCC addresses
+    const combinedBccAddresses = bcc
+      ? [...bcc, ...bccEmailAddresses]
+      : bccEmailAddresses;
+
+    // Combine provided CC addresses with any default CC addresses
+    const combinedCcAddresses = cc
+      ? [...cc, ...ccEmailAddresses]
+      : ccEmailAddresses;
 
     // Type check on from, since "from" is optionally included in the arguments schema
     // This should never happen.
@@ -115,7 +163,7 @@ server.tool(
     }
 
     console.error(`Debug - Sending email with from: ${fromEmailAddress}`);
-    
+
     // Explicitly structure the request with all parameters to ensure they're passed correctly
     const emailRequest: {
       to: string;
@@ -134,24 +182,24 @@ server.tool(
       from: fromEmailAddress,
       replyTo: replyToEmailAddresses,
     };
-    
+
     // Add optional parameters conditionally
     if (html) {
       emailRequest.html = html;
     }
-    
+
     if (scheduledAt) {
       emailRequest.scheduledAt = scheduledAt;
     }
-    
-    if (cc) {
-      emailRequest.cc = cc;
+
+    if (combinedCcAddresses.length > 0) {
+      emailRequest.cc = combinedCcAddresses;
     }
-    
-    if (bcc) {
-      emailRequest.bcc = bcc;
+
+    if (combinedBccAddresses.length > 0) {
+      emailRequest.bcc = combinedBccAddresses;
     }
-    
+
     console.error(`Email request: ${JSON.stringify(emailRequest)}`);
 
     const response = await resend.emails.send(emailRequest);

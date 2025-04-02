@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/8c05cbf0-1664-4b3b-afb1-663b46af3464
 **Cursor**
 
 1. First, you need to authorize Resend to send emails from your domain or email. Follow the steps [here](https://resend.com/docs/send-with-nodejs) to set that up and get a Resend API key.
-2. Clone this project locally. Edit index.ts and replace me@yoko.dev to your own email to send emails from
+2. Clone this project locally.
 3. Run `npm install`, `npm run build` under the project dir. You should now see a /build/index.js generated - this is the MCP server script!
 
 Then go to Cursor Settings -> MCP -> Add new MCP server
@@ -44,16 +44,19 @@ Now you can test out sending emails by going to email.md, replace the to: email 
 
 Same set up as above, and then add the following MCP config
 
-```
+```json
 {
   "mcpServers": {
     "resend": {
       "command": "node",
       "args": ["ABSOLUTE_PATH_TO_MCP_SERVER/build/index.js"],
       "env": {
-        "RESEND_API_KEY": [YOUR_API_KEY],
-        "SENDER_EMAIL_ADDRESS": [OPTIONAL_SENDER_EMAIL_ADDRESS],
-        "REPLY_TO_EMAIL_ADDRESSES": [OPTIONAL_REPLY_TO_EMAIL_ADDRESSES_COMMA_DELIMITED]
+        "RESEND_API_KEY": "<YOUR_API_KEY>",
+        "SENDER_EMAIL_ADDRESS": "<OPTIONAL_SENDER_EMAIL_ADDRESS>",
+        "SENDER_NAME": "<OPTIONAL_SENDER_NAME>",
+        "REPLY_TO_EMAIL_ADDRESSES": "<OPTIONAL_REPLY_TO_EMAIL_ADDRESSES_COMMA_DELIMITED>",
+        "CC_EMAIL_ADDRESSES": "<OPTIONAL_CC_EMAIL_ADDRESSES_COMMA_DELIMITED>",
+        "BCC_EMAIL_ADDRESSES": "<OPTIONAL_BCC_EMAIL_ADDRESSES_COMMA_DELIMITED>"
       }
     }
   }
@@ -63,4 +66,5 @@ Same set up as above, and then add the following MCP config
 **Develop**
 
 `npm install`
+
 `npm run build`
