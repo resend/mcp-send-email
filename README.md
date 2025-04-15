@@ -4,6 +4,9 @@
 
 This is a simple MCP server that sends emails using Resend's API. Why? Now you can let Cursor or Claude Desktop compose emails for you and send it right away without having to copy and paste the email content.
 
+> [!TIP]
+> [Klavis AI](https://www.klavis.ai/mcp-servers) has a hosted version of the resend MCP server. You can give it a try there for free.
+
 Built with:
 
 - [Resend](https://resend.com/)
