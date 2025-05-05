@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/resend-mcp-send-email-badge.png)](https://mseep.ai/app/resend-mcp-send-email)
+
 # Email sending MCP 💌
 
 [![smithery badge](https://smithery.ai/badge/@resend/mcp-send-email)](https://smithery.ai/server/@resend/mcp-send-email)
