@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import minimist from 'minimist';
 import { Resend } from 'resend';
 import { z } from 'zod';
+import packageJson from './package.json' with { type: 'json' };
 
 // Parse command line arguments
 const argv = minimist(process.argv.slice(2));
@@ -37,7 +38,7 @@ const resend = new Resend(apiKey);
 // Create server instance
 const server = new McpServer({
   name: 'email-sending-service',
-  version: '1.0.0',
+  version: packageJson.version,
 });
 
 server.tool(
