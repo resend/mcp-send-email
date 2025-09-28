@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add more audience tools (create/get/delete)
+
 ### Changed
 
 - Upgrade Resend SDK to v6.1.0
