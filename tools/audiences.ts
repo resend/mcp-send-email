@@ -17,12 +17,25 @@ export function addAudienceTools(server: McpServer, resend: Resend) {
         );
       }
 
+      const audiences = response.data.data;
       return {
         content: [
           {
             type: 'text',
-            text: `Audiences found: ${JSON.stringify(response.data)}`,
+            text: `Found ${audiences.length} audience${audiences.length === 1 ? '' : 's'}${audiences.length === 0 ? '.' : ':'}`,
           },
+          ...audiences.map(({ name, id, created_at }) => ({
+            type: 'text' as const,
+            text: `Name: ${name}\nID: ${id}\nCreated at: ${created_at}`,
+          })),
+          ...(audiences.length === 0
+            ? []
+            : [
+                {
+                  type: 'text' as const,
+                  text: "Don't bother telling the user the IDs or creation dates unless they ask for them.",
+                },
+              ]),
         ],
       };
     },

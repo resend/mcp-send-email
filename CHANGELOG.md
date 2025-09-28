@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Upgrade Resend SDK to v6.1.0
+- Improve `list-audiences` response formatting
 
 ## [1.1.0] - 2025-07-08
 
