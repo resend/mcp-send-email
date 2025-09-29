@@ -5,6 +5,7 @@ import { Resend } from 'resend';
 import packageJson from './package.json' with { type: 'json' };
 import {
   addAudienceTools,
+  addBroadcastTools,
   addContactTools,
   addEmailTools,
 } from './tools/index.js';
@@ -46,6 +47,10 @@ const server = new McpServer({
 });
 
 addAudienceTools(server, resend);
+addBroadcastTools(server, resend, {
+  senderEmailAddress,
+  replierEmailAddresses,
+});
 addContactTools(server, resend);
 addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
 

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add more audience tools (create/get/delete)
 - Add contact tools
+- Add broadcast tools
 
 ### Changed
 
