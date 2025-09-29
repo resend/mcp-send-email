@@ -3,7 +3,11 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import minimist from 'minimist';
 import { Resend } from 'resend';
 import packageJson from './package.json' with { type: 'json' };
-import { addAudienceTools, addEmailTools } from './tools/index.js';
+import {
+  addAudienceTools,
+  addContactTools,
+  addEmailTools,
+} from './tools/index.js';
 
 // Parse command line arguments
 const argv = minimist(process.argv.slice(2));
@@ -42,6 +46,7 @@ const server = new McpServer({
 });
 
 addAudienceTools(server, resend);
+addContactTools(server, resend);
 addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
 
 async function main() {
