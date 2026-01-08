@@ -1,7 +1,11 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "organizeImports": {
-    "enabled": true
+  "$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   },
   "formatter": {
     "indentStyle": "space",
@@ -13,66 +17,52 @@
       "quoteStyle": "single"
     }
   },
-  "css": {
-    "parser": {
-      "cssModules": true
-    }
-  },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
-      "a11y": {
-        "noSvgWithoutTitle": "off",
-        "noAutofocus": "off",
-        "useKeyWithClickEvents": "off",
-        "useIframeTitle": "off",
-        "useButtonType": "off",
-        "useValidAnchor": "off",
-        "noPositiveTabindex": "off",
-        "useAriaPropsForRole": "off",
-        "noBlankTarget": "off",
-        "useFocusableInteractive": "off",
-        "useSemanticElements": "off",
-        "noLabelWithoutControl": "off"
-      },
       "correctness": {
+        "useUniqueElementIds": "off",
         "noUnusedImports": "error",
         "noUnusedVariables": "error",
         "useExhaustiveDependencies": "off",
-        "useJsxKeyInIterable": "off",
-        "noConstantCondition": "off"
+        "useHookAtTopLevel": "off"
       },
       "complexity": {
         "noUselessSwitchCase": "off",
         "noBannedTypes": "off",
-        "noForEach": "off",
         "noUselessFragments": "off"
       },
       "suspicious": {
+        "noUnknownAtRules": "off",
+        "noImplicitAnyLet": "off",
         "noExplicitAny": "off",
         "noAssignInExpressions": "off",
         "noArrayIndexKey": "off",
         "noFallthroughSwitchClause": "off",
         "noPrototypeBuiltins": "off",
         "useDefaultSwitchClauseLast": "off",
-        "noConsoleLog": "error",
-        "noCommentText": "off"
-      },
-      "security": {
-        "noDangerouslySetInnerHtml": "off"
+        "noCommentText": "off",
+        "noConsole": {
+          "level": "error",
+          "options": {
+            "allow": ["error", "warn", "info"]
+          }
+        }
       },
       "style": {
         "noNonNullAssertion": "off",
         "useSingleVarDeclarator": "off",
-        "noParameterAssign": "off"
+        "noParameterAssign": "off",
+        "noDescendingSpecificity": "off"
       },
       "performance": {
-        "noAccumulatingSpread": "off"
+        "noAccumulatingSpread": "off",
+        "noDynamicNamespaceImportAccess": "off"
       }
     }
   },
   "files": {
-    "ignore": ["build", "npm-lock.yaml", "node_modules/**/*"]
+    "includes": ["**", "!**/build", "!**/pnpm-lock.yaml"]
   }
 }
