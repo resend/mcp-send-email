@@ -4,7 +4,7 @@
   "main": "index.js",
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "description": "",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.5.0",
