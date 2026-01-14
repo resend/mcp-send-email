@@ -102,11 +102,11 @@ export function addContactTools(server: McpServer, resend: Resend) {
           ...(contacts.length === 0
             ? []
             : [
-                {
-                  type: 'text' as const,
-                  text: "Don't bother telling the user the IDs, unsubscribe statuses, or creation dates unless they ask for them.",
-                },
-              ]),
+              {
+                type: 'text' as const,
+                text: "Don't bother telling the user the IDs, unsubscribe statuses, or creation dates unless they ask for them.",
+              },
+            ]),
         ],
       };
     },
@@ -150,9 +150,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
             text: [
               `ID: ${contact.id}`,
               `Email: ${contact.email}`,
-              // TODO: Fix `first_name` type in SDK. It's actually returning `string | null`, not `string | undefined`.
               contact.first_name != null && `First name: ${contact.first_name}`,
-              // TODO: Fix `last_name` type in SDK. It's actually returning `string | null`, not `string | undefined`.
               contact.last_name != null && `Last name: ${contact.last_name}`,
               `Unsubscribed: ${contact.unsubscribed}`,
               `Created at: ${contact.created_at}`,
@@ -198,9 +196,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
       const commonOptions = {
         audienceId,
-        // TODO: Fix `firstName` and `lastName` types in SDK. Passing `null` to one of these is the only way to remove a contact's first or last name.
-        firstName: firstName as string | undefined,
-        lastName: lastName as string | undefined,
+        firstName,
+        lastName,
         unsubscribed,
       };
 
