@@ -159,4 +159,159 @@ export function addEmailTools(
       };
     },
   );
+
+  server.tool(
+    'list-emails',
+    "List sent emails from your account. Returns email metadata including recipient, subject, status, and timestamps. Use 'get-email' with an email ID to retrieve full content. Don't bother telling the user the IDs unless they ask for them.",
+    {
+      limit: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe(
+          'Number of emails to retrieve. Default: 20, Max: 100, Min: 1',
+        ),
+      after: z
+        .string()
+        .optional()
+        .describe(
+          'Email ID after which to retrieve more emails (for forward pagination). Cannot be used with "before".',
+        ),
+      before: z
+        .string()
+        .optional()
+        .describe(
+          'Email ID before which to retrieve more emails (for backward pagination). Cannot be used with "after".',
+        ),
+    },
+    async ({ limit, after, before }) => {
+      if (after && before) {
+        throw new Error(
+          'Cannot use both "after" and "before" parameters. Use only one for pagination.',
+        );
+      }
+
+      console.error(
+        `Debug - Listing emails with limit: ${limit}, after: ${after}, before: ${before}`,
+      );
+
+      // Build pagination options - Resend SDK requires mutually exclusive after/before
+      const paginationOptions = after
+        ? { limit, after }
+        : before
+          ? { limit, before }
+          : limit !== undefined
+            ? { limit }
+            : undefined;
+
+      const response = await resend.emails.list(paginationOptions);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to list emails: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const emails = response.data?.data ?? [];
+      const hasMore = response.data?.has_more ?? false;
+
+      if (emails.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'No emails found.',
+            },
+          ],
+        };
+      }
+
+      const emailSummaries = emails
+        .map((email) => {
+          const to = Array.isArray(email.to) ? email.to.join(', ') : email.to;
+          const scheduledInfo = email.scheduled_at
+            ? ` (Scheduled: ${email.scheduled_at})`
+            : '';
+          return `- To: ${to} | Subject: "${email.subject}" | Status: ${email.last_event} | Sent: ${email.created_at}${scheduledInfo} | ID: ${email.id}`;
+        })
+        .join('\n');
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Found ${emails.length} email(s)${hasMore ? ' (more available)' : ''}:\n\n${emailSummaries}`,
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'get-email',
+    'Retrieve full details of a specific sent email by ID, including HTML and plain text content.',
+    {
+      id: z.string().describe('The email ID to retrieve'),
+    },
+    async ({ id }) => {
+      console.error(`Debug - Getting email with ID: ${id}`);
+
+      const response = await resend.emails.get(id);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to retrieve email: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const email = response.data;
+
+      if (!email) {
+        throw new Error(`Email with ID ${id} not found.`);
+      }
+
+      const to = Array.isArray(email.to) ? email.to.join(', ') : email.to;
+      const cc = email.cc
+        ? Array.isArray(email.cc)
+          ? email.cc.join(', ')
+          : email.cc
+        : null;
+      const bcc = email.bcc
+        ? Array.isArray(email.bcc)
+          ? email.bcc.join(', ')
+          : email.bcc
+        : null;
+      const replyTo = email.reply_to
+        ? Array.isArray(email.reply_to)
+          ? email.reply_to.join(', ')
+          : email.reply_to
+        : null;
+
+      let details = `Email Details:\n`;
+      details += `- ID: ${email.id}\n`;
+      details += `- From: ${email.from}\n`;
+      details += `- To: ${to}\n`;
+      if (cc) details += `- CC: ${cc}\n`;
+      if (bcc) details += `- BCC: ${bcc}\n`;
+      if (replyTo) details += `- Reply-To: ${replyTo}\n`;
+      details += `- Subject: ${email.subject}\n`;
+      details += `- Status: ${email.last_event}\n`;
+      details += `- Created: ${email.created_at}\n`;
+      if (email.scheduled_at) details += `- Scheduled: ${email.scheduled_at}\n`;
+      details += `\n--- Plain Text Content ---\n${email.text || '(none)'}\n`;
+      if (email.html) {
+        details += `\n--- HTML Content ---\n${email.html}\n`;
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: details,
+          },
+        ],
+      };
+    },
+  );
 }
