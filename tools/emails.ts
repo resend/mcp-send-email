@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
@@ -48,6 +49,42 @@ export function addEmailTools(
         .describe(
           "Optional parameter to schedule the email. This uses natural language. Examples would be 'tomorrow at 10am' or 'in 2 hours' or 'next day at 9am PST' or 'Friday at 3pm ET'.",
         ),
+      attachments: z
+        .array(
+          z.object({
+            filename: z
+              .string()
+              .describe('Name of the file with extension (e.g., "report.pdf")'),
+            filePath: z
+              .string()
+              .optional()
+              .describe('Local file path to read and attach'),
+            url: z
+              .string()
+              .optional()
+              .describe('URL where the file is hosted (Resend will fetch it)'),
+            content: z
+              .string()
+              .optional()
+              .describe('Base64-encoded file content'),
+            contentType: z
+              .string()
+              .optional()
+              .describe(
+                'MIME type (e.g., "application/pdf"). Auto-derived from filename if not set',
+              ),
+            contentId: z
+              .string()
+              .optional()
+              .describe(
+                'Content ID for inline images. Reference in HTML with cid:<contentId>',
+              ),
+          }),
+        )
+        .optional()
+        .describe(
+          'Array of file attachments. Each needs filename plus one of: filePath, url, or content. Max 40MB total.',
+        ),
       // If sender email address is not provided, the tool requires it as an argument
       ...(!senderEmailAddress
         ? {
@@ -83,6 +120,7 @@ export function addEmailTools(
       scheduledAt,
       cc,
       bcc,
+      attachments,
     }) => {
       const fromEmailAddress = from ?? senderEmailAddress;
       const replyToEmailAddresses = replyTo ?? replierEmailAddresses;
@@ -114,6 +152,13 @@ export function addEmailTools(
         scheduledAt?: string;
         cc?: string[];
         bcc?: string[];
+        attachments?: Array<{
+          content?: Buffer;
+          filename?: string;
+          path?: string;
+          contentType?: string;
+          contentId?: string;
+        }>;
       } = {
         to,
         subject,
@@ -137,6 +182,39 @@ export function addEmailTools(
 
       if (bcc) {
         emailRequest.bcc = bcc;
+      }
+
+      if (attachments && attachments.length > 0) {
+        emailRequest.attachments = await Promise.all(
+          attachments.map(async (att) => {
+            const result: {
+              filename?: string;
+              content?: Buffer;
+              path?: string;
+              contentType?: string;
+              contentId?: string;
+            } = {};
+
+            if (att.filename) result.filename = att.filename;
+            if (att.contentType) result.contentType = att.contentType;
+            if (att.contentId) result.contentId = att.contentId;
+
+            // Priority: filePath > url > content
+            if (att.filePath) {
+              // Read local file
+              const fileBuffer = await fs.readFile(att.filePath);
+              result.content = fileBuffer;
+            } else if (att.url) {
+              // Let Resend fetch from URL
+              result.path = att.url;
+            } else if (att.content) {
+              // Direct Base64 content
+              result.content = Buffer.from(att.content, 'base64');
+            }
+
+            return result;
+          }),
+        );
       }
 
       console.error(`Email request: ${JSON.stringify(emailRequest)}`);
