@@ -18,7 +18,13 @@ export function addEmailTools(
     'send-email',
     'Send an email using Resend',
     {
-      to: z.string().email().describe('Recipient email address'),
+      to: z
+        .string()
+        .email()
+        .array()
+        .min(1)
+        .max(50)
+        .describe('Array of recipient email addresses (1-50 recipients)'),
       subject: z.string().describe('Email subject line'),
       text: z.string().describe('Plain text email content'),
       html: z
@@ -85,6 +91,17 @@ export function addEmailTools(
         .describe(
           'Array of file attachments. Each needs filename plus one of: filePath, url, or content. Max 40MB total.',
         ),
+      tags: z
+        .array(
+          z.object({
+            name: z.string().describe('Tag name (key)'),
+            value: z.string().describe('Tag value'),
+          }),
+        )
+        .optional()
+        .describe(
+          'Array of custom tags for tracking/analytics. Each tag has a name and value.',
+        ),
       // If sender email address is not provided, the tool requires it as an argument
       ...(!senderEmailAddress
         ? {
@@ -121,6 +138,7 @@ export function addEmailTools(
       cc,
       bcc,
       attachments,
+      tags,
     }) => {
       const fromEmailAddress = from ?? senderEmailAddress;
       const replyToEmailAddresses = replyTo ?? replierEmailAddresses;
@@ -143,7 +161,7 @@ export function addEmailTools(
 
       // Explicitly structure the request with all parameters to ensure they're passed correctly
       const emailRequest: {
-        to: string;
+        to: string[];
         subject: string;
         text: string;
         from: string;
@@ -158,6 +176,10 @@ export function addEmailTools(
           path?: string;
           contentType?: string;
           contentId?: string;
+        }>;
+        tags?: Array<{
+          name: string;
+          value: string;
         }>;
       } = {
         to,
@@ -215,6 +237,10 @@ export function addEmailTools(
             return result;
           }),
         );
+      }
+
+      if (tags && tags.length > 0) {
+        emailRequest.tags = tags;
       }
 
       console.error(`Email request: ${JSON.stringify(emailRequest)}`);
