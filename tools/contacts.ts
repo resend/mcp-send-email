@@ -102,11 +102,11 @@ export function addContactTools(server: McpServer, resend: Resend) {
           ...(contacts.length === 0
             ? []
             : [
-              {
-                type: 'text' as const,
-                text: "Don't bother telling the user the IDs, unsubscribe statuses, or creation dates unless they ask for them.",
-              },
-            ]),
+                {
+                  type: 'text' as const,
+                  text: "Don't bother telling the user the IDs, unsubscribe statuses, or creation dates unless they ask for them.",
+                },
+              ]),
         ],
       };
     },

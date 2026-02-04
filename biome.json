@@ -43,12 +43,7 @@
         "noPrototypeBuiltins": "off",
         "useDefaultSwitchClauseLast": "off",
         "noCommentText": "off",
-        "noConsole": {
-          "level": "error",
-          "options": {
-            "allow": ["error", "warn", "info"]
-          }
-        }
+        "noConsole": "off"
       },
       "style": {
         "noNonNullAssertion": "off",
