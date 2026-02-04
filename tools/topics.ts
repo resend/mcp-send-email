@@ -79,7 +79,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
               default_subscription?: string;
               visibility?: string;
             };
-            const defaultSub = topic.defaultSubscription ?? t.default_subscription;
+            const defaultSub =
+              topic.defaultSubscription ?? t.default_subscription;
             const visibility = t.visibility;
             return {
               type: 'text' as const,
