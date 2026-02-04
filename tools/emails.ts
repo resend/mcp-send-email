@@ -102,6 +102,12 @@ export function addEmailTools(
         .describe(
           'Array of custom tags for tracking/analytics. Each tag has a name and value.',
         ),
+      topicId: z
+        .string()
+        .optional()
+        .describe(
+          'Topic ID for subscription-based sending. When set, the email respects contact subscription preferences for this topic.',
+        ),
       // If sender email address is not provided, the tool requires it as an argument
       ...(!senderEmailAddress
         ? {
@@ -139,6 +145,7 @@ export function addEmailTools(
       bcc,
       attachments,
       tags,
+      topicId,
     }) => {
       const fromEmailAddress = from ?? senderEmailAddress;
       const replyToEmailAddresses = replyTo ?? replierEmailAddresses;
@@ -181,6 +188,7 @@ export function addEmailTools(
           name: string;
           value: string;
         }>;
+        topicId?: string;
       } = {
         to,
         subject,
@@ -241,6 +249,10 @@ export function addEmailTools(
 
       if (tags && tags.length > 0) {
         emailRequest.tags = tags;
+      }
+
+      if (topicId) {
+        emailRequest.topicId = topicId;
       }
 
       console.error(`Email request: ${JSON.stringify(emailRequest)}`);
