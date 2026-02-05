@@ -8,6 +8,7 @@ import {
   addBroadcastTools,
   addContactTools,
   addEmailTools,
+  addTopicTools,
 } from './tools/index.js';
 
 // Parse command line arguments
@@ -53,6 +54,7 @@ addBroadcastTools(server, resend, {
 });
 addContactTools(server, resend);
 addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
+addTopicTools(server, resend);
 
 async function main() {
   const transport = new StdioServerTransport();
