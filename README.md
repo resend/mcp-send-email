@@ -134,3 +134,26 @@ Close and reopen Claude Desktop. Verify that the `resend` tool is available in t
 ![Claude Desktop developer settings with Resend MCP server showing](https://github.com/user-attachments/assets/be9549e5-eaef-4946-b10a-e708c1864acf)
 
 Chat with Claude and tell it to send you an email using the `resend` tool.
+
+### Testing with MCP Inspector
+
+> **Note:** Make sure you've built the project first (see [Setup](#setup) section above).
+
+1. **Set your API key** (so the server can talk to Resend):
+
+   ```bash
+   export RESEND_API_KEY=re_your_key_here
+   ```
+
+2. **Start the inspector**:
+
+   ```bash
+   pnpm inspector
+   ```
+
+3. **In the Inspector UI** (browser):
+   - Choose **stdio** (launch a process).
+   - **Command:** `node`
+   - **Args:** `build/index.js` (or the full path to `build/index.js`)
+   - **Env:** `RESEND_API_KEY=re_your_key_here` (or leave blank if you already exported it in the same terminal).
+   - Click **Connect**, then use "List tools" to verify the server is working.
