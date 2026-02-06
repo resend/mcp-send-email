@@ -14,124 +14,136 @@ export function addEmailTools(
     replierEmailAddresses: string[];
   },
 ) {
-  server.tool(
+  server.registerTool(
     'send-email',
-    'Send an email using Resend',
     {
-      to: z
-        .string()
-        .email()
-        .array()
-        .min(1)
-        .max(50)
-        .describe('Array of recipient email addresses (1-50 recipients)'),
-      subject: z.string().describe('Email subject line'),
-      text: z.string().describe('Plain text email content'),
-      html: z
-        .string()
-        .optional()
-        .describe(
-          'HTML email content. When provided, the plain text argument MUST be provided as well.',
-        ),
-      cc: z
-        .string()
-        .email()
-        .array()
-        .optional()
-        .describe(
-          'Optional array of CC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
-        ),
-      bcc: z
-        .string()
-        .email()
-        .array()
-        .optional()
-        .describe(
-          'Optional array of BCC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
-        ),
-      scheduledAt: z
-        .string()
-        .optional()
-        .describe(
-          "Optional parameter to schedule the email. This uses natural language. Examples would be 'tomorrow at 10am' or 'in 2 hours' or 'next day at 9am PST' or 'Friday at 3pm ET'.",
-        ),
-      attachments: z
-        .array(
-          z.object({
-            filename: z
-              .string()
-              .describe('Name of the file with extension (e.g., "report.pdf")'),
-            filePath: z
-              .string()
-              .optional()
-              .describe('Local file path to read and attach'),
-            url: z
-              .string()
-              .optional()
-              .describe('URL where the file is hosted (Resend will fetch it)'),
-            content: z
-              .string()
-              .optional()
-              .describe('Base64-encoded file content'),
-            contentType: z
-              .string()
-              .optional()
-              .describe(
-                'MIME type (e.g., "application/pdf"). Auto-derived from filename if not set',
-              ),
-            contentId: z
-              .string()
-              .optional()
-              .describe(
-                'Content ID for inline images. Reference in HTML with cid:<contentId>',
-              ),
-          }),
-        )
-        .optional()
-        .describe(
-          'Array of file attachments. Each needs filename plus one of: filePath, url, or content. Max 40MB total.',
-        ),
-      tags: z
-        .array(
-          z.object({
-            name: z.string().describe('Tag name (key)'),
-            value: z.string().describe('Tag value'),
-          }),
-        )
-        .optional()
-        .describe(
-          'Array of custom tags for tracking/analytics. Each tag has a name and value.',
-        ),
-      topicId: z
-        .string()
-        .optional()
-        .describe(
-          'Topic ID for subscription-based sending. When set, the email respects contact subscription preferences for this topic.',
-        ),
-      // If sender email address is not provided, the tool requires it as an argument
-      ...(!senderEmailAddress
-        ? {
-            from: z
-              .string()
-              .email()
-              .nonempty()
-              .describe(
-                'Sender email address. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
-              ),
-          }
-        : {}),
-      ...(replierEmailAddresses.length === 0
-        ? {
-            replyTo: z
-              .string()
-              .email()
-              .array()
-              .optional()
-              .describe(
-                'Optional email addresses for the email readers to reply to. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
-              ),
-          }
-        : {}),
+      title: 'Send Email',
+      description: `**Purpose:** Send a single transactional email to one or more recipients immediately (or schedule it). Use for one-off messages, notifications, and direct replies.
+
+**NOT for:** Sending the same email to a whole list/audience (use create-broadcast + send-broadcast). Not for managing contacts or audiences.
+
+**Returns:** Send confirmation and email ID.
+
+**When to use:**
+- User wants to "send an email" to specific people (names or addresses)
+- One-off messages: password reset, order confirmation, receipt, alert
+- User says "email this to X", "notify them", "send a message to..."
+- Scheduling a single email for later
+
+**Workflow:** Get recipient(s) and content from user → send-email. Use list-emails or get-email to check delivery status afterward.
+
+**Key trigger phrases:** "Send an email", "Email this to", "Notify", "Send a message", "Reply to them", "Schedule an email"`,
+      inputSchema: {
+        to: z
+          .array(z.email())
+          .min(1)
+          .max(50)
+          .describe('Array of recipient email addresses (1-50 recipients)'),
+        subject: z.string().describe('Email subject line'),
+        text: z.string().describe('Plain text email content'),
+        html: z
+          .string()
+          .optional()
+          .describe(
+            'HTML email content. When provided, the plain text argument MUST be provided as well.',
+          ),
+        cc: z
+          .array(z.email())
+          .optional()
+          .describe(
+            'Optional array of CC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
+          ),
+        bcc: z
+          .array(z.email())
+          .optional()
+          .describe(
+            'Optional array of BCC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
+          ),
+        scheduledAt: z
+          .string()
+          .optional()
+          .describe(
+            "Optional parameter to schedule the email. This uses natural language. Examples would be 'tomorrow at 10am' or 'in 2 hours' or 'next day at 9am PST' or 'Friday at 3pm ET'.",
+          ),
+        attachments: z
+          .array(
+            z.object({
+              filename: z
+                .string()
+                .describe(
+                  'Name of the file with extension (e.g., "report.pdf")',
+                ),
+              filePath: z
+                .string()
+                .optional()
+                .describe('Local file path to read and attach'),
+              url: z
+                .string()
+                .optional()
+                .describe(
+                  'URL where the file is hosted (Resend will fetch it)',
+                ),
+              content: z
+                .string()
+                .optional()
+                .describe('Base64-encoded file content'),
+              contentType: z
+                .string()
+                .optional()
+                .describe(
+                  'MIME type (e.g., "application/pdf"). Auto-derived from filename if not set',
+                ),
+              contentId: z
+                .string()
+                .optional()
+                .describe(
+                  'Content ID for inline images. Reference in HTML with cid:<contentId>',
+                ),
+            }),
+          )
+          .optional()
+          .describe(
+            'Array of file attachments. Each needs filename plus one of: filePath, url, or content. Max 40MB total.',
+          ),
+        tags: z
+          .array(
+            z.object({
+              name: z.string().describe('Tag name (key)'),
+              value: z.string().describe('Tag value'),
+            }),
+          )
+          .optional()
+          .describe(
+            'Array of custom tags for tracking/analytics. Each tag has a name and value.',
+          ),
+        topicId: z
+          .string()
+          .optional()
+          .describe(
+            'Topic ID for subscription-based sending. When set, the email respects contact subscription preferences for this topic.',
+          ),
+        // If sender email address is not provided, the tool requires it as an argument
+        ...(!senderEmailAddress
+          ? {
+              from: z
+                .email()
+                .nonempty()
+                .describe(
+                  'Sender email address. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
+                ),
+            }
+          : {}),
+        ...(replierEmailAddresses.length === 0
+          ? {
+              replyTo: z
+                .array(z.email())
+                .optional()
+                .describe(
+                  'Optional email addresses for the email readers to reply to. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
+                ),
+            }
+          : {}),
+      },
     },
     async ({
       from,
@@ -276,30 +288,44 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-emails',
-    "List sent emails from your account. Returns email metadata including recipient, subject, status, and timestamps. Use 'get-email' with an email ID to retrieve full content. Don't bother telling the user the IDs unless they ask for them.",
     {
-      limit: z
-        .number()
-        .min(1)
-        .max(100)
-        .optional()
-        .describe(
-          'Number of emails to retrieve. Default: 20, Max: 100, Min: 1',
-        ),
-      after: z
-        .string()
-        .optional()
-        .describe(
-          'Email ID after which to retrieve more emails (for forward pagination). Cannot be used with "before".',
-        ),
-      before: z
-        .string()
-        .optional()
-        .describe(
-          'Email ID before which to retrieve more emails (for backward pagination). Cannot be used with "after".',
-        ),
+      title: 'List Emails',
+      description: `**Purpose:** List recently sent emails (transactional emails sent via send-email) with metadata: recipient, subject, status, timestamps.
+
+**NOT for:** Listing broadcast campaigns (use list-broadcasts). Not for composing or sending.
+
+**Returns:** Paginated list with to, subject, status, created_at, and ID per email.
+
+**When to use:**
+- User asks "what emails were sent?", "show recent emails", "did my email go out?"
+- Checking delivery status of sent messages
+- Finding an email ID to fetch full content (then use get-email)
+
+**Workflow:** list-emails → get-email( id ) when user needs full body or details.`,
+      inputSchema: {
+        limit: z
+          .number()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            'Number of emails to retrieve. Default: 20, Max: 100, Min: 1',
+          ),
+        after: z
+          .string()
+          .optional()
+          .describe(
+            'Email ID after which to retrieve more emails (for forward pagination). Cannot be used with "before".',
+          ),
+        before: z
+          .string()
+          .optional()
+          .describe(
+            'Email ID before which to retrieve more emails (for backward pagination). Cannot be used with "after".',
+          ),
+      },
     },
     async ({ limit, after, before }) => {
       if (after && before) {
@@ -364,11 +390,14 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-email',
-    'Retrieve full details of a specific sent email by ID, including HTML and plain text content.',
     {
-      id: z.string().describe('The email ID to retrieve'),
+      title: 'Get Email',
+      description: 'Retrieve full details of a specific sent transactional email by ID, including HTML and plain text content.',
+      inputSchema: {
+        id: z.string().describe('The email ID to retrieve'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Getting email with ID: ${id}`);
