@@ -700,9 +700,7 @@ export function addEmailTools(
       const attachment = response.data;
 
       if (!attachment) {
-        throw new Error(
-          `Attachment ${id} not found for email ${emailId}.`,
-        );
+        throw new Error(`Attachment ${id} not found for email ${emailId}.`);
       }
 
       let details = 'Attachment Details:\n';
@@ -824,9 +822,7 @@ export function addEmailTools(
         );
       }
 
-      console.error(
-        `Debug - Listing attachments for sent email: ${emailId}`,
-      );
+      console.error(`Debug - Listing attachments for sent email: ${emailId}`);
 
       const paginationOptions = after
         ? { emailId, limit, after }
@@ -834,8 +830,7 @@ export function addEmailTools(
           ? { emailId, limit, before }
           : { emailId, limit };
 
-      const response =
-        await resend.emails.attachments.list(paginationOptions);
+      const response = await resend.emails.attachments.list(paginationOptions);
 
       if (response.error) {
         throw new Error(
@@ -901,9 +896,7 @@ export function addEmailTools(
       const attachment = response.data;
 
       if (!attachment) {
-        throw new Error(
-          `Attachment ${id} not found for email ${emailId}.`,
-        );
+        throw new Error(`Attachment ${id} not found for email ${emailId}.`);
       }
 
       let details = 'Attachment Details:\n';
@@ -945,10 +938,7 @@ export function addEmailTools(
               .describe('Array of recipient email addresses (1-50 recipients)'),
             subject: z.string().describe('Email subject line'),
             text: z.string().describe('Plain text email content'),
-            html: z
-              .string()
-              .optional()
-              .describe('HTML email content'),
+            html: z.string().optional().describe('HTML email content'),
             from: z
               .string()
               .optional()
@@ -1034,9 +1024,7 @@ export function addEmailTools(
       );
 
       if (response.error) {
-        throw new Error(
-          `Batch send failed: ${JSON.stringify(response.error)}`,
-        );
+        throw new Error(`Batch send failed: ${JSON.stringify(response.error)}`);
       }
 
       const ids = response.data?.data?.map((e) => e.id) ?? [];
