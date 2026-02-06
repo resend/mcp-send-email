@@ -4,10 +4,13 @@ import minimist from 'minimist';
 import { Resend } from 'resend';
 import packageJson from './package.json' with { type: 'json' };
 import {
+  addApiKeyTools,
   addAudienceTools,
   addBroadcastTools,
   addContactTools,
+  addDomainTools,
   addEmailTools,
+  addSegmentTools,
   addTopicTools,
 } from './tools/index.js';
 
@@ -47,13 +50,16 @@ const server = new McpServer({
   version: packageJson.version,
 });
 
+addApiKeyTools(server, resend);
 addAudienceTools(server, resend);
 addBroadcastTools(server, resend, {
   senderEmailAddress,
   replierEmailAddresses,
 });
 addContactTools(server, resend);
+addDomainTools(server, resend);
 addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
+addSegmentTools(server, resend);
 addTopicTools(server, resend);
 
 async function main() {
