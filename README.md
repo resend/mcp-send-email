@@ -38,8 +38,8 @@ git clone https://github.com/resend/mcp-send-email.git
 2. Build the project
 
 ```
-npm install
-npm run build
+pnpm install
+pnpm run build
 ```
 3. Setup Resend
 

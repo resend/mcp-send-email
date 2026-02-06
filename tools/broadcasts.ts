@@ -13,46 +13,61 @@ export function addBroadcastTools(
     replierEmailAddresses: string[];
   },
 ) {
-  server.tool(
+  server.registerTool(
     'create-broadcast',
-    'Create a new broadcast email to an audience.',
     {
-      name: z
-        .string()
-        .nonempty()
-        .describe(
-          'Name for the broadcast. If the user does not provide a name, go ahead and create a descriptive name for them, based on the email subject/content and the context of your conversation.',
-        ),
-      audienceId: z.string().nonempty().describe('Audience ID to send to'),
-      subject: z.string().nonempty().describe('Email subject'),
-      text: z
-        .string()
-        .nonempty()
-        .describe(
-          'Plain text version of the email content. The following placeholders may be used to personalize the email content: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}',
-        ),
-      html: z
-        .string()
-        .optional()
-        .describe(
-          'HTML version of the email content. The following placeholders may be used to personalize the email content: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}',
-        ),
-      previewText: z.string().optional().describe('Preview text for the email'),
-      ...(!senderEmailAddress
-        ? {
-            from: z.string().email().nonempty().describe('From email address'),
-          }
-        : {}),
-      ...(replierEmailAddresses.length === 0
-        ? {
-            replyTo: z
-              .string()
-              .email()
-              .array()
-              .optional()
-              .describe('Reply-to email address(es)'),
-          }
-        : {}),
+      title: 'Create Broadcast',
+      description: `**Purpose:** Create a broadcast campaign (one email sent to an entire audience). Defines subject, body, and audience; does NOT send yet. Use send-broadcast to send it.
+
+**NOT for:** Sending a one-off email to specific people (use send-email). Not for adding contacts (use create-contact).
+
+**Returns:** Broadcast ID. Use this ID with send-broadcast to send, or get-broadcast/update-broadcast to manage.
+
+**When to use:**
+- User wants to "email my list", "send a newsletter", "broadcast to my audience", "email all contacts in X"
+- Newsletter, announcement, or bulk message to one audience
+- Supports personalization: {{{FIRST_NAME}}}, {{{LAST_NAME}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}
+
+**Workflow:** list-audiences (if needed) → create-broadcast → send-broadcast( id ). Optionally update-broadcast before sending.`,
+      inputSchema: {
+        name: z
+          .string()
+          .nonempty()
+          .describe(
+            'Name for the broadcast. If the user does not provide a name, go ahead and create a descriptive name for them, based on the email subject/content and the context of your conversation.',
+          ),
+        audienceId: z.string().nonempty().describe('Audience ID to send to'),
+        subject: z.string().nonempty().describe('Email subject'),
+        text: z
+          .string()
+          .nonempty()
+          .describe(
+            'Plain text version of the email content. The following placeholders may be used to personalize the email content: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}',
+          ),
+        html: z
+          .string()
+          .optional()
+          .describe(
+            'HTML version of the email content. The following placeholders may be used to personalize the email content: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}',
+          ),
+        previewText: z
+          .string()
+          .optional()
+          .describe('Preview text for the email'),
+        ...(!senderEmailAddress
+          ? {
+              from: z.email().nonempty().describe('From email address'),
+            }
+          : {}),
+        ...(replierEmailAddresses.length === 0
+          ? {
+              replyTo: z
+                .array(z.email())
+                .optional()
+                .describe('Reply-to email address(es)'),
+            }
+          : {}),
+      },
     },
     async ({
       name,
@@ -115,17 +130,31 @@ export function addBroadcastTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'send-broadcast',
-    'Send a broadcast email by ID. You may optionally schedule the send.',
     {
-      id: z.string().nonempty().describe('Broadcast ID'),
-      scheduledAt: z
-        .string()
-        .optional()
-        .describe(
-          'When to send the broadcast. Value may be in ISO 8601 format (e.g., 2024-08-05T11:52:01.858Z) or in natural language (e.g., "tomorrow at 10am", "in 2 hours", "next day at 9am PST", "Friday at 3pm ET"). If not provided, the broadcast will be sent immediately.',
-        ),
+      title: 'Send Broadcast',
+      description: `**Purpose:** Send (or schedule) an existing broadcast by ID. The broadcast must have been created with create-broadcast first.
+
+**NOT for:** Sending a new one-off email (use send-email). Not for creating the broadcast content (use create-broadcast).
+
+**Returns:** Send confirmation and broadcast ID.
+
+**When to use:**
+- User has created a broadcast and says "send it", "go ahead and send", "schedule this for tomorrow"
+- After create-broadcast; call send-broadcast with the returned ID to deliver to the audience
+- Optional scheduledAt: natural language or ISO 8601 for scheduled send
+
+**Workflow:** create-broadcast → send-broadcast( id ). Use list-broadcasts to find existing draft/sent broadcasts.`,
+      inputSchema: {
+        id: z.string().nonempty().describe('Broadcast ID'),
+        scheduledAt: z
+          .string()
+          .optional()
+          .describe(
+            'When to send the broadcast. Value may be in ISO 8601 format (e.g., 2024-08-05T11:52:01.858Z) or in natural language (e.g., "tomorrow at 10am", "in 2 hours", "next day at 9am PST", "Friday at 3pm ET"). If not provided, the broadcast will be sent immediately.',
+          ),
+      },
     },
     async ({ id, scheduledAt }) => {
       console.error(`Debug - Sending broadcast with id: ${id}`);
@@ -151,10 +180,19 @@ export function addBroadcastTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-broadcasts',
-    'List all broadcasts. Use this to find broadcast IDs or names.',
-    {},
+    {
+      title: 'List Broadcasts',
+      description: `**Purpose:** List all broadcast campaigns (newsletters/bulk emails to audiences) with ID, name, audience, status, timestamps.
+
+**NOT for:** Listing transactional emails (use list-emails). Not for listing audiences or contacts (use list-audiences, list-contacts).
+
+**Returns:** For each broadcast: id, name, audience_id, status, created_at, scheduled_at, sent_at.
+
+**When to use:** User asks "show my broadcasts", "what newsletters did I send?", "list campaigns". Use get-broadcast for full details of one.`,
+      inputSchema: {},
+    },
     async () => {
       console.error('Debug - Listing broadcasts');
 
@@ -202,11 +240,14 @@ export function addBroadcastTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-broadcast',
-    'Get a broadcast by ID.',
     {
-      id: z.string().nonempty().describe('Broadcast ID'),
+      title: 'Get Broadcast',
+      description: 'Get a broadcast by ID.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Broadcast ID'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Getting broadcast with id: ${id}`);
@@ -257,11 +298,14 @@ export function addBroadcastTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'remove-broadcast',
-    'Remove a broadcast by ID. Before using this tool, you MUST double-check with the user that they want to remove this broadcast. Reference the NAME of the broadcast when double-checking, and warn the user that removing a broadcast is irreversible. You may only use this tool if the user explicitly confirms they want to remove the broadcast after you double-check.',
     {
-      id: z.string().nonempty().describe('Broadcast ID'),
+      title: 'Remove Broadcast',
+      description: 'Remove a broadcast by ID. Before using this tool, you MUST double-check with the user that they want to remove this broadcast. Reference the NAME of the broadcast when double-checking, and warn the user that removing a broadcast is irreversible. You may only use this tool if the user explicitly confirms they want to remove the broadcast after you double-check.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Broadcast ID'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Removing broadcast with id: ${id}`);
@@ -283,24 +327,28 @@ export function addBroadcastTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'update-broadcast',
-    'Update a broadcast by ID.',
     {
-      id: z.string().nonempty().describe('Broadcast ID'),
-      name: z.string().optional().describe('Name for the broadcast'),
-      audienceId: z.string().optional().describe('Audience ID to send to'),
-      from: z.string().email().optional().describe('From email address'),
-      html: z.string().optional().describe('HTML content of the email'),
-      text: z.string().optional().describe('Plain text content of the email'),
-      subject: z.string().optional().describe('Email subject'),
-      replyTo: z
-        .string()
-        .email()
-        .array()
-        .optional()
-        .describe('Reply-to email address(es)'),
-      previewText: z.string().optional().describe('Preview text for the email'),
+      title: 'Update Broadcast',
+      description: 'Update a broadcast by ID.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Broadcast ID'),
+        name: z.string().optional().describe('Name for the broadcast'),
+        audienceId: z.string().optional().describe('Audience ID to send to'),
+        from: z.email().optional().describe('From email address'),
+        html: z.string().optional().describe('HTML content of the email'),
+        text: z.string().optional().describe('Plain text content of the email'),
+        subject: z.string().optional().describe('Email subject'),
+        replyTo: z
+          .array(z.email())
+          .optional()
+          .describe('Reply-to email address(es)'),
+        previewText: z
+          .string()
+          .optional()
+          .describe('Preview text for the email'),
+      },
     },
     async ({
       id,

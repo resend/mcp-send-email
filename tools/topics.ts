@@ -3,25 +3,28 @@ import type { Resend } from 'resend';
 import { z } from 'zod';
 
 export function addTopicTools(server: McpServer, resend: Resend) {
-  server.tool(
+  server.registerTool(
     'create-topic',
-    'Create a new topic in Resend. Topics allow contacts to manage their subscription preferences for different types of emails.',
     {
-      name: z
-        .string()
-        .nonempty()
-        .max(50)
-        .describe('Topic name (max 50 characters)'),
-      defaultSubscription: z
-        .enum(['opt_in', 'opt_out'])
-        .describe(
-          'Default subscription preference for new contacts. Cannot be modified after creation.',
-        ),
-      description: z
-        .string()
-        .max(200)
-        .optional()
-        .describe('Topic description (max 200 characters)'),
+      title: 'Create Topic',
+      description: 'Create a new topic in Resend. Topics allow contacts to manage their subscription preferences for different types of emails.',
+      inputSchema: {
+        name: z
+          .string()
+          .nonempty()
+          .max(50)
+          .describe('Topic name (max 50 characters)'),
+        defaultSubscription: z
+          .enum(['opt_in', 'opt_out'])
+          .describe(
+            'Default subscription preference for new contacts. Cannot be modified after creation.',
+          ),
+        description: z
+          .string()
+          .max(200)
+          .optional()
+          .describe('Topic description (max 200 characters)'),
+      },
     },
     async ({ name, defaultSubscription, description }) => {
       console.error(`Debug - Creating topic with name: ${name}`);
@@ -52,10 +55,13 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-topics',
-    'List all topics from Resend. This tool is useful for getting topic IDs to use with other tools like send-email.',
-    {},
+    {
+      title: 'List Topics',
+      description: 'List all topics from Resend. This tool is useful for getting topic IDs to use with other tools like send-email.',
+      inputSchema: {},
+    },
     async () => {
       console.error('Debug - Listing topics');
 
@@ -100,11 +106,14 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-topic',
-    'Get a topic by ID from Resend.',
     {
-      id: z.string().nonempty().describe('Topic ID'),
+      title: 'Get Topic',
+      description: 'Get a topic by ID from Resend.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Topic ID'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Getting topic with id: ${id}`);
@@ -135,22 +144,25 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'update-topic',
-    'Update an existing topic in Resend. Note: defaultSubscription cannot be modified after creation.',
     {
-      id: z.string().nonempty().describe('Topic ID'),
-      name: z
-        .string()
-        .nonempty()
-        .max(50)
-        .optional()
-        .describe('New topic name (max 50 characters)'),
-      description: z
-        .string()
-        .max(200)
-        .optional()
-        .describe('New topic description (max 200 characters)'),
+      title: 'Update Topic',
+      description: 'Update an existing topic in Resend. Note: defaultSubscription cannot be modified after creation.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Topic ID'),
+        name: z
+          .string()
+          .nonempty()
+          .max(50)
+          .optional()
+          .describe('New topic name (max 50 characters)'),
+        description: z
+          .string()
+          .max(200)
+          .optional()
+          .describe('New topic description (max 200 characters)'),
+      },
     },
     async ({ id, name, description }) => {
       console.error(`Debug - Updating topic with id: ${id}`);
@@ -176,11 +188,14 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'remove-topic',
-    'Remove a topic by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this topic. Reference the NAME of the topic when double-checking, and warn the user that removing a topic is irreversible. You may only use this tool if the user explicitly confirms they want to remove the topic after you double-check.',
     {
-      id: z.string().nonempty().describe('Topic ID'),
+      title: 'Remove Topic',
+      description: 'Remove a topic by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this topic. Reference the NAME of the topic when double-checking, and warn the user that removing a topic is irreversible. You may only use this tool if the user explicitly confirms they want to remove the topic after you double-check.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Topic ID'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Removing topic with id: ${id}`);
