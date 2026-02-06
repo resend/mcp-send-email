@@ -5,7 +5,6 @@ import { Resend } from 'resend';
 import packageJson from './package.json' with { type: 'json' };
 import {
   addApiKeyTools,
-  addAudienceTools,
   addBroadcastTools,
   addContactTools,
   addDomainTools,
@@ -51,7 +50,6 @@ const server = new McpServer({
 });
 
 addApiKeyTools(server, resend);
-addAudienceTools(server, resend);
 addBroadcastTools(server, resend, {
   senderEmailAddress,
   replierEmailAddresses,
