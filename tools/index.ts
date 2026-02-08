@@ -5,3 +5,4 @@ export * from './domains.js';
 export * from './emails.js';
 export * from './segments.js';
 export * from './topics.js';
+export * from './webhooks.js';

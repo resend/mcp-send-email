@@ -11,6 +11,7 @@ import {
   addEmailTools,
   addSegmentTools,
   addTopicTools,
+  addWebhookTools,
 } from './tools/index.js';
 
 // Parse command line arguments
@@ -59,6 +60,7 @@ addDomainTools(server, resend);
 addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
 addSegmentTools(server, resend);
 addTopicTools(server, resend);
+addWebhookTools(server, resend);
 
 async function main() {
   const transport = new StdioServerTransport();
