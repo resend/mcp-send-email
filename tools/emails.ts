@@ -459,4 +459,613 @@ export function addEmailTools(
       };
     },
   );
+
+  server.tool(
+    'list-received-emails',
+    "List received emails. Returns email metadata including sender, subject, and timestamps. Use 'get-received-email' with an email ID to retrieve full content. Don't bother telling the user the IDs unless they ask for them.",
+    {
+      limit: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe(
+          'Number of emails to retrieve. Default: 20, Max: 100, Min: 1',
+        ),
+      after: z
+        .string()
+        .optional()
+        .describe(
+          'Email ID after which to retrieve more emails (for forward pagination). Cannot be used with "before".',
+        ),
+      before: z
+        .string()
+        .optional()
+        .describe(
+          'Email ID before which to retrieve more emails (for backward pagination). Cannot be used with "after".',
+        ),
+    },
+    async ({ limit, after, before }) => {
+      if (after && before) {
+        throw new Error(
+          'Cannot use both "after" and "before" parameters. Use only one for pagination.',
+        );
+      }
+
+      console.error(
+        `Debug - Listing received emails with limit: ${limit}, after: ${after}, before: ${before}`,
+      );
+
+      const paginationOptions = after
+        ? { limit, after }
+        : before
+          ? { limit, before }
+          : limit !== undefined
+            ? { limit }
+            : undefined;
+
+      const response = await resend.emails.receiving.list(paginationOptions);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to list received emails: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const emails = response.data?.data ?? [];
+      const hasMore = response.data?.has_more ?? false;
+
+      if (emails.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'No received emails found.',
+            },
+          ],
+        };
+      }
+
+      const emailSummaries = emails
+        .map((email) => {
+          const to = Array.isArray(email.to) ? email.to.join(', ') : email.to;
+          const attachmentCount = email.attachments?.length ?? 0;
+          const attachmentInfo =
+            attachmentCount > 0 ? ` | Attachments: ${attachmentCount}` : '';
+          return `- From: ${email.from} | To: ${to} | Subject: "${email.subject}" | Received: ${email.created_at}${attachmentInfo} | ID: ${email.id}`;
+        })
+        .join('\n');
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Found ${emails.length} received email(s)${hasMore ? ' (more available)' : ''}:\n\n${emailSummaries}`,
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'get-received-email',
+    'Retrieve full details of a specific received email by ID, including HTML and plain text content, headers, and raw email download URL.',
+    {
+      id: z.string().describe('The received email ID to retrieve'),
+    },
+    async ({ id }) => {
+      console.error(`Debug - Getting received email with ID: ${id}`);
+
+      const response = await resend.emails.receiving.get(id);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to retrieve received email: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const email = response.data;
+
+      if (!email) {
+        throw new Error(`Received email with ID ${id} not found.`);
+      }
+
+      const to = Array.isArray(email.to) ? email.to.join(', ') : email.to;
+      const cc = email.cc
+        ? Array.isArray(email.cc)
+          ? email.cc.join(', ')
+          : email.cc
+        : null;
+      const bcc = email.bcc
+        ? Array.isArray(email.bcc)
+          ? email.bcc.join(', ')
+          : email.bcc
+        : null;
+      const replyTo = email.reply_to
+        ? Array.isArray(email.reply_to)
+          ? email.reply_to.join(', ')
+          : email.reply_to
+        : null;
+
+      let details = 'Received Email Details:\n';
+      details += `- ID: ${email.id}\n`;
+      details += `- From: ${email.from}\n`;
+      details += `- To: ${to}\n`;
+      if (cc) details += `- CC: ${cc}\n`;
+      if (bcc) details += `- BCC: ${bcc}\n`;
+      if (replyTo) details += `- Reply-To: ${replyTo}\n`;
+      details += `- Subject: ${email.subject}\n`;
+      details += `- Message ID: ${email.message_id}\n`;
+      details += `- Received: ${email.created_at}\n`;
+      if (email.raw) {
+        details += `- Raw Email URL: ${email.raw.download_url} (expires: ${email.raw.expires_at})\n`;
+      }
+      if (email.attachments && email.attachments.length > 0) {
+        details += `- Attachments: ${email.attachments.map((a) => `${a.filename} (${a.content_type}, ${a.size} bytes)`).join(', ')}\n`;
+      }
+      details += `\n--- Plain Text Content ---\n${email.text || '(none)'}\n`;
+      if (email.html) {
+        details += `\n--- HTML Content ---\n${email.html}\n`;
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: details,
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'list-received-email-attachments',
+    'List all attachments from a specific received email. Returns attachment metadata including filename, size, content type, and a time-limited download URL.',
+    {
+      emailId: z.string().describe('The received email ID'),
+      limit: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe(
+          'Number of attachments to retrieve. Default: 20, Max: 100, Min: 1',
+        ),
+      after: z
+        .string()
+        .optional()
+        .describe(
+          'Attachment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+        ),
+      before: z
+        .string()
+        .optional()
+        .describe(
+          'Attachment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+        ),
+    },
+    async ({ emailId, limit, after, before }) => {
+      if (after && before) {
+        throw new Error(
+          'Cannot use both "after" and "before" parameters. Use only one for pagination.',
+        );
+      }
+
+      console.error(
+        `Debug - Listing attachments for received email: ${emailId}`,
+      );
+
+      const paginationOptions = after
+        ? { emailId, limit, after }
+        : before
+          ? { emailId, limit, before }
+          : { emailId, limit };
+
+      const response =
+        await resend.emails.receiving.attachments.list(paginationOptions);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to list attachments: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const attachments = response.data?.data ?? [];
+      const hasMore = response.data?.has_more ?? false;
+
+      if (attachments.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'No attachments found for this email.',
+            },
+          ],
+        };
+      }
+
+      const attachmentSummaries = attachments
+        .map(
+          (att) =>
+            `- ${att.filename} | Type: ${att.content_type} | Size: ${att.size} bytes | Download: ${att.download_url} (expires: ${att.expires_at}) | ID: ${att.id}`,
+        )
+        .join('\n');
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Found ${attachments.length} attachment(s)${hasMore ? ' (more available)' : ''}:\n\n${attachmentSummaries}`,
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'get-received-email-attachment',
+    'Retrieve details of a specific attachment from a received email, including a time-limited download URL.',
+    {
+      emailId: z.string().describe('The received email ID'),
+      id: z.string().describe('The attachment ID'),
+    },
+    async ({ emailId, id }) => {
+      console.error(
+        `Debug - Getting attachment ${id} for received email: ${emailId}`,
+      );
+
+      const response = await resend.emails.receiving.attachments.get({
+        emailId,
+        id,
+      });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to retrieve attachment: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const attachment = response.data;
+
+      if (!attachment) {
+        throw new Error(`Attachment ${id} not found for email ${emailId}.`);
+      }
+
+      let details = 'Attachment Details:\n';
+      details += `- ID: ${attachment.id}\n`;
+      details += `- Filename: ${attachment.filename}\n`;
+      details += `- Content Type: ${attachment.content_type}\n`;
+      details += `- Size: ${attachment.size} bytes\n`;
+      details += `- Content Disposition: ${attachment.content_disposition}\n`;
+      if (attachment.content_id) {
+        details += `- Content ID: ${attachment.content_id}\n`;
+      }
+      details += `- Download URL: ${attachment.download_url}\n`;
+      details += `- Expires At: ${attachment.expires_at}\n`;
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: details,
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'cancel-email',
+    'Cancel a scheduled email that has not yet been sent. Only works for emails that were scheduled using the scheduledAt parameter.',
+    {
+      id: z.string().describe('The ID of the scheduled email to cancel'),
+    },
+    async ({ id }) => {
+      console.error(`Debug - Cancelling email with ID: ${id}`);
+
+      const response = await resend.emails.cancel(id);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to cancel email: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Email ${response.data?.id} has been cancelled successfully.`,
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'update-email',
+    'Reschedule a scheduled email by updating its scheduled send time. Only works for emails that were scheduled and have not yet been sent.',
+    {
+      id: z.string().describe('The ID of the scheduled email to update'),
+      scheduledAt: z
+        .string()
+        .describe(
+          'The new scheduled time in ISO 8601 format (e.g., "2024-08-05T11:52:01.858Z").',
+        ),
+    },
+    async ({ id, scheduledAt }) => {
+      console.error(
+        `Debug - Updating email ${id} with scheduledAt: ${scheduledAt}`,
+      );
+
+      const response = await resend.emails.update({ id, scheduledAt });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to update email: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Email ${response.data?.id} has been rescheduled to ${scheduledAt}.`,
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'list-sent-email-attachments',
+    'List all attachments from a specific sent email. Returns attachment metadata including filename, size, content type, and a time-limited download URL.',
+    {
+      emailId: z.string().describe('The sent email ID'),
+      limit: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe(
+          'Number of attachments to retrieve. Default: 20, Max: 100, Min: 1',
+        ),
+      after: z
+        .string()
+        .optional()
+        .describe(
+          'Attachment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+        ),
+      before: z
+        .string()
+        .optional()
+        .describe(
+          'Attachment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+        ),
+    },
+    async ({ emailId, limit, after, before }) => {
+      if (after && before) {
+        throw new Error(
+          'Cannot use both "after" and "before" parameters. Use only one for pagination.',
+        );
+      }
+
+      console.error(`Debug - Listing attachments for sent email: ${emailId}`);
+
+      const paginationOptions = after
+        ? { emailId, limit, after }
+        : before
+          ? { emailId, limit, before }
+          : { emailId, limit };
+
+      const response = await resend.emails.attachments.list(paginationOptions);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to list attachments: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const attachments = response.data?.data ?? [];
+      const hasMore = response.data?.has_more ?? false;
+
+      if (attachments.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'No attachments found for this email.',
+            },
+          ],
+        };
+      }
+
+      const attachmentSummaries = attachments
+        .map(
+          (att) =>
+            `- ${att.filename} | Type: ${att.content_type} | Size: ${att.size} bytes | Download: ${att.download_url} (expires: ${att.expires_at}) | ID: ${att.id}`,
+        )
+        .join('\n');
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Found ${attachments.length} attachment(s)${hasMore ? ' (more available)' : ''}:\n\n${attachmentSummaries}`,
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'get-sent-email-attachment',
+    'Retrieve details of a specific attachment from a sent email, including a time-limited download URL.',
+    {
+      emailId: z.string().describe('The sent email ID'),
+      id: z.string().describe('The attachment ID'),
+    },
+    async ({ emailId, id }) => {
+      console.error(
+        `Debug - Getting attachment ${id} for sent email: ${emailId}`,
+      );
+
+      const response = await resend.emails.attachments.get({
+        emailId,
+        id,
+      });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to retrieve attachment: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const attachment = response.data;
+
+      if (!attachment) {
+        throw new Error(`Attachment ${id} not found for email ${emailId}.`);
+      }
+
+      let details = 'Attachment Details:\n';
+      details += `- ID: ${attachment.id}\n`;
+      details += `- Filename: ${attachment.filename}\n`;
+      details += `- Content Type: ${attachment.content_type}\n`;
+      details += `- Size: ${attachment.size} bytes\n`;
+      details += `- Content Disposition: ${attachment.content_disposition}\n`;
+      if (attachment.content_id) {
+        details += `- Content ID: ${attachment.content_id}\n`;
+      }
+      details += `- Download URL: ${attachment.download_url}\n`;
+      details += `- Expires At: ${attachment.expires_at}\n`;
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: details,
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'send-batch-emails',
+    'Send multiple emails in a single API call (up to 100 emails). Each email in the batch has the same options as send-email.',
+    {
+      emails: z
+        .array(
+          z.object({
+            to: z
+              .string()
+              .email()
+              .array()
+              .min(1)
+              .max(50)
+              .describe('Array of recipient email addresses (1-50 recipients)'),
+            subject: z.string().describe('Email subject line'),
+            text: z.string().describe('Plain text email content'),
+            html: z.string().optional().describe('HTML email content'),
+            from: z
+              .string()
+              .optional()
+              .describe(
+                'Sender email address. Falls back to the configured default sender if not provided.',
+              ),
+            replyTo: z
+              .string()
+              .email()
+              .array()
+              .optional()
+              .describe('Reply-to email addresses'),
+            cc: z
+              .string()
+              .email()
+              .array()
+              .optional()
+              .describe('CC email addresses'),
+            bcc: z
+              .string()
+              .email()
+              .array()
+              .optional()
+              .describe('BCC email addresses'),
+            scheduledAt: z
+              .string()
+              .optional()
+              .describe(
+                "Optional schedule time. Uses natural language (e.g., 'tomorrow at 10am') or ISO 8601.",
+              ),
+            tags: z
+              .array(
+                z.object({
+                  name: z.string().describe('Tag name (key)'),
+                  value: z.string().describe('Tag value'),
+                }),
+              )
+              .optional()
+              .describe('Custom tags for tracking/analytics'),
+            topicId: z
+              .string()
+              .optional()
+              .describe('Topic ID for subscription-based sending'),
+          }),
+        )
+        .min(1)
+        .max(100)
+        .describe('Array of email objects to send (1-100 emails)'),
+    },
+    async ({ emails }) => {
+      console.error(`Debug - Sending batch of ${emails.length} emails`);
+
+      const emailRequests = emails.map((email) => {
+        const fromAddress = email.from ?? senderEmailAddress;
+        const replyToAddresses = email.replyTo ?? replierEmailAddresses;
+
+        if (typeof fromAddress !== 'string') {
+          throw new Error(
+            `from address must be provided for email to ${email.to.join(', ')}`,
+          );
+        }
+
+        const request: Record<string, unknown> = {
+          to: email.to,
+          subject: email.subject,
+          text: email.text,
+          from: fromAddress,
+          replyTo: replyToAddresses,
+        };
+
+        if (email.html) request.html = email.html;
+        if (email.cc) request.cc = email.cc;
+        if (email.bcc) request.bcc = email.bcc;
+        if (email.scheduledAt) request.scheduledAt = email.scheduledAt;
+        if (email.tags && email.tags.length > 0) request.tags = email.tags;
+        if (email.topicId) request.topicId = email.topicId;
+
+        return request;
+      });
+
+      const response = await resend.batch.send(
+        emailRequests as unknown as Parameters<typeof resend.batch.send>[0],
+      );
+
+      if (response.error) {
+        throw new Error(`Batch send failed: ${JSON.stringify(response.error)}`);
+      }
+
+      const ids = response.data?.data?.map((e) => e.id) ?? [];
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Batch sent successfully! ${ids.length} email(s) queued.\nIDs: ${ids.join(', ')}`,
+          },
+        ],
+      };
+    },
+  );
 }
