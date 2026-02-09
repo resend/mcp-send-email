@@ -4,11 +4,14 @@ import minimist from 'minimist';
 import { Resend } from 'resend';
 import packageJson from './package.json' with { type: 'json' };
 import {
-  addAudienceTools,
+  addApiKeyTools,
   addBroadcastTools,
   addContactTools,
+  addDomainTools,
   addEmailTools,
+  addSegmentTools,
   addTopicTools,
+  addWebhookTools,
 } from './tools/index.js';
 
 // Parse command line arguments
@@ -47,14 +50,17 @@ const server = new McpServer({
   version: packageJson.version,
 });
 
-addAudienceTools(server, resend);
+addApiKeyTools(server, resend);
 addBroadcastTools(server, resend, {
   senderEmailAddress,
   replierEmailAddresses,
 });
 addContactTools(server, resend);
+addDomainTools(server, resend);
 addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
+addSegmentTools(server, resend);
 addTopicTools(server, resend);
+addWebhookTools(server, resend);
 
 async function main() {
   const transport = new StdioServerTransport();
