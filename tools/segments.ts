@@ -3,11 +3,15 @@ import type { Resend } from 'resend';
 import { z } from 'zod';
 
 export function addSegmentTools(server: McpServer, resend: Resend) {
-  server.tool(
+  server.registerTool(
     'create-segment',
-    'Create a new segment in Resend. A segment is a group of contacts that can be used to target specific broadcasts.',
     {
-      name: z.string().nonempty().describe('Name for the new segment'),
+      title: 'Create Segment',
+      description:
+        'Create a new segment in Resend. A segment is a group of contacts that can be used to target specific broadcasts.',
+      inputSchema: {
+        name: z.string().nonempty().describe('Name for the new segment'),
+      },
     },
     async ({ name }) => {
       console.error(`Debug - Creating segment with name: ${name}`);
@@ -34,30 +38,39 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-segments',
-    "List all segments from Resend. This tool is useful for getting the segment ID to help the user find the segment they want to use for other tools. If you need a segment ID, you MUST use this tool to get all available segments and then ask the user to select the segment they want to use. Don't bother telling the user the IDs or creation dates unless they ask for them.",
     {
-      limit: z
-        .number()
-        .min(1)
-        .max(100)
-        .optional()
-        .describe(
-          'Number of segments to retrieve. Default: 20, Max: 100, Min: 1',
-        ),
-      after: z
-        .string()
-        .optional()
-        .describe(
-          'Segment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-        ),
-      before: z
-        .string()
-        .optional()
-        .describe(
-          'Segment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-        ),
+      title: 'List Segments',
+      description: `**Purpose:** List all segments in the account. Use to get segment IDs required by create-contact, create-broadcast, list-contacts.
+
+**NOT for:** Listing contacts inside a segment (use list-contacts with segmentId). Not for listing broadcasts (use list-broadcasts).
+
+**Returns:** For each segment: name, id, created_at. Use pagination (limit, after/before) for large lists.
+
+**When to use:** User says "show my segments", "what lists do I have?", or before create-contact/create-broadcast when segmentId is unknown.`,
+      inputSchema: {
+        limit: z
+          .number()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            'Number of segments to retrieve. Default: 20, Max: 100, Min: 1',
+          ),
+        after: z
+          .string()
+          .optional()
+          .describe(
+            'Segment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+          ),
+        before: z
+          .string()
+          .optional()
+          .describe(
+            'Segment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+          ),
+      },
     },
     async ({ limit, after, before }) => {
       if (after && before) {
@@ -122,11 +135,14 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-segment',
-    'Get a segment by ID from Resend.',
     {
-      id: z.string().nonempty().describe('Segment ID'),
+      title: 'Get Segment',
+      description: 'Get a segment by ID from Resend.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Segment ID'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Getting segment with id: ${id}`);
@@ -151,11 +167,15 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'remove-segment',
-    'Remove a segment by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this segment. Reference the NAME of the segment when double-checking, and warn the user that removing a segment is irreversible. You may only use this tool if the user explicitly confirms they want to remove the segment after you double-check.',
     {
-      id: z.string().nonempty().describe('Segment ID'),
+      title: 'Remove Segment',
+      description:
+        'Remove a segment by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this segment. Reference the NAME of the segment when double-checking, and warn the user that removing a segment is irreversible. You may only use this tool if the user explicitly confirms they want to remove the segment after you double-check.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Segment ID'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Removing segment with id: ${id}`);

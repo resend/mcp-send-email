@@ -44,7 +44,10 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       return {
         content: [
           { type: 'text', text: 'Contact property created successfully.' },
-          { type: 'text', text: `Key: ${key}\nType: ${type}\nID: ${created.id}` },
+          {
+            type: 'text',
+            text: `Key: ${key}\nType: ${type}\nID: ${created.id}`,
+          },
           {
             type: 'text',
             text: "Don't bother telling the user the ID unless they ask for it.",
@@ -98,8 +101,7 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
             ? { limit }
             : undefined;
 
-      const response =
-        await resend.contactProperties.list(paginationOptions);
+      const response = await resend.contactProperties.list(paginationOptions);
 
       if (response.error) {
         throw new Error(
@@ -147,18 +149,14 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
     'get-contact-property',
     'Get a contact property by ID from Resend.',
     {
-      contactPropertyId: z
-        .string()
-        .nonempty()
-        .describe('Contact property ID'),
+      contactPropertyId: z.string().nonempty().describe('Contact property ID'),
     },
     async ({ contactPropertyId }) => {
       console.error(
         `Debug - Getting contact property with id: ${contactPropertyId}`,
       );
 
-      const response =
-        await resend.contactProperties.get(contactPropertyId);
+      const response = await resend.contactProperties.get(contactPropertyId);
 
       if (response.error) {
         throw new Error(
@@ -182,10 +180,7 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
     'update-contact-property',
     'Update an existing contact property in Resend. Only the fallback value can be changed — the key and type cannot be modified after creation.',
     {
-      contactPropertyId: z
-        .string()
-        .nonempty()
-        .describe('Contact property ID'),
+      contactPropertyId: z.string().nonempty().describe('Contact property ID'),
       fallbackValue: z
         .union([z.string(), z.number(), z.null()])
         .describe(
@@ -225,18 +220,14 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
     'remove-contact-property',
     'Remove a contact property by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this contact property. Reference the KEY of the property when double-checking, and warn the user that removing a contact property is irreversible and will remove the property from all contacts. You may only use this tool if the user explicitly confirms they want to remove the contact property after you double-check.',
     {
-      contactPropertyId: z
-        .string()
-        .nonempty()
-        .describe('Contact property ID'),
+      contactPropertyId: z.string().nonempty().describe('Contact property ID'),
     },
     async ({ contactPropertyId }) => {
       console.error(
         `Debug - Removing contact property with id: ${contactPropertyId}`,
       );
 
-      const response =
-        await resend.contactProperties.remove(contactPropertyId);
+      const response = await resend.contactProperties.remove(contactPropertyId);
 
       if (response.error) {
         throw new Error(

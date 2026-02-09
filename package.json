@@ -6,14 +6,15 @@
   "type": "module",
   "scripts": {
     "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
-    "lint:fix": "biome check . --write",
-    "lint": "biome check ."
+    "inspector": "npx @modelcontextprotocol/inspector@latest",
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.2",
     "minimist": "1.2.8",
     "resend": "6.9.1",
-    "zod": "4.3.5"
+    "zod": "4.3.6"
   },
   "engines": {
     "node": ">=20"

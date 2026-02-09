@@ -24,49 +24,55 @@ function formatDnsRecords(
 }
 
 export function addDomainTools(server: McpServer, resend: Resend) {
-  server.tool(
+  server.registerTool(
     'create-domain',
-    'Create a new domain in Resend. Returns DNS records that must be configured with your DNS provider for verification. You MUST display the DNS records to the user so they can set them up.',
     {
-      name: z
-        .string()
-        .nonempty()
-        .describe('The domain name (e.g., example.com)'),
-      region: z
-        .enum(['us-east-1', 'eu-west-1', 'sa-east-1', 'ap-northeast-1'])
-        .optional()
-        .describe('Deployment region. Defaults to "us-east-1".'),
-      customReturnPath: z
-        .string()
-        .optional()
-        .describe('Subdomain for the Return-Path address. Defaults to "send".'),
-      openTracking: z
-        .boolean()
-        .optional()
-        .describe('Enable email open rate tracking.'),
-      clickTracking: z
-        .boolean()
-        .optional()
-        .describe('Enable click tracking in HTML emails.'),
-      tls: z
-        .enum(['opportunistic', 'enforced'])
-        .optional()
-        .describe(
-          'TLS mode. "opportunistic" attempts secure connection with fallback. "enforced" requires TLS or fails. Defaults to "opportunistic".',
-        ),
-      capabilities: z
-        .object({
-          sending: z
-            .enum(['enabled', 'disabled'])
-            .optional()
-            .describe('Enable or disable sending. Defaults to "enabled".'),
-          receiving: z
-            .enum(['enabled', 'disabled'])
-            .optional()
-            .describe('Enable or disable receiving. Defaults to "disabled".'),
-        })
-        .optional()
-        .describe('Domain capabilities configuration.'),
+      title: 'Create Domain',
+      description:
+        'Create a new domain in Resend. Returns DNS records that must be configured with your DNS provider for verification. You MUST display the DNS records to the user so they can set them up.',
+      inputSchema: {
+        name: z
+          .string()
+          .nonempty()
+          .describe('The domain name (e.g., example.com)'),
+        region: z
+          .enum(['us-east-1', 'eu-west-1', 'sa-east-1', 'ap-northeast-1'])
+          .optional()
+          .describe('Deployment region. Defaults to "us-east-1".'),
+        customReturnPath: z
+          .string()
+          .optional()
+          .describe(
+            'Subdomain for the Return-Path address. Defaults to "send".',
+          ),
+        openTracking: z
+          .boolean()
+          .optional()
+          .describe('Enable email open rate tracking.'),
+        clickTracking: z
+          .boolean()
+          .optional()
+          .describe('Enable click tracking in HTML emails.'),
+        tls: z
+          .enum(['opportunistic', 'enforced'])
+          .optional()
+          .describe(
+            'TLS mode. "opportunistic" attempts secure connection with fallback. "enforced" requires TLS or fails. Defaults to "opportunistic".',
+          ),
+        capabilities: z
+          .object({
+            sending: z
+              .enum(['enabled', 'disabled'])
+              .optional()
+              .describe('Enable or disable sending. Defaults to "enabled".'),
+            receiving: z
+              .enum(['enabled', 'disabled'])
+              .optional()
+              .describe('Enable or disable receiving. Defaults to "disabled".'),
+          })
+          .optional()
+          .describe('Domain capabilities configuration.'),
+      },
     },
     async ({
       name,
@@ -116,30 +122,34 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-domains',
-    "List all domains from Resend. Returns domain names, statuses, regions, and capabilities. Don't bother telling the user the IDs unless they ask for them.",
     {
-      limit: z
-        .number()
-        .min(1)
-        .max(100)
-        .optional()
-        .describe(
-          'Number of domains to retrieve. Default: 20, Max: 100, Min: 1',
-        ),
-      after: z
-        .string()
-        .optional()
-        .describe(
-          'Domain ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-        ),
-      before: z
-        .string()
-        .optional()
-        .describe(
-          'Domain ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-        ),
+      title: 'List Domains',
+      description:
+        "List all domains from Resend. Returns domain names, statuses, regions, and capabilities. Don't bother telling the user the IDs unless they ask for them.",
+      inputSchema: {
+        limit: z
+          .number()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            'Number of domains to retrieve. Default: 20, Max: 100, Min: 1',
+          ),
+        after: z
+          .string()
+          .optional()
+          .describe(
+            'Domain ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+          ),
+        before: z
+          .string()
+          .optional()
+          .describe(
+            'Domain ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+          ),
+      },
     },
     async ({ limit, after, before }) => {
       if (after && before) {
@@ -204,11 +214,15 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-domain',
-    'Get a domain by ID from Resend. Returns full domain details including DNS records needed for verification.',
     {
-      id: z.string().nonempty().describe('Domain ID'),
+      title: 'Get Domain',
+      description:
+        'Get a domain by ID from Resend. Returns full domain details including DNS records needed for verification.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Domain ID'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Getting domain with id: ${id}`);
@@ -237,40 +251,44 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'update-domain',
-    'Update an existing domain in Resend. Allows changing tracking settings, TLS mode, and capabilities.',
     {
-      id: z.string().nonempty().describe('Domain ID'),
-      clickTracking: z
-        .boolean()
-        .optional()
-        .describe('Track clicks within the body of each HTML email.'),
-      openTracking: z
-        .boolean()
-        .optional()
-        .describe('Track the open rate of each email.'),
-      tls: z
-        .enum(['opportunistic', 'enforced'])
-        .optional()
-        .describe(
-          'TLS mode. "opportunistic" attempts secure connection with fallback. "enforced" requires TLS or fails.',
-        ),
-      capabilities: z
-        .object({
-          sending: z
-            .enum(['enabled', 'disabled'])
-            .optional()
-            .describe('Enable or disable sending.'),
-          receiving: z
-            .enum(['enabled', 'disabled'])
-            .optional()
-            .describe('Enable or disable receiving.'),
-        })
-        .optional()
-        .describe(
-          'Domain capabilities. At least one capability must remain enabled.',
-        ),
+      title: 'Update Domain',
+      description:
+        'Update an existing domain in Resend. Allows changing tracking settings, TLS mode, and capabilities.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Domain ID'),
+        clickTracking: z
+          .boolean()
+          .optional()
+          .describe('Track clicks within the body of each HTML email.'),
+        openTracking: z
+          .boolean()
+          .optional()
+          .describe('Track the open rate of each email.'),
+        tls: z
+          .enum(['opportunistic', 'enforced'])
+          .optional()
+          .describe(
+            'TLS mode. "opportunistic" attempts secure connection with fallback. "enforced" requires TLS or fails.',
+          ),
+        capabilities: z
+          .object({
+            sending: z
+              .enum(['enabled', 'disabled'])
+              .optional()
+              .describe('Enable or disable sending.'),
+            receiving: z
+              .enum(['enabled', 'disabled'])
+              .optional()
+              .describe('Enable or disable receiving.'),
+          })
+          .optional()
+          .describe(
+            'Domain capabilities. At least one capability must remain enabled.',
+          ),
+      },
     },
     async ({ id, clickTracking, openTracking, tls, capabilities }) => {
       console.error(`Debug - Updating domain with id: ${id}`);
@@ -298,11 +316,15 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'remove-domain',
-    'Remove a domain by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this domain. Reference the NAME of the domain when double-checking, and warn the user that removing a domain is irreversible and will stop all email sending/receiving for that domain. You may only use this tool if the user explicitly confirms they want to remove the domain after you double-check.',
     {
-      id: z.string().nonempty().describe('Domain ID'),
+      title: 'Remove Domain',
+      description:
+        'Remove a domain by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this domain. Reference the NAME of the domain when double-checking, and warn the user that removing a domain is irreversible and will stop all email sending/receiving for that domain. You may only use this tool if the user explicitly confirms they want to remove the domain after you double-check.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Domain ID'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Removing domain with id: ${id}`);
@@ -324,11 +346,15 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'verify-domain',
-    'Trigger domain verification in Resend. This starts an asynchronous verification process that checks if the DNS records are correctly configured. The domain status will temporarily show as "pending" during verification.',
     {
-      id: z.string().nonempty().describe('Domain ID'),
+      title: 'Verify Domain',
+      description:
+        'Trigger domain verification in Resend. This starts an asynchronous verification process that checks if the DNS records are correctly configured. The domain status will temporarily show as "pending" during verification.',
+      inputSchema: {
+        id: z.string().nonempty().describe('Domain ID'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Verifying domain with id: ${id}`);
