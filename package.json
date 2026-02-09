@@ -6,8 +6,9 @@
   "type": "module",
   "scripts": {
     "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
-    "lint:fix": "biome check . --write",
-    "lint": "biome check ."
+    "inspector": "npx @modelcontextprotocol/inspector@latest",
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.2",

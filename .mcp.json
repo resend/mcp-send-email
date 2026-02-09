@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "resend": {
+      "command": "node",
+      "args": ["build/index.js"],
+      "env": {
+        "RESEND_API_KEY": "${RESEND_API_KEY}"
+      }
+    },
+    "resend-dev": {
+      "command": "node",
+      "args": ["build/index.js", "--key", "${RESEND_API_KEY}"],
+      "env": {}
+    }
+  }
+}
