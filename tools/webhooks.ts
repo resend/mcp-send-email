@@ -30,9 +30,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       description:
         'Create a new webhook in Resend. A webhook allows you to receive notifications at a specified URL when certain events occur (e.g. email.sent, email.delivered, email.bounced).',
       inputSchema: {
-        endpoint: z
-          .url()
-          .describe('The URL where webhook events will be sent'),
+        endpoint: z.url().describe('The URL where webhook events will be sent'),
         events: webhookEventSchema
           .array()
           .min(1)
