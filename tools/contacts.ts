@@ -8,21 +8,24 @@ import type {
 import { z } from 'zod';
 
 export function addContactTools(server: McpServer, resend: Resend) {
-  server.tool(
+  server.registerTool(
     'create-contact',
-    'Create a new contact in an audience.',
     {
-      audienceId: z
-        .string()
-        .nonempty()
-        .describe('Audience ID to add the contact to'),
-      email: z.string().email().describe('Contact email address'),
-      firstName: z.string().optional().describe('Contact first name'),
-      lastName: z.string().optional().describe('Contact last name'),
-      unsubscribed: z
-        .boolean()
-        .optional()
-        .describe('Whether the contact is unsubscribed'),
+      title: 'Create Contact',
+      description: 'Create a new contact in an audience.',
+      inputSchema: {
+        audienceId: z
+          .string()
+          .nonempty()
+          .describe('Audience ID to add the contact to'),
+        email: z.email().describe('Contact email address'),
+        firstName: z.string().optional().describe('Contact first name'),
+        lastName: z.string().optional().describe('Contact last name'),
+        unsubscribed: z
+          .boolean()
+          .optional()
+          .describe('Whether the contact is unsubscribed'),
+      },
     },
     async ({ audienceId, email, firstName, lastName, unsubscribed }) => {
       console.error(
@@ -53,11 +56,20 @@ export function addContactTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-contacts',
-    'List contacts for an audience. Use this to discover contact IDs or emails.',
     {
-      audienceId: z.string().nonempty().describe('Audience ID'),
+      title: 'List Contacts',
+      description: `**Purpose:** List contacts belonging to one audience (by audienceId). Use to discover who is in a list and get contact IDs/emails.
+
+**NOT for:** Listing audiences (use list-audiences). Not for listing sent emails (use list-emails) or broadcasts (use list-broadcasts).
+
+**Returns:** For each contact: id, email, first_name, last_name, unsubscribed, created_at.
+
+**When to use:** User asks "who's in this list?", "show contacts for X", "who did I add to this audience?" Requires audienceId — use list-audiences first if unknown.`,
+      inputSchema: {
+        audienceId: z.string().nonempty().describe('Audience ID'),
+      },
     },
     async ({ audienceId }) => {
       console.error(`Debug - Listing contacts for audience: ${audienceId}`);
@@ -112,13 +124,16 @@ export function addContactTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-contact',
-    'Get a contact by ID or email from an audience',
     {
-      audienceId: z.string().nonempty().describe('Audience ID'),
-      id: z.string().optional().describe('Contact ID'),
-      email: z.string().email().optional().describe('Contact email address'),
+      title: 'Get Contact',
+      description: 'Get a contact by ID or email from an audience.',
+      inputSchema: {
+        audienceId: z.string().nonempty().describe('Audience ID'),
+        id: z.string().optional().describe('Contact ID'),
+        email: z.email().optional().describe('Contact email address'),
+      },
     },
     async ({ audienceId, id, email }) => {
       console.error(
@@ -163,31 +178,34 @@ export function addContactTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'update-contact',
-    'Update a contact in an audience (by ID or email)',
     {
-      audienceId: z.string().nonempty().describe('Audience ID'),
-      id: z.string().optional().describe('Contact ID'),
-      email: z.string().email().optional().describe('Contact email address'),
-      firstName: z
-        .string()
-        .nullable()
-        .optional()
-        .describe(
-          "Contact first name. Pass `null` to remove the contact's first name.",
-        ),
-      lastName: z
-        .string()
-        .nullable()
-        .optional()
-        .describe(
-          "Contact last name. Pass `null` to remove the contact's last name.",
-        ),
-      unsubscribed: z
-        .boolean()
-        .optional()
-        .describe('Whether the contact is unsubscribed'),
+      title: 'Update Contact',
+      description: 'Update a contact in an audience (by ID or email).',
+      inputSchema: {
+        audienceId: z.string().nonempty().describe('Audience ID'),
+        id: z.string().optional().describe('Contact ID'),
+        email: z.email().optional().describe('Contact email address'),
+        firstName: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "Contact first name. Pass `null` to remove the contact's first name.",
+          ),
+        lastName: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "Contact last name. Pass `null` to remove the contact's last name.",
+          ),
+        unsubscribed: z
+          .boolean()
+          .optional()
+          .describe('Whether the contact is unsubscribed'),
+      },
     },
     async ({ audienceId, id, email, firstName, lastName, unsubscribed }) => {
       console.error(
@@ -228,13 +246,17 @@ export function addContactTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'remove-contact',
-    "Remove a contact from an audience (by ID or email). Before using this tool, you MUST double-check with the user that they want to remove this contact. Reference the contact's name (if present) and email address when double-checking, and warn the user that removing a contact is irreversible. You may only use this tool if the user explicitly confirms they want to remove the contact after you double-check.",
     {
-      audienceId: z.string().nonempty().describe('Audience ID'),
-      id: z.string().optional().describe('Contact ID'),
-      email: z.string().email().optional().describe('Contact email address'),
+      title: 'Remove Contact',
+      description:
+        "Remove a contact from an audience (by ID or email). Before using this tool, you MUST double-check with the user that they want to remove this contact. Reference the contact's name (if present) and email address when double-checking, and warn the user that removing a contact is irreversible. You may only use this tool if the user explicitly confirms they want to remove the contact after you double-check.",
+      inputSchema: {
+        audienceId: z.string().nonempty().describe('Audience ID'),
+        id: z.string().optional().describe('Contact ID'),
+        email: z.email().optional().describe('Contact email address'),
+      },
     },
     async ({ audienceId, id, email }) => {
       console.error(

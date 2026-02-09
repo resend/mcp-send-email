@@ -23,18 +23,19 @@ const webhookEventSchema = z.enum([
 ]);
 
 export function addWebhookTools(server: McpServer, resend: Resend) {
-  server.tool(
+  server.registerTool(
     'create-webhook',
-    'Create a new webhook in Resend. A webhook allows you to receive notifications at a specified URL when certain events occur (e.g. email.sent, email.delivered, email.bounced).',
     {
-      endpoint: z
-        .string()
-        .url()
-        .describe('The URL where webhook events will be sent'),
-      events: webhookEventSchema
-        .array()
-        .min(1)
-        .describe('Array of event types to subscribe to'),
+      title: 'Create Webhook',
+      description:
+        'Create a new webhook in Resend. A webhook allows you to receive notifications at a specified URL when certain events occur (e.g. email.sent, email.delivered, email.bounced).',
+      inputSchema: {
+        endpoint: z.url().describe('The URL where webhook events will be sent'),
+        events: webhookEventSchema
+          .array()
+          .min(1)
+          .describe('Array of event types to subscribe to'),
+      },
     },
     async ({ endpoint, events }) => {
       console.error(
@@ -66,10 +67,14 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-webhooks',
-    'List all webhooks from Resend. This tool is useful for getting webhook IDs and seeing which endpoints and events are configured.',
-    {},
+    {
+      title: 'List Webhooks',
+      description:
+        'List all webhooks from Resend. Use to get webhook IDs and see which endpoints and events are configured. Not for listing emails, segments, or broadcasts.',
+      inputSchema: {},
+    },
     async () => {
       console.error('Debug - Listing webhooks');
 
@@ -105,11 +110,14 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-webhook',
-    'Get a webhook by ID from Resend.',
     {
-      webhookId: z.string().nonempty().describe('Webhook ID'),
+      title: 'Get Webhook',
+      description: 'Get a webhook by ID from Resend.',
+      inputSchema: {
+        webhookId: z.string().nonempty().describe('Webhook ID'),
+      },
     },
     async ({ webhookId }) => {
       console.error(`Debug - Getting webhook with id: ${webhookId}`);
@@ -134,25 +142,28 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'update-webhook',
-    'Update an existing webhook in Resend. You can change the endpoint URL, subscribed events, or enable/disable the webhook.',
     {
-      webhookId: z.string().nonempty().describe('Webhook ID'),
-      endpoint: z
-        .string()
-        .url()
-        .optional()
-        .describe('New URL where webhook events will be sent'),
-      events: webhookEventSchema
-        .array()
-        .min(1)
-        .optional()
-        .describe('New array of event types to subscribe to'),
-      status: z
-        .enum(['enabled', 'disabled'])
-        .optional()
-        .describe('Webhook status'),
+      title: 'Update Webhook',
+      description:
+        'Update an existing webhook in Resend. You can change the endpoint URL, subscribed events, or enable/disable the webhook.',
+      inputSchema: {
+        webhookId: z.string().nonempty().describe('Webhook ID'),
+        endpoint: z
+          .url()
+          .optional()
+          .describe('New URL where webhook events will be sent'),
+        events: webhookEventSchema
+          .array()
+          .min(1)
+          .optional()
+          .describe('New array of event types to subscribe to'),
+        status: z
+          .enum(['enabled', 'disabled'])
+          .optional()
+          .describe('Webhook status'),
+      },
     },
     async ({ webhookId, endpoint, events, status }) => {
       console.error(`Debug - Updating webhook with id: ${webhookId}`);
@@ -182,11 +193,15 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'remove-webhook',
-    'Remove a webhook by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this webhook. Reference the ENDPOINT of the webhook when double-checking, and warn the user that removing a webhook is irreversible. You may only use this tool if the user explicitly confirms they want to remove the webhook after you double-check.',
     {
-      webhookId: z.string().nonempty().describe('Webhook ID'),
+      title: 'Remove Webhook',
+      description:
+        'Remove a webhook by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this webhook. Reference the ENDPOINT of the webhook when double-checking, and warn the user that removing a webhook is irreversible. You may only use this tool if the user explicitly confirms they want to remove the webhook after you double-check.',
+      inputSchema: {
+        webhookId: z.string().nonempty().describe('Webhook ID'),
+      },
     },
     async ({ webhookId }) => {
       console.error(`Debug - Removing webhook with id: ${webhookId}`);
