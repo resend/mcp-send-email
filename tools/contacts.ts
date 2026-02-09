@@ -10,31 +10,58 @@ import { z } from 'zod';
 export function addContactTools(server: McpServer, resend: Resend) {
   server.tool(
     'create-contact',
-    'Create a new contact in an audience.',
+    'Create a new contact in Resend. Optionally assign to segments and configure topic subscriptions.',
     {
-      audienceId: z
-        .string()
-        .nonempty()
-        .describe('Audience ID to add the contact to'),
       email: z.string().email().describe('Contact email address'),
       firstName: z.string().optional().describe('Contact first name'),
       lastName: z.string().optional().describe('Contact last name'),
       unsubscribed: z
         .boolean()
         .optional()
-        .describe('Whether the contact is unsubscribed'),
+        .describe(
+          'Whether the contact is unsubscribed from all broadcasts',
+        ),
+      properties: z
+        .record(z.string(), z.union([z.string(), z.number(), z.null()]))
+        .optional()
+        .describe(
+          'Custom property key-value pairs for the contact (e.g. { "company_name": "Acme" })',
+        ),
+      segmentIds: z
+        .array(z.string())
+        .optional()
+        .describe('Array of segment IDs to assign this contact to'),
+      topics: z
+        .array(
+          z.object({
+            id: z.string().describe('Topic ID'),
+            subscription: z
+              .enum(['opt_in', 'opt_out'])
+              .describe('Subscription preference for this topic'),
+          }),
+        )
+        .optional()
+        .describe('Array of topic subscription configurations'),
     },
-    async ({ audienceId, email, firstName, lastName, unsubscribed }) => {
-      console.error(
-        `Debug - Creating contact in audience: ${audienceId} email: ${email}`,
-      );
+    async ({
+      email,
+      firstName,
+      lastName,
+      unsubscribed,
+      properties,
+      segmentIds,
+      topics,
+    }) => {
+      console.error(`Debug - Creating contact with email: ${email}`);
 
       const response = await resend.contacts.create({
-        audienceId,
         email,
         firstName,
         lastName,
         unsubscribed,
+        properties,
+        segments: segmentIds?.map((id) => ({ id })),
+        topics,
       });
 
       if (response.error) {
@@ -48,6 +75,10 @@ export function addContactTools(server: McpServer, resend: Resend) {
         content: [
           { type: 'text', text: 'Contact created successfully.' },
           { type: 'text', text: `ID: ${created.id}` },
+          {
+            type: 'text',
+            text: "Don't bother telling the user the ID unless they ask for it.",
+          },
         ],
       };
     },
@@ -55,14 +86,55 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.tool(
     'list-contacts',
-    'List contacts for an audience. Use this to discover contact IDs or emails.',
+    "List contacts from Resend. Optionally filter by segment. Use this to discover contact IDs or emails. Don't bother telling the user the IDs, unsubscribe statuses, or creation dates unless they ask for them.",
     {
-      audienceId: z.string().nonempty().describe('Audience ID'),
+      segmentId: z
+        .string()
+        .optional()
+        .describe(
+          'Segment ID to filter by. If provided, only contacts in this segment will be returned.',
+        ),
+      limit: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe(
+          'Number of contacts to retrieve. Default: 20, Max: 100, Min: 1',
+        ),
+      after: z
+        .string()
+        .optional()
+        .describe(
+          'Contact ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+        ),
+      before: z
+        .string()
+        .optional()
+        .describe(
+          'Contact ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+        ),
     },
-    async ({ audienceId }) => {
-      console.error(`Debug - Listing contacts for audience: ${audienceId}`);
+    async ({ segmentId, limit, after, before }) => {
+      if (after && before) {
+        throw new Error(
+          'Cannot use both "after" and "before" parameters. Use only one for pagination.',
+        );
+      }
 
-      const response = await resend.contacts.list({ audienceId });
+      console.error(
+        `Debug - Listing contacts with segmentId: ${segmentId}, limit: ${limit}, after: ${after}, before: ${before}`,
+      );
+
+      const options: Record<string, unknown> = {};
+      if (segmentId) options.segmentId = segmentId;
+      if (limit !== undefined) options.limit = limit;
+      if (after) options.after = after;
+      if (before) options.before = before;
+
+      const response = await resend.contacts.list(
+        Object.keys(options).length > 0 ? options : undefined,
+      );
 
       if (response.error) {
         throw new Error(
@@ -70,12 +142,20 @@ export function addContactTools(server: McpServer, resend: Resend) {
         );
       }
 
-      const contacts = response.data.data;
+      const contacts = response.data?.data ?? [];
+      const hasMore = response.data?.has_more ?? false;
+
+      if (contacts.length === 0) {
+        return {
+          content: [{ type: 'text', text: 'No contacts found.' }],
+        };
+      }
+
       return {
         content: [
           {
             type: 'text',
-            text: `Found ${contacts.length} contact${contacts.length === 1 ? '' : 's'}${contacts.length === 0 ? '.' : ':'}`,
+            text: `Found ${contacts.length} contact${contacts.length === 1 ? '' : 's'}:`,
           },
           ...contacts.map(
             ({
@@ -99,14 +179,18 @@ export function addContactTools(server: McpServer, resend: Resend) {
                 .join('\n'),
             }),
           ),
-          ...(contacts.length === 0
-            ? []
-            : [
+          ...(hasMore
+            ? [
                 {
                   type: 'text' as const,
-                  text: "Don't bother telling the user the IDs, unsubscribe statuses, or creation dates unless they ask for them.",
+                  text: 'There are more contacts available. Use the "after" parameter with the last ID to retrieve more.',
                 },
-              ]),
+              ]
+            : []),
+          {
+            type: 'text' as const,
+            text: "Don't bother telling the user the IDs, unsubscribe statuses, or creation dates unless they ask for them.",
+          },
         ],
       };
     },
@@ -114,22 +198,21 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.tool(
     'get-contact',
-    'Get a contact by ID or email from an audience',
+    'Get a contact by ID or email from Resend.',
     {
-      audienceId: z.string().nonempty().describe('Audience ID'),
       id: z.string().optional().describe('Contact ID'),
       email: z.string().email().optional().describe('Contact email address'),
     },
-    async ({ audienceId, id, email }) => {
+    async ({ id, email }) => {
       console.error(
-        `Debug - Getting contact for audience: ${audienceId} id: ${id} email: ${email}`,
+        `Debug - Getting contact with id: ${id}, email: ${email}`,
       );
 
       let response: GetContactResponse;
       if (id) {
-        response = await resend.contacts.get({ audienceId, id });
+        response = await resend.contacts.get({ id });
       } else if (email) {
-        response = await resend.contacts.get({ audienceId, email });
+        response = await resend.contacts.get({ email });
       } else {
         throw new Error(
           'You must provide either `id` or `email` to get a contact.',
@@ -165,9 +248,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.tool(
     'update-contact',
-    'Update a contact in an audience (by ID or email)',
+    'Update a contact in Resend (by ID or email).',
     {
-      audienceId: z.string().nonempty().describe('Audience ID'),
       id: z.string().optional().describe('Contact ID'),
       email: z.string().email().optional().describe('Contact email address'),
       firstName: z
@@ -187,18 +269,24 @@ export function addContactTools(server: McpServer, resend: Resend) {
       unsubscribed: z
         .boolean()
         .optional()
-        .describe('Whether the contact is unsubscribed'),
+        .describe('Whether the contact is unsubscribed from all broadcasts'),
+      properties: z
+        .record(z.string(), z.union([z.string(), z.number(), z.null()]))
+        .optional()
+        .describe(
+          'Custom property key-value pairs to update (e.g. { "company_name": "Acme" })',
+        ),
     },
-    async ({ audienceId, id, email, firstName, lastName, unsubscribed }) => {
+    async ({ id, email, firstName, lastName, unsubscribed, properties }) => {
       console.error(
-        `Debug - Updating contact for audience: ${audienceId} id: ${id} email: ${email}`,
+        `Debug - Updating contact with id: ${id}, email: ${email}`,
       );
 
       const commonOptions = {
-        audienceId,
         firstName,
         lastName,
         unsubscribed,
+        properties,
       };
 
       let response: UpdateContactResponse;
@@ -223,6 +311,10 @@ export function addContactTools(server: McpServer, resend: Resend) {
         content: [
           { type: 'text', text: 'Contact updated successfully.' },
           { type: 'text', text: `ID: ${updated.id}` },
+          {
+            type: 'text',
+            text: "Don't bother telling the user the ID unless they ask for it.",
+          },
         ],
       };
     },
@@ -230,22 +322,21 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.tool(
     'remove-contact',
-    "Remove a contact from an audience (by ID or email). Before using this tool, you MUST double-check with the user that they want to remove this contact. Reference the contact's name (if present) and email address when double-checking, and warn the user that removing a contact is irreversible. You may only use this tool if the user explicitly confirms they want to remove the contact after you double-check.",
+    "Remove a contact from Resend (by ID or email). Before using this tool, you MUST double-check with the user that they want to remove this contact. Reference the contact's name (if present) and email address when double-checking, and warn the user that removing a contact is irreversible. You may only use this tool if the user explicitly confirms they want to remove the contact after you double-check.",
     {
-      audienceId: z.string().nonempty().describe('Audience ID'),
       id: z.string().optional().describe('Contact ID'),
       email: z.string().email().optional().describe('Contact email address'),
     },
-    async ({ audienceId, id, email }) => {
+    async ({ id, email }) => {
       console.error(
-        `Debug - Removing contact for audience: ${audienceId} id: ${id} email: ${email}`,
+        `Debug - Removing contact with id: ${id}, email: ${email}`,
       );
 
       let response: RemoveContactsResponse;
       if (id) {
-        response = await resend.contacts.remove({ audienceId, id });
+        response = await resend.contacts.remove({ id });
       } else if (email) {
-        response = await resend.contacts.remove({ audienceId, email });
+        response = await resend.contacts.remove({ email });
       } else {
         throw new Error(
           'You must provide either `id` or `email` to remove a contact.',
@@ -262,6 +353,356 @@ export function addContactTools(server: McpServer, resend: Resend) {
         content: [
           { type: 'text', text: 'Contact removed successfully.' },
           { type: 'text', text: `Contact: ${response.data.contact}` },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'add-contact-to-segment',
+    'Add a contact to a segment in Resend (by contact ID or email).',
+    {
+      contactId: z.string().optional().describe('Contact ID'),
+      email: z.string().email().optional().describe('Contact email address'),
+      segmentId: z.string().nonempty().describe('Segment ID to add the contact to'),
+    },
+    async ({ contactId, email, segmentId }) => {
+      console.error(
+        `Debug - Adding contact (id: ${contactId}, email: ${email}) to segment: ${segmentId}`,
+      );
+
+      let response;
+      if (contactId) {
+        response = await resend.contacts.segments.add({ contactId, segmentId });
+      } else if (email) {
+        response = await resend.contacts.segments.add({ email, segmentId });
+      } else {
+        throw new Error(
+          'You must provide either `contactId` or `email` to add a contact to a segment.',
+        );
+      }
+
+      if (response.error) {
+        throw new Error(
+          `Failed to add contact to segment: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      return {
+        content: [
+          { type: 'text', text: 'Contact added to segment successfully.' },
+          { type: 'text', text: `Segment ID: ${response.data.id}` },
+          {
+            type: 'text',
+            text: "Don't bother telling the user the ID unless they ask for it.",
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'remove-contact-from-segment',
+    'Remove a contact from a segment in Resend (by contact ID or email). Before using this tool, you MUST double-check with the user that they want to remove the contact from the segment.',
+    {
+      contactId: z.string().optional().describe('Contact ID'),
+      email: z.string().email().optional().describe('Contact email address'),
+      segmentId: z.string().nonempty().describe('Segment ID to remove the contact from'),
+    },
+    async ({ contactId, email, segmentId }) => {
+      console.error(
+        `Debug - Removing contact (id: ${contactId}, email: ${email}) from segment: ${segmentId}`,
+      );
+
+      let response;
+      if (contactId) {
+        response = await resend.contacts.segments.remove({ contactId, segmentId });
+      } else if (email) {
+        response = await resend.contacts.segments.remove({ email, segmentId });
+      } else {
+        throw new Error(
+          'You must provide either `contactId` or `email` to remove a contact from a segment.',
+        );
+      }
+
+      if (response.error) {
+        throw new Error(
+          `Failed to remove contact from segment: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      return {
+        content: [
+          { type: 'text', text: 'Contact removed from segment successfully.' },
+          { type: 'text', text: `Segment ID: ${response.data.id}` },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'list-contact-segments',
+    "List all segments a contact belongs to in Resend (by contact ID or email). Don't bother telling the user the IDs or creation dates unless they ask for them.",
+    {
+      contactId: z.string().optional().describe('Contact ID'),
+      email: z.string().email().optional().describe('Contact email address'),
+      limit: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe(
+          'Number of segments to retrieve. Default: 20, Max: 100, Min: 1',
+        ),
+      after: z
+        .string()
+        .optional()
+        .describe(
+          'Segment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+        ),
+      before: z
+        .string()
+        .optional()
+        .describe(
+          'Segment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+        ),
+    },
+    async ({ contactId, email, limit, after, before }) => {
+      if (after && before) {
+        throw new Error(
+          'Cannot use both "after" and "before" parameters. Use only one for pagination.',
+        );
+      }
+
+      if (!contactId && !email) {
+        throw new Error(
+          'You must provide either `contactId` or `email` to list contact segments.',
+        );
+      }
+
+      console.error(
+        `Debug - Listing segments for contact (id: ${contactId}, email: ${email})`,
+      );
+
+      const contactField = contactId
+        ? { contactId }
+        : { email: email! };
+
+      const paginationOptions = after
+        ? { limit, after }
+        : before
+          ? { limit, before }
+          : limit !== undefined
+            ? { limit }
+            : {};
+
+      const response = await resend.contacts.segments.list({
+        ...contactField,
+        ...paginationOptions,
+      });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to list contact segments: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const segments = response.data?.data ?? [];
+      const hasMore = response.data?.has_more ?? false;
+
+      if (segments.length === 0) {
+        return {
+          content: [{ type: 'text', text: 'Contact is not in any segments.' }],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Contact is in ${segments.length} segment${segments.length === 1 ? '' : 's'}:`,
+          },
+          ...segments.map(({ name, id, created_at }) => ({
+            type: 'text' as const,
+            text: `Name: ${name}\nID: ${id}\nCreated at: ${created_at}`,
+          })),
+          ...(hasMore
+            ? [
+                {
+                  type: 'text' as const,
+                  text: 'There are more segments available. Use the "after" parameter with the last ID to retrieve more.',
+                },
+              ]
+            : []),
+          {
+            type: 'text' as const,
+            text: "Don't bother telling the user the IDs or creation dates unless they ask for them.",
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'list-contact-topics',
+    "List all topic subscriptions for a contact in Resend (by contact ID or email). Don't bother telling the user the IDs unless they ask for them.",
+    {
+      id: z.string().optional().describe('Contact ID'),
+      email: z.string().email().optional().describe('Contact email address'),
+      limit: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe(
+          'Number of topics to retrieve. Default: 20, Max: 100, Min: 1',
+        ),
+      after: z
+        .string()
+        .optional()
+        .describe(
+          'Topic ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+        ),
+      before: z
+        .string()
+        .optional()
+        .describe(
+          'Topic ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+        ),
+    },
+    async ({ id, email, limit, after, before }) => {
+      if (after && before) {
+        throw new Error(
+          'Cannot use both "after" and "before" parameters. Use only one for pagination.',
+        );
+      }
+
+      if (!id && !email) {
+        throw new Error(
+          'You must provide either `id` or `email` to list contact topics.',
+        );
+      }
+
+      console.error(
+        `Debug - Listing topics for contact (id: ${id}, email: ${email})`,
+      );
+
+      const contactField = id ? { id } : { email: email! };
+
+      const paginationOptions = after
+        ? { limit, after }
+        : before
+          ? { limit, before }
+          : limit !== undefined
+            ? { limit }
+            : {};
+
+      const response = await resend.contacts.topics.list({
+        ...contactField,
+        ...paginationOptions,
+      });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to list contact topics: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const topics = response.data?.data ?? [];
+      const hasMore = response.data?.has_more ?? false;
+
+      if (topics.length === 0) {
+        return {
+          content: [
+            { type: 'text', text: 'Contact has no topic subscriptions.' },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Contact has ${topics.length} topic subscription${topics.length === 1 ? '' : 's'}:`,
+          },
+          ...topics.map(({ name, id, description, subscription }) => ({
+            type: 'text' as const,
+            text: [
+              `Name: ${name}`,
+              `Subscription: ${subscription}`,
+              description != null && `Description: ${description}`,
+              `ID: ${id}`,
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          })),
+          ...(hasMore
+            ? [
+                {
+                  type: 'text' as const,
+                  text: 'There are more topics available. Use the "after" parameter with the last ID to retrieve more.',
+                },
+              ]
+            : []),
+          {
+            type: 'text' as const,
+            text: "Don't bother telling the user the IDs unless they ask for them.",
+          },
+        ],
+      };
+    },
+  );
+
+  server.tool(
+    'update-contact-topics',
+    'Update topic subscriptions for a contact in Resend (by contact ID or email).',
+    {
+      id: z.string().optional().describe('Contact ID'),
+      email: z.string().email().optional().describe('Contact email address'),
+      topics: z
+        .array(
+          z.object({
+            id: z.string().describe('Topic ID'),
+            subscription: z
+              .enum(['opt_in', 'opt_out'])
+              .describe('Subscription preference for this topic'),
+          }),
+        )
+        .min(1)
+        .describe('Array of topic subscription configurations to update'),
+    },
+    async ({ id, email, topics }) => {
+      if (!id && !email) {
+        throw new Error(
+          'You must provide either `id` or `email` to update contact topics.',
+        );
+      }
+
+      console.error(
+        `Debug - Updating topics for contact (id: ${id}, email: ${email})`,
+      );
+
+      const contactField = id ? { id } : { email: email! };
+
+      const response = await resend.contacts.topics.update({
+        ...contactField,
+        topics,
+      });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to update contact topics: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      return {
+        content: [
+          { type: 'text', text: 'Contact topic subscriptions updated successfully.' },
+          { type: 'text', text: `Contact ID: ${response.data.id}` },
+          {
+            type: 'text',
+            text: "Don't bother telling the user the ID unless they ask for it.",
+          },
         ],
       };
     },
