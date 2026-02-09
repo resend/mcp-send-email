@@ -267,8 +267,6 @@ export function addEmailTools(
         emailRequest.topicId = topicId;
       }
 
-      console.error(`Email request: ${JSON.stringify(emailRequest)}`);
-
       const response = await resend.emails.send(emailRequest);
 
       if (response.error) {
@@ -394,7 +392,8 @@ export function addEmailTools(
     'get-email',
     {
       title: 'Get Email',
-      description: 'Retrieve full details of a specific sent transactional email by ID, including HTML and plain text content.',
+      description:
+        'Retrieve full details of a specific sent transactional email by ID, including HTML and plain text content.',
       inputSchema: {
         id: z.string().describe('The email ID to retrieve'),
       },
@@ -460,30 +459,37 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-received-emails',
-    "List received emails. Returns email metadata including sender, subject, and timestamps. Use 'get-received-email' with an email ID to retrieve full content. Don't bother telling the user the IDs unless they ask for them.",
     {
-      limit: z
-        .number()
-        .min(1)
-        .max(100)
-        .optional()
-        .describe(
-          'Number of emails to retrieve. Default: 20, Max: 100, Min: 1',
-        ),
-      after: z
-        .string()
-        .optional()
-        .describe(
-          'Email ID after which to retrieve more emails (for forward pagination). Cannot be used with "before".',
-        ),
-      before: z
-        .string()
-        .optional()
-        .describe(
-          'Email ID before which to retrieve more emails (for backward pagination). Cannot be used with "after".',
-        ),
+      title: 'List Received Emails',
+      description: `**Purpose:** List emails received (inbox) by your Resend receiving address. Use for "show my inbox", "what emails did I get?", "list incoming mail".
+
+**NOT for:** Listing emails you sent (use list-emails). Not for listing broadcasts (use list-broadcasts).
+
+**Returns:** Paginated metadata: from, to, subject, received time. Use get-received-email with an ID for full content.`,
+      inputSchema: {
+        limit: z
+          .number()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            'Number of emails to retrieve. Default: 20, Max: 100, Min: 1',
+          ),
+        after: z
+          .string()
+          .optional()
+          .describe(
+            'Email ID after which to retrieve more emails (for forward pagination). Cannot be used with "before".',
+          ),
+        before: z
+          .string()
+          .optional()
+          .describe(
+            'Email ID before which to retrieve more emails (for backward pagination). Cannot be used with "after".',
+          ),
+      },
     },
     async ({ limit, after, before }) => {
       if (after && before) {
@@ -547,11 +553,15 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-received-email',
-    'Retrieve full details of a specific received email by ID, including HTML and plain text content, headers, and raw email download URL.',
     {
-      id: z.string().describe('The received email ID to retrieve'),
+      title: 'Get Received Email',
+      description:
+        'Retrieve full details of a specific received email by ID, including HTML and plain text content, headers, and raw email download URL.',
+      inputSchema: {
+        id: z.string().describe('The received email ID to retrieve'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Getting received email with ID: ${id}`);
@@ -619,31 +629,35 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-received-email-attachments',
-    'List all attachments from a specific received email. Returns attachment metadata including filename, size, content type, and a time-limited download URL.',
     {
-      emailId: z.string().describe('The received email ID'),
-      limit: z
-        .number()
-        .min(1)
-        .max(100)
-        .optional()
-        .describe(
-          'Number of attachments to retrieve. Default: 20, Max: 100, Min: 1',
-        ),
-      after: z
-        .string()
-        .optional()
-        .describe(
-          'Attachment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-        ),
-      before: z
-        .string()
-        .optional()
-        .describe(
-          'Attachment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-        ),
+      title: 'List Received Email Attachments',
+      description:
+        'List all attachments from a specific received (inbox) email. Returns attachment metadata including filename, size, content type, and a time-limited download URL. Use for emails listed by list-received-emails.',
+      inputSchema: {
+        emailId: z.string().describe('The received email ID'),
+        limit: z
+          .number()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            'Number of attachments to retrieve. Default: 20, Max: 100, Min: 1',
+          ),
+        after: z
+          .string()
+          .optional()
+          .describe(
+            'Attachment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+          ),
+        before: z
+          .string()
+          .optional()
+          .describe(
+            'Attachment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+          ),
+      },
     },
     async ({ emailId, limit, after, before }) => {
       if (after && before) {
@@ -703,12 +717,16 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-received-email-attachment',
-    'Retrieve details of a specific attachment from a received email, including a time-limited download URL.',
     {
-      emailId: z.string().describe('The received email ID'),
-      id: z.string().describe('The attachment ID'),
+      title: 'Get Received Email Attachment',
+      description:
+        'Retrieve details of a specific attachment from a received email, including a time-limited download URL.',
+      inputSchema: {
+        emailId: z.string().describe('The received email ID'),
+        id: z.string().describe('The attachment ID'),
+      },
     },
     async ({ emailId, id }) => {
       console.error(
@@ -755,11 +773,15 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'cancel-email',
-    'Cancel a scheduled email that has not yet been sent. Only works for emails that were scheduled using the scheduledAt parameter.',
     {
-      id: z.string().describe('The ID of the scheduled email to cancel'),
+      title: 'Cancel Email',
+      description:
+        'Cancel a scheduled email that has not yet been sent. Only works for emails that were scheduled using the scheduledAt parameter.',
+      inputSchema: {
+        id: z.string().describe('The ID of the scheduled email to cancel'),
+      },
     },
     async ({ id }) => {
       console.error(`Debug - Cancelling email with ID: ${id}`);
@@ -783,16 +805,20 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'update-email',
-    'Reschedule a scheduled email by updating its scheduled send time. Only works for emails that were scheduled and have not yet been sent.',
     {
-      id: z.string().describe('The ID of the scheduled email to update'),
-      scheduledAt: z
-        .string()
-        .describe(
-          'The new scheduled time in ISO 8601 format (e.g., "2024-08-05T11:52:01.858Z").',
-        ),
+      title: 'Update Email',
+      description:
+        'Reschedule a scheduled email by updating its scheduled send time. Only works for emails that were scheduled and have not yet been sent.',
+      inputSchema: {
+        id: z.string().describe('The ID of the scheduled email to update'),
+        scheduledAt: z
+          .string()
+          .describe(
+            'The new scheduled time in ISO 8601 format (e.g., "2024-08-05T11:52:01.858Z").',
+          ),
+      },
     },
     async ({ id, scheduledAt }) => {
       console.error(
@@ -818,31 +844,35 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-sent-email-attachments',
-    'List all attachments from a specific sent email. Returns attachment metadata including filename, size, content type, and a time-limited download URL.',
     {
-      emailId: z.string().describe('The sent email ID'),
-      limit: z
-        .number()
-        .min(1)
-        .max(100)
-        .optional()
-        .describe(
-          'Number of attachments to retrieve. Default: 20, Max: 100, Min: 1',
-        ),
-      after: z
-        .string()
-        .optional()
-        .describe(
-          'Attachment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-        ),
-      before: z
-        .string()
-        .optional()
-        .describe(
-          'Attachment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-        ),
+      title: 'List Sent Email Attachments',
+      description:
+        'List all attachments from a specific sent email (from send-email or list-emails). Returns attachment metadata including filename, size, content type, and a time-limited download URL.',
+      inputSchema: {
+        emailId: z.string().describe('The sent email ID'),
+        limit: z
+          .number()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            'Number of attachments to retrieve. Default: 20, Max: 100, Min: 1',
+          ),
+        after: z
+          .string()
+          .optional()
+          .describe(
+            'Attachment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+          ),
+        before: z
+          .string()
+          .optional()
+          .describe(
+            'Attachment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+          ),
+      },
     },
     async ({ emailId, limit, after, before }) => {
       if (after && before) {
@@ -899,12 +929,16 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-sent-email-attachment',
-    'Retrieve details of a specific attachment from a sent email, including a time-limited download URL.',
     {
-      emailId: z.string().describe('The sent email ID'),
-      id: z.string().describe('The attachment ID'),
+      title: 'Get Sent Email Attachment',
+      description:
+        'Retrieve details of a specific attachment from a sent email, including a time-limited download URL.',
+      inputSchema: {
+        emailId: z.string().describe('The sent email ID'),
+        id: z.string().describe('The attachment ID'),
+      },
     },
     async ({ emailId, id }) => {
       console.error(
@@ -951,71 +985,69 @@ export function addEmailTools(
     },
   );
 
-  server.tool(
+  server.registerTool(
     'send-batch-emails',
-    'Send multiple emails in a single API call (up to 100 emails). Each email in the batch has the same options as send-email.',
     {
-      emails: z
-        .array(
-          z.object({
-            to: z
-              .string()
-              .email()
-              .array()
-              .min(1)
-              .max(50)
-              .describe('Array of recipient email addresses (1-50 recipients)'),
-            subject: z.string().describe('Email subject line'),
-            text: z.string().describe('Plain text email content'),
-            html: z.string().optional().describe('HTML email content'),
-            from: z
-              .string()
-              .optional()
-              .describe(
-                'Sender email address. Falls back to the configured default sender if not provided.',
-              ),
-            replyTo: z
-              .string()
-              .email()
-              .array()
-              .optional()
-              .describe('Reply-to email addresses'),
-            cc: z
-              .string()
-              .email()
-              .array()
-              .optional()
-              .describe('CC email addresses'),
-            bcc: z
-              .string()
-              .email()
-              .array()
-              .optional()
-              .describe('BCC email addresses'),
-            scheduledAt: z
-              .string()
-              .optional()
-              .describe(
-                "Optional schedule time. Uses natural language (e.g., 'tomorrow at 10am') or ISO 8601.",
-              ),
-            tags: z
-              .array(
-                z.object({
-                  name: z.string().describe('Tag name (key)'),
-                  value: z.string().describe('Tag value'),
-                }),
-              )
-              .optional()
-              .describe('Custom tags for tracking/analytics'),
-            topicId: z
-              .string()
-              .optional()
-              .describe('Topic ID for subscription-based sending'),
-          }),
-        )
-        .min(1)
-        .max(100)
-        .describe('Array of email objects to send (1-100 emails)'),
+      title: 'Send Batch Emails',
+      description: `**Purpose:** Send up to 100 transactional emails in one API call. Each item has the same fields as send-email (to, subject, text, from, etc.).
+
+**NOT for:** Sending one email (use send-email) or the same content to a segment (use create-broadcast + send-broadcast).
+
+**When to use:** User wants to send many individual emails in bulk (e.g. 50 password resets, 100 receipts). Not for one-to-many broadcasts.`,
+      inputSchema: {
+        emails: z
+          .array(
+            z.object({
+              to: z
+                .array(z.email())
+                .min(1)
+                .max(50)
+                .describe(
+                  'Array of recipient email addresses (1-50 recipients)',
+                ),
+              subject: z.string().describe('Email subject line'),
+              text: z.string().describe('Plain text email content'),
+              html: z.string().optional().describe('HTML email content'),
+              from: z
+                .email()
+                .optional()
+                .describe(
+                  'Sender email address. Falls back to the configured default sender if not provided.',
+                ),
+              replyTo: z
+                .array(z.email())
+                .optional()
+                .describe('Reply-to email addresses'),
+              cc: z.array(z.email()).optional().describe('CC email addresses'),
+              bcc: z
+                .array(z.email())
+                .optional()
+                .describe('BCC email addresses'),
+              scheduledAt: z
+                .string()
+                .optional()
+                .describe(
+                  "Optional schedule time. Uses natural language (e.g., 'tomorrow at 10am') or ISO 8601.",
+                ),
+              tags: z
+                .array(
+                  z.object({
+                    name: z.string().describe('Tag name (key)'),
+                    value: z.string().describe('Tag value'),
+                  }),
+                )
+                .optional()
+                .describe('Custom tags for tracking/analytics'),
+              topicId: z
+                .string()
+                .optional()
+                .describe('Topic ID for subscription-based sending'),
+            }),
+          )
+          .min(1)
+          .max(100)
+          .describe('Array of email objects to send (1-100 emails)'),
+      },
     },
     async ({ emails }) => {
       console.error(`Debug - Sending batch of ${emails.length} emails`);

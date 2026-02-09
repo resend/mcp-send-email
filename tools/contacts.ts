@@ -250,7 +250,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
     'remove-contact',
     {
       title: 'Remove Contact',
-      description: "Remove a contact from an audience (by ID or email). Before using this tool, you MUST double-check with the user that they want to remove this contact. Reference the contact's name (if present) and email address when double-checking, and warn the user that removing a contact is irreversible. You may only use this tool if the user explicitly confirms they want to remove the contact after you double-check.",
+      description:
+        "Remove a contact from an audience (by ID or email). Before using this tool, you MUST double-check with the user that they want to remove this contact. Reference the contact's name (if present) and email address when double-checking, and warn the user that removing a contact is irreversible. You may only use this tool if the user explicitly confirms they want to remove the contact after you double-check.",
       inputSchema: {
         audienceId: z.string().nonempty().describe('Audience ID'),
         id: z.string().optional().describe('Contact ID'),

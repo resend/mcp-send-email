@@ -7,7 +7,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     'create-topic',
     {
       title: 'Create Topic',
-      description: 'Create a new topic in Resend. Topics allow contacts to manage their subscription preferences for different types of emails.',
+      description:
+        'Create a new topic in Resend. Topics allow contacts to manage their subscription preferences for different types of emails.',
       inputSchema: {
         name: z
           .string()
@@ -59,7 +60,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     'list-topics',
     {
       title: 'List Topics',
-      description: 'List all topics from Resend. This tool is useful for getting topic IDs to use with other tools like send-email.',
+      description:
+        'List all topics from Resend. This tool is useful for getting topic IDs to use with other tools like send-email.',
       inputSchema: {},
     },
     async () => {
@@ -148,7 +150,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     'update-topic',
     {
       title: 'Update Topic',
-      description: 'Update an existing topic in Resend. Note: defaultSubscription cannot be modified after creation.',
+      description:
+        'Update an existing topic in Resend. Note: defaultSubscription cannot be modified after creation.',
       inputSchema: {
         id: z.string().nonempty().describe('Topic ID'),
         name: z
@@ -192,7 +195,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     'remove-topic',
     {
       title: 'Remove Topic',
-      description: 'Remove a topic by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this topic. Reference the NAME of the topic when double-checking, and warn the user that removing a topic is irreversible. You may only use this tool if the user explicitly confirms they want to remove the topic after you double-check.',
+      description:
+        'Remove a topic by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this topic. Reference the NAME of the topic when double-checking, and warn the user that removing a topic is irreversible. You may only use this tool if the user explicitly confirms they want to remove the topic after you double-check.',
       inputSchema: {
         id: z.string().nonempty().describe('Topic ID'),
       },

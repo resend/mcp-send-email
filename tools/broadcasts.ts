@@ -302,7 +302,8 @@ export function addBroadcastTools(
     'remove-broadcast',
     {
       title: 'Remove Broadcast',
-      description: 'Remove a broadcast by ID. Before using this tool, you MUST double-check with the user that they want to remove this broadcast. Reference the NAME of the broadcast when double-checking, and warn the user that removing a broadcast is irreversible. You may only use this tool if the user explicitly confirms they want to remove the broadcast after you double-check.',
+      description:
+        'Remove a broadcast by ID. Before using this tool, you MUST double-check with the user that they want to remove this broadcast. Reference the NAME of the broadcast when double-checking, and warn the user that removing a broadcast is irreversible. You may only use this tool if the user explicitly confirms they want to remove the broadcast after you double-check.',
       inputSchema: {
         id: z.string().nonempty().describe('Broadcast ID'),
       },
