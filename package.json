@@ -2,10 +2,10 @@
   "name": "send-email",
   "version": "1.1.0",
   "license": "MIT",
-  "module": "build/index.js",
+  "module": "build/src/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "build": "tsc && node -e \"require('fs').chmodSync('build/src/index.js', '755')\"",
     "inspector": "npx @modelcontextprotocol/inspector@latest",
     "lint": "biome check .",
     "lint:fix": "biome check . --write"

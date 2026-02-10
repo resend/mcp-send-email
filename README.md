@@ -14,6 +14,8 @@ Built with:
 
 ## Features
 
+- **Transport:** stdio (for Cursor, Claude Desktop, MCP Inspector)
+- **CLI:** `--key`, `--sender`, `--reply-to`, `--help`; env vars supported
 - Send plain text and HTML emails
 - Schedule emails for future delivery
 - Add CC and BCC recipients
@@ -64,19 +66,15 @@ Add the following config:
   "mcpServers": {
     "resend": {
       "type": "command",
-      "command": "node ABSOLUTE_PATH_TO_MCP_SEND_EMAIL_PROJECT/build/index.js --key=YOUR_RESEND_API_KEY"
+      "command": "node ABSOLUTE_PATH_TO_MCP_SEND_EMAIL_PROJECT/build/src/index.js --key=YOUR_RESEND_API_KEY"
     }
   }
 }
 ```
 
-You can get the absolute path to your build script by right-clicking on the `/build/index.js` file in Cursor and selecting `Copy Path`.
+You can get the absolute path to your build script by right-clicking on `build/src/index.js` in Cursor and selecting `Copy Path`.
 
-**Possible arguments**
-
-- `--key`: Your Resend API key (required)
-- `--sender`: Your sender email address from a verified domain (optional)
-- `--reply-to`: Your reply-to email address (optional)
+**CLI options:** `--key`, `--sender`, `--reply-to`, `--help`. Or set `RESEND_API_KEY`, `SENDER_EMAIL_ADDRESS`, `REPLY_TO_EMAIL_ADDRESSES` in the environment.
 
 > [!NOTE]
 > If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.
@@ -106,7 +104,7 @@ Add the following config:
     "resend": {
       "command": "node",
       "args": [
-        "ABSOLUTE_PATH_TO_MCP_SEND_EMAIL_PROJECT/build/index.js"
+        "ABSOLUTE_PATH_TO_MCP_SEND_EMAIL_PROJECT/build/src/index.js"
       ],
       "env": {
         "RESEND_API_KEY": "YOUR_RESEND_API_KEY",
@@ -116,13 +114,13 @@ Add the following config:
 }
 ```
 
-You can get the absolute path to your build script by right-clicking on the `/build/index.js` file in your IDE and selecting `Copy Path`.
+You can get the absolute path to your build script by right-clicking on `build/src/index.js` in your IDE and selecting `Copy Path`.
 
 **Possible environment variables**
 
 - `RESEND_API_KEY`: Your Resend API key (required)
 - `SENDER_EMAIL_ADDRESS`: Your sender email address from a verified domain (optional)
-- `REPLY_TO_EMAIL_ADDRESS`: Your reply-to email address (optional)
+- `REPLY_TO_EMAIL_ADDRESSES`: Reply-to address(es), comma-separated (optional)
 
 > [!NOTE]
 > If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.
@@ -154,6 +152,6 @@ Chat with Claude and tell it to send you an email using the `resend` tool.
 3. **In the Inspector UI** (browser):
    - Choose **stdio** (launch a process).
    - **Command:** `node`
-   - **Args:** `build/index.js` (or the full path to `build/index.js`)
+   - **Args:** `build/src/index.js` (or the full path to `build/src/index.js`)
    - **Env:** `RESEND_API_KEY=re_your_key_here` (or leave blank if you already exported it in the same terminal).
    - Click **Connect**, then use "List tools" to verify the server is working.
