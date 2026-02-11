@@ -159,7 +159,10 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       title: 'Get Contact Property',
       description: 'Get a contact property by ID from Resend.',
       inputSchema: {
-        contactPropertyId: z.string().nonempty().describe('Contact property ID'),
+        contactPropertyId: z
+          .string()
+          .nonempty()
+          .describe('Contact property ID'),
       },
     },
     async ({ contactPropertyId }) => {
@@ -194,7 +197,10 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       description:
         'Update an existing contact property in Resend. Only the fallback value can be changed — the key and type cannot be modified after creation.',
       inputSchema: {
-        contactPropertyId: z.string().nonempty().describe('Contact property ID'),
+        contactPropertyId: z
+          .string()
+          .nonempty()
+          .describe('Contact property ID'),
         fallbackValue: z
           .union([z.string(), z.number(), z.null()])
           .describe(
@@ -238,7 +244,10 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       description:
         'Remove a contact property by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this contact property. Reference the KEY of the property when double-checking, and warn the user that removing a contact property is irreversible and will remove the property from all contacts. You may only use this tool if the user explicitly confirms they want to remove the contact property after you double-check.',
       inputSchema: {
-        contactPropertyId: z.string().nonempty().describe('Contact property ID'),
+        contactPropertyId: z
+          .string()
+          .nonempty()
+          .describe('Contact property ID'),
       },
     },
     async ({ contactPropertyId }) => {
