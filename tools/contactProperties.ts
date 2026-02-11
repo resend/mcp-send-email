@@ -3,25 +3,29 @@ import type { Resend } from 'resend';
 import { z } from 'zod';
 
 export function addContactPropertyTools(server: McpServer, resend: Resend) {
-  server.tool(
+  server.registerTool(
     'create-contact-property',
-    'Create a new contact property in Resend. A contact property is a custom attribute (e.g. "company_name", "plan_tier") that can be attached to contacts.',
     {
-      key: z
-        .string()
-        .nonempty()
-        .describe(
-          'The property key. Max 50 characters, only alphanumeric characters and underscores allowed.',
-        ),
-      type: z
-        .enum(['string', 'number'])
-        .describe('The property type: "string" or "number".'),
-      fallbackValue: z
-        .union([z.string(), z.number()])
-        .optional()
-        .describe(
-          'Default value when the property is not set for a contact. Must match the specified type.',
-        ),
+      title: 'Create Contact Property',
+      description:
+        'Create a new contact property in Resend. A contact property is a custom attribute (e.g. "company_name", "plan_tier") that can be attached to contacts.',
+      inputSchema: {
+        key: z
+          .string()
+          .nonempty()
+          .describe(
+            'The property key. Max 50 characters, only alphanumeric characters and underscores allowed.',
+          ),
+        type: z
+          .enum(['string', 'number'])
+          .describe('The property type: "string" or "number".'),
+        fallbackValue: z
+          .union([z.string(), z.number()])
+          .optional()
+          .describe(
+            'Default value when the property is not set for a contact. Must match the specified type.',
+          ),
+      },
     },
     async ({ key, type, fallbackValue }) => {
       console.error(
@@ -57,30 +61,34 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-contact-properties',
-    "List all contact properties from Resend. This tool is useful for getting property IDs and seeing which custom attributes are configured. If you need a contact property ID, you MUST use this tool to get all available properties and then ask the user to select the one they want. Don't bother telling the user the IDs or creation dates unless they ask for them.",
     {
-      limit: z
-        .number()
-        .min(1)
-        .max(100)
-        .optional()
-        .describe(
-          'Number of contact properties to retrieve. Default: 20, Max: 100, Min: 1',
-        ),
-      after: z
-        .string()
-        .optional()
-        .describe(
-          'Contact property ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-        ),
-      before: z
-        .string()
-        .optional()
-        .describe(
-          'Contact property ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-        ),
+      title: 'List Contact Properties',
+      description:
+        "List all contact properties from Resend. This tool is useful for getting property IDs and seeing which custom attributes are configured. If you need a contact property ID, you MUST use this tool to get all available properties and then ask the user to select the one they want. Don't bother telling the user the IDs or creation dates unless they ask for them.",
+      inputSchema: {
+        limit: z
+          .number()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            'Number of contact properties to retrieve. Default: 20, Max: 100, Min: 1',
+          ),
+        after: z
+          .string()
+          .optional()
+          .describe(
+            'Contact property ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+          ),
+        before: z
+          .string()
+          .optional()
+          .describe(
+            'Contact property ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+          ),
+      },
     },
     async ({ limit, after, before }) => {
       if (after && before) {
@@ -145,11 +153,14 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-contact-property',
-    'Get a contact property by ID from Resend.',
     {
-      contactPropertyId: z.string().nonempty().describe('Contact property ID'),
+      title: 'Get Contact Property',
+      description: 'Get a contact property by ID from Resend.',
+      inputSchema: {
+        contactPropertyId: z.string().nonempty().describe('Contact property ID'),
+      },
     },
     async ({ contactPropertyId }) => {
       console.error(
@@ -176,16 +187,20 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'update-contact-property',
-    'Update an existing contact property in Resend. Only the fallback value can be changed — the key and type cannot be modified after creation.',
     {
-      contactPropertyId: z.string().nonempty().describe('Contact property ID'),
-      fallbackValue: z
-        .union([z.string(), z.number(), z.null()])
-        .describe(
-          'New default value for the property. Pass null to remove the fallback value. Must match the property type.',
-        ),
+      title: 'Update Contact Property',
+      description:
+        'Update an existing contact property in Resend. Only the fallback value can be changed — the key and type cannot be modified after creation.',
+      inputSchema: {
+        contactPropertyId: z.string().nonempty().describe('Contact property ID'),
+        fallbackValue: z
+          .union([z.string(), z.number(), z.null()])
+          .describe(
+            'New default value for the property. Pass null to remove the fallback value. Must match the property type.',
+          ),
+      },
     },
     async ({ contactPropertyId, fallbackValue }) => {
       console.error(
@@ -216,11 +231,15 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'remove-contact-property',
-    'Remove a contact property by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this contact property. Reference the KEY of the property when double-checking, and warn the user that removing a contact property is irreversible and will remove the property from all contacts. You may only use this tool if the user explicitly confirms they want to remove the contact property after you double-check.',
     {
-      contactPropertyId: z.string().nonempty().describe('Contact property ID'),
+      title: 'Remove Contact Property',
+      description:
+        'Remove a contact property by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this contact property. Reference the KEY of the property when double-checking, and warn the user that removing a contact property is irreversible and will remove the property from all contacts. You may only use this tool if the user explicitly confirms they want to remove the contact property after you double-check.',
+      inputSchema: {
+        contactPropertyId: z.string().nonempty().describe('Contact property ID'),
+      },
     },
     async ({ contactPropertyId }) => {
       console.error(
