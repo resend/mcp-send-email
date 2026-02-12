@@ -119,7 +119,7 @@ pnpm run build
       "command": "node",
       "args": ["ABSOLUTE_PATH_TO_PROJECT/dist/index.js"],
       "env": {
-        "RESEND_API_KEY": "YOUR_RESEND_API_KEY"
+        "RESEND_API_KEY": "re_xxxxxxxxx"
       }
     }
   }
