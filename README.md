@@ -1,6 +1,6 @@
 # Email sending MCP 💌
 
-[![smithery badge](https://smithery.ai/badge/@resend/mcp-send-email)](https://smithery.ai/server/@resend/mcp-send-email)
+[![smithery badge](https://smithery.ai/badge/@resend/resend-mcp)](https://smithery.ai/server/@resend/resend-mcp)
 
 This is a simple MCP server that sends emails using Resend's API. Why? Now you can let Cursor or Claude Desktop compose emails for you and send it right away without having to copy and paste the email content.
 
@@ -14,12 +14,15 @@ Built with:
 
 ## Features
 
-- Send plain text and HTML emails
-- Schedule emails for future delivery
-- Add CC and BCC recipients
-- Configure reply-to addresses
-- Customizable sender email (requires verification)
-- List Resend audiences
+- **Emails** — Send, list, get, cancel, update, and send batch emails. Supports plain text, HTML, attachments, CC/BCC, reply-to, scheduling, and tags. Manage sent and received email attachments.
+- **Contacts** — Create, list, get, update, and remove contacts. Manage contact segment memberships and topic subscriptions.
+- **Broadcasts** — Create, send, list, get, update, and remove broadcast emails to audiences.
+- **Domains** — Create, list, get, update, remove, and verify sender domains.
+- **API Keys** — Create, list, and remove API keys.
+- **Segments** — Create, list, get, and remove audience segments.
+- **Topics** — Create, list, get, update, and remove topics.
+- **Contact Properties** — Create, list, get, update, and remove custom contact properties.
+- **Webhooks** — Create, list, get, update, and remove webhooks.
 
 ## Demo
 
@@ -32,7 +35,7 @@ Currently, you must build the project locally to use this MCP server. Then add t
 1. Clone this project locally.
 
 ```
-git clone https://github.com/resend/mcp-send-email.git
+git clone https://github.com/resend/resend-mcp.git
 ```
 
 2. Build the project
