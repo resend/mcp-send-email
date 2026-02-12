@@ -50,7 +50,7 @@ Add the following config:
       "type": "command",
       "command": "npx -y resend-mcp",
       "env": {
-        "RESEND_API_KEY": "YOUR_RESEND_API_KEY"
+        "RESEND_API_KEY": "re_xxxxxxxxx"
       }
     }
   }
