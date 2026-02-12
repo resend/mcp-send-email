@@ -6,6 +6,7 @@ import packageJson from './package.json' with { type: 'json' };
 import {
   addApiKeyTools,
   addBroadcastTools,
+  addContactPropertyTools,
   addContactTools,
   addDomainTools,
   addEmailTools,
@@ -55,6 +56,7 @@ addBroadcastTools(server, resend, {
   senderEmailAddress,
   replierEmailAddresses,
 });
+addContactPropertyTools(server, resend);
 addContactTools(server, resend);
 addDomainTools(server, resend);
 addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
