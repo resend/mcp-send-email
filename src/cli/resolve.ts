@@ -14,7 +14,7 @@ export function resolveConfig(
     env.RESEND_API_KEY ??
     null;
 
-  if (!apiKey || typeof apiKey !== 'string' || !apiKey.trim()) {
+  if (!apiKey || !apiKey.trim()) {
     return {
       ok: false,
       error:

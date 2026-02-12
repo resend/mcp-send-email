@@ -4,9 +4,9 @@ import { resolveConfig } from './resolve.js';
 import type { CliConfig } from './types.js';
 
 /**
- * Parse argv and env into config. Prints help or error and exits if invalid.
+ * Resolve config from argv and env, or print help/error and exit.
  */
-export function parseCli(
+export function resolveConfigOrExit(
   argv: ParsedArgs,
   env: NodeJS.ProcessEnv = process.env,
 ): CliConfig {
