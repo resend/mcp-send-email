@@ -8,12 +8,14 @@ function parsePort(parsed: ParsedArgs, env: NodeJS.ProcessEnv): number {
     typeof parsed.port === 'string' && parsed.port.trim() !== ''
       ? Number.parseInt(parsed.port.trim(), 10)
       : NaN;
-  if (Number.isInteger(fromArg) && fromArg > 0 && fromArg < 65536) return fromArg;
+  if (Number.isInteger(fromArg) && fromArg > 0 && fromArg < 65536)
+    return fromArg;
   const fromEnv =
     typeof env.MCP_PORT === 'string' && env.MCP_PORT.trim() !== ''
       ? Number.parseInt(env.MCP_PORT.trim(), 10)
       : NaN;
-  if (Number.isInteger(fromEnv) && fromEnv > 0 && fromEnv < 65536) return fromEnv;
+  if (Number.isInteger(fromEnv) && fromEnv > 0 && fromEnv < 65536)
+    return fromEnv;
   return DEFAULT_HTTP_PORT;
 }
 

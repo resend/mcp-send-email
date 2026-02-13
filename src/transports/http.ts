@@ -31,32 +31,39 @@ export async function runHttp(
 
   const app = createMcpExpressApp();
 
-  app.all('/mcp', async (req: IncomingMessage & { body?: unknown }, res: ServerResponse) => {
-    const sessionId = req.headers['mcp-session-id'] as string | undefined;
-    let transport: StreamableHTTPServerTransport | undefined;
+  app.all(
+    '/mcp',
+    async (req: IncomingMessage & { body?: unknown }, res: ServerResponse) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+      let transport: StreamableHTTPServerTransport | undefined;
 
-    if (sessionId && sessions[sessionId]) {
-      transport = sessions[sessionId];
-    } else if (!sessionId && req.method === 'POST' && isInitializeRequest(req.body)) {
-      transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-        onsessioninitialized: (sid) => {
-          sessions[sid] = transport!;
-        },
-      });
-      transport.onclose = () => {
-        const sid = transport!.sessionId;
-        if (sid && sessions[sid]) delete sessions[sid];
-      };
-      const server = getServer();
-      await server.connect(transport);
-    } else {
-      sendJsonRpcError(res, 'Bad Request: No valid session ID provided');
-      return;
-    }
+      if (sessionId && sessions[sessionId]) {
+        transport = sessions[sessionId];
+      } else if (
+        !sessionId &&
+        req.method === 'POST' &&
+        isInitializeRequest(req.body)
+      ) {
+        transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (sid) => {
+            sessions[sid] = transport!;
+          },
+        });
+        transport.onclose = () => {
+          const sid = transport!.sessionId;
+          if (sid && sessions[sid]) delete sessions[sid];
+        };
+        const server = getServer();
+        await server.connect(transport);
+      } else {
+        sendJsonRpcError(res, 'Bad Request: No valid session ID provided');
+        return;
+      }
 
-    await transport.handleRequest(req, res, req.body);
-  });
+      await transport.handleRequest(req, res, req.body);
+    },
+  );
 
   return new Promise((resolve, reject) => {
     const server = app.listen(port, () => {

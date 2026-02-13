@@ -137,7 +137,10 @@ describe('resolveConfig', () => {
 
   it('--port overrides MCP_PORT', () => {
     const parsed = parseArgs(['--key', 're_x', '--http', '--port', '4000']);
-    const result = resolveConfig(parsed, { RESEND_API_KEY: 're_x', MCP_PORT: '9000' });
+    const result = resolveConfig(parsed, {
+      RESEND_API_KEY: 're_x',
+      MCP_PORT: '9000',
+    });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.config.port).toBe(4000);
