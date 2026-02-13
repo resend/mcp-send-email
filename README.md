@@ -111,6 +111,8 @@ pnpm run build
 
 ### Testing with MCP Inspector
 
+> **Note:** Make sure you've built the project first (see [Local Development](#local-development) section above).
+
 1. Set your API key:
 
    ```bash
@@ -123,4 +125,10 @@ pnpm run build
    pnpm inspector
    ```
 
-3. In the Inspector UI, connect with command `node` and args `dist/index.js`, then use "List tools" to verify.
+3. In the browser (Inspector UI):
+
+   - Choose **stdio** (launch a process).
+   - **Command:** `node`
+   - **Args:** `dist/index.js` (or the full path to `dist/index.js`)
+   - **Env:** `RESEND_API_KEY=re_your_key_here` (or leave blank if you already exported it in the same terminal).
+   - Click **Connect**, then use "List tools" to verify the server is working.
