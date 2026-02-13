@@ -93,6 +93,47 @@ You can pass additional arguments to configure the server:
 
 Environment variables:
 
+Add the following config:
+
+> [!NOTE]
+> If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.
+
+## Local Development
+
+1. Clone this project and build:
+
+```
+git clone https://github.com/resend/resend-mcp.git
+pnpm install
+pnpm run build
+```
+
+2. To use the local build in Cursor or Claude Desktop, replace the `npx` command with the path to your local build:
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "command": "node",
+      "args": ["ABSOLUTE_PATH_TO_PROJECT/dist/index.js"],
+      "env": {
+        "RESEND_API_KEY": "re_xxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+### Options
+
+You can pass additional arguments to configure the server:
+
+- `--key`: Your Resend API key (alternative to `RESEND_API_KEY` env var)
+- `--sender`: Your sender email address from a verified domain
+- `--reply-to`: Your reply-to email address
+
+Environment variables:
+
 - `RESEND_API_KEY`: Your Resend API key (required)
 - `SENDER_EMAIL_ADDRESS`: Your sender email address from a verified domain (optional)
 - `REPLY_TO_EMAIL_ADDRESSES`: Reply-to address(es), comma-separated (optional)
