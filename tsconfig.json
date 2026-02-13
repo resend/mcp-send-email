@@ -5,13 +5,13 @@
     "moduleResolution": "nodenext",
     "resolveJsonModule": true,
     "jsx": "react-jsx",
-    "outDir": "./build",
-    "rootDir": ".",
+    "outDir": "./dist",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*", "tools/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "build"]
 }

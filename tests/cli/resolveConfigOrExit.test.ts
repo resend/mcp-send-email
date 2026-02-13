@@ -21,8 +21,7 @@ describe('resolveConfigOrExit', () => {
   });
 
   it('calls process.exit(0) and prints help when --help', () => {
-    const parsed = parseArgs(['--help']);
-    expect(() => resolveConfigOrExit(parsed, {})).toThrow();
+    expect(() => resolveConfigOrExit(parseArgs(['--help']), {})).toThrow();
     expect(exitSpy).toHaveBeenCalledWith(0);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining('RESEND_API_KEY'),
@@ -33,8 +32,7 @@ describe('resolveConfigOrExit', () => {
   });
 
   it('calls process.exit(0) when -h', () => {
-    const parsed = parseArgs(['-h']);
-    expect(() => resolveConfigOrExit(parsed, {})).toThrow();
+    expect(() => resolveConfigOrExit(parseArgs(['-h']), {})).toThrow();
     expect(exitSpy).toHaveBeenCalledWith(0);
   });
 
@@ -55,7 +53,17 @@ describe('resolveConfigOrExit', () => {
       apiKey: 're_abc',
       senderEmailAddress: 'x@r.dev',
       replierEmailAddresses: [],
+      transport: 'stdio',
+      port: 3000,
     });
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns config with transport http and port when --http', () => {
+    const parsed = parseArgs(['--key', 're_abc', '--http', '--port', '8080']);
+    const config = resolveConfigOrExit(parsed, {});
+    expect(config.transport).toBe('http');
+    expect(config.port).toBe(8080);
     expect(exitSpy).not.toHaveBeenCalled();
   });
 });

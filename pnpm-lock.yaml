@@ -11,6 +11,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.25.2
         version: 1.25.2(hono@4.11.3)(zod@4.3.6)
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
       minimist:
         specifier: 1.2.8
         version: 1.2.8

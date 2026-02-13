@@ -4,13 +4,14 @@ import packageJson from '../package.json' with { type: 'json' };
 import {
   addApiKeyTools,
   addBroadcastTools,
+  addContactPropertyTools,
   addContactTools,
   addDomainTools,
   addEmailTools,
   addSegmentTools,
   addTopicTools,
   addWebhookTools,
-} from '../tools/index.js';
+} from './tools/index.js';
 import type { ServerOptions } from './types.js';
 
 export type { ServerOptions } from './types.js';
@@ -29,6 +30,7 @@ export function createMcpServer(
     senderEmailAddress,
     replierEmailAddresses,
   });
+  addContactPropertyTools(server, resend);
   addContactTools(server, resend);
   addDomainTools(server, resend);
   addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });

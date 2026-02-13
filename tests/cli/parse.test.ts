@@ -40,6 +40,15 @@ describe('parseArgs', () => {
     ]);
     expect(parsed['reply-to']).toEqual(['a@x.com', 'b@x.com']);
   });
+
+  it('parses --http as boolean', () => {
+    expect(parseArgs(['--http']).http).toBe(true);
+  });
+
+  it('parses --port', () => {
+    const parsed = parseArgs(['--port', '8080']);
+    expect(parsed.port).toBe('8080');
+  });
 });
 
 describe('parseReplierAddresses', () => {

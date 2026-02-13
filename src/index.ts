@@ -1,5 +1,7 @@
+#!/usr/bin/env node
 import { Resend } from 'resend';
 import { parseArgs, resolveConfigOrExit } from './cli/index.js';
+import { runHttp } from './transports/http.js';
 import { runStdio } from './transports/stdio.js';
 
 const parsed = parseArgs(process.argv.slice(2));
@@ -21,4 +23,8 @@ function onFatal(err: unknown): void {
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));
 
-runStdio(resend, serverOptions).catch(onFatal);
+if (config.transport === 'http') {
+  runHttp(resend, serverOptions, config.port).catch(onFatal);
+} else {
+  runStdio(resend, serverOptions).catch(onFatal);
+}

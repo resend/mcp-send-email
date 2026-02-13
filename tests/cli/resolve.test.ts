@@ -92,4 +92,69 @@ describe('resolveConfig', () => {
       ]);
     }
   });
+
+  it('defaults transport to stdio and port to 3000', () => {
+    const parsed = parseArgs(['--key', 're_x']);
+    const result = resolveConfig(parsed, { RESEND_API_KEY: 're_x' });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.transport).toBe('stdio');
+      expect(result.config.port).toBe(3000);
+    }
+  });
+
+  it('sets transport to http and uses default port when --http', () => {
+    const parsed = parseArgs(['--key', 're_x', '--http']);
+    const result = resolveConfig(parsed, { RESEND_API_KEY: 're_x' });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.transport).toBe('http');
+      expect(result.config.port).toBe(3000);
+    }
+  });
+
+  it('uses --port when provided with --http', () => {
+    const parsed = parseArgs(['--key', 're_x', '--http', '--port', '8080']);
+    const result = resolveConfig(parsed, { RESEND_API_KEY: 're_x' });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.transport).toBe('http');
+      expect(result.config.port).toBe(8080);
+    }
+  });
+
+  it('uses MCP_PORT when --port not set', () => {
+    const parsed = parseArgs(['--key', 're_x', '--http']);
+    const result = resolveConfig(parsed, {
+      RESEND_API_KEY: 're_x',
+      MCP_PORT: '9000',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.port).toBe(9000);
+    }
+  });
+
+  it('--port overrides MCP_PORT', () => {
+    const parsed = parseArgs(['--key', 're_x', '--http', '--port', '4000']);
+    const result = resolveConfig(parsed, { RESEND_API_KEY: 're_x', MCP_PORT: '9000' });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.port).toBe(4000);
+    }
+  });
+
+  it('invalid or out-of-range port falls back to default', () => {
+    const invalid = resolveConfig(
+      parseArgs(['--key', 're_x', '--http', '--port', 'not-a-number']),
+      { RESEND_API_KEY: 're_x' },
+    );
+    const outOfRange = resolveConfig(parseArgs(['--key', 're_x', '--http']), {
+      RESEND_API_KEY: 're_x',
+      MCP_PORT: '99999',
+    });
+    expect(invalid.ok && outOfRange.ok).toBe(true);
+    if (invalid.ok) expect(invalid.config.port).toBe(3000);
+    if (outOfRange.ok) expect(outOfRange.config.port).toBe(3000);
+  });
 });
