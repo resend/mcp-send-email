@@ -1,0 +1,113 @@
+---
+title: Use Resend MCP with Cursor and Claude Desktop
+description: Set up the Resend MCP server to send emails directly from Cursor and Claude Desktop.
+---
+
+> Resend MCP lets you send emails, manage contacts, broadcasts, and more — directly from AI tools like Cursor and Claude Desktop — using your Resend account and API key.
+>
+> Create a free account and an API key: https://resend.com/api-keys
+
+<!--
+Suggested layout: two-column, similar to https://resend.com/nextjs
+Left column: step-by-step instructions
+Right column: ready-to-copy JSON config
+-->
+
+<div class="two-column">
+  <div>
+
+## Use with Cursor
+
+1) Open the command palette (cmd+shift+p on macOS or ctrl+shift+p on Windows) and choose “Cursor Settings”.
+2) Select “MCP” from the left sidebar.
+3) Click “Add new global MCP server”.
+4) Add this configuration (replace the API key):
+
+  </div>
+  <div>
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "type": "command",
+      "command": "npx -y resend-mcp",
+      "env": {
+        "RESEND_API_KEY": "re_xxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+  </div>
+</div>
+
+### What you get in Cursor
+- Send, list, get, cancel, update, and send batch emails (with HTML, attachments, CC/BCC, reply‑to, scheduling, and tags)
+- Manage contacts, segments, topics, custom contact properties
+- Create and manage broadcasts, domains, API keys, and webhooks
+
+---
+
+<div class="two-column">
+  <div>
+
+## Use with Claude Desktop
+
+1) Open Claude Desktop settings and navigate to the “Developer” tab.
+2) Click “Edit Config”.
+3) Paste the configuration below (replace the API key).
+4) Close and reopen Claude Desktop.
+5) Verify the `resend` tool appears in the developer settings, then ask Claude to send an email using `resend`.
+
+  </div>
+  <div>
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "command": "npx",
+      "args": ["-y", "resend-mcp"],
+      "env": {
+        "RESEND_API_KEY": "re_xxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+  </div>
+</div>
+
+> Optional: You can also point Claude Desktop (or Cursor) at a local build if you’re developing the server locally. Replace the `npx` command with `node ABSOLUTE_PATH_TO_PROJECT/dist/index.js`.
+
+---
+
+## Options
+
+You can pass additional arguments to configure the server:
+
+- `--key`: Your Resend API key (alternative to `RESEND_API_KEY` env var)
+- `--sender`: Your sender email address from a verified domain
+- `--reply-to`: Your reply-to email address
+
+Environment variables:
+
+- `RESEND_API_KEY`: Your Resend API key (required)
+- `SENDER_EMAIL_ADDRESS`: Your sender email address from a verified domain (optional)
+- `REPLY_TO_EMAIL_ADDRESS`: Your reply-to email address (optional)
+
+> Note: If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.
+
+---
+
+## Troubleshooting
+
+- Make sure your API key is valid and has permission to send emails.
+- To send to other addresses, verify your domain in Resend: https://resend.com/domains
+- If you don’t see the `resend` tool:
+  - Cursor: confirm the MCP server is added under Settings → MCP
+  - Claude Desktop: confirm the Developer config is saved and app is restarted
+
