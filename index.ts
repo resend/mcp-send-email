@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import minimist from 'minimist';
@@ -8,6 +9,7 @@ import {
   addApiKeyTools,
   addBroadcastTools,
   addComposeEmailTool,
+  addContactPropertyTools,
   addContactTools,
   addDomainTools,
   addEmailTools,
@@ -56,6 +58,7 @@ addBroadcastTools(server, resend, {
   senderEmailAddress,
   replierEmailAddresses,
 });
+addContactPropertyTools(server, resend);
 addContactTools(server, resend);
 addDomainTools(server, resend);
 addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });

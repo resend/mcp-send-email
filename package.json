@@ -1,13 +1,19 @@
 {
-  "name": "send-email",
-  "version": "1.1.0",
+  "name": "resend-mcp",
+  "version": "2.0.1",
   "license": "MIT",
-  "module": "build/index.js",
   "type": "module",
+  "bin": {
+    "resend-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
-    "dev": "node build/index.js --http --port 3000",
-    "start": "node build/index.js",
+    "dev": "node dist/index.js --http --port 3000",
+    "start": "node dist/index.js",
+    "build": "tsc && node -e \"require('fs').chmodSync('dist/index.js', '755')\"",
+    "prepare": "npm run build",
     "inspector": "npx @modelcontextprotocol/inspector@latest",
     "lint": "biome check .",
     "lint:fix": "biome check . --write"
