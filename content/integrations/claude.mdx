@@ -1,0 +1,112 @@
+---
+title: Claude Desktop + Resend MCP
+description: Send and manage emails directly from Claude Desktop using Resend’s Model Context Protocol (MCP) server.
+slug: /claude
+canonical: https://resend.com/claude
+---
+
+import Link from 'next/link'
+
+# Claude Desktop + Resend MCP
+
+Empower Claude Desktop to send and manage emails via Resend—right from the chat. Ask Claude to draft, send, list, or manage emails, contacts, broadcasts, domains, and more with Resend’s MCP server.
+
+## Why use Resend MCP with Claude?
+
+- Powerful email features exposed to your AI assistant
+- Local-first: runs on your machine with your API key
+- Free to start with Resend
+
+## Features
+
+- Emails — Send, list, get, cancel, update, and send batch emails. Supports plain text, HTML, attachments, CC/BCC, reply-to, scheduling, and tags. Manage sent and received email attachments.
+- Contacts — Create, list, get, update, and remove contacts. Manage contact segment memberships and topic subscriptions.
+- Broadcasts — Create, send, list, get, update, and remove broadcast emails to audiences.
+- Domains — Create, list, get, update, remove, and verify sender domains.
+- API Keys — Create, list, and remove API keys.
+- Segments — Create, list, get, and remove audience segments.
+- Topics — Create, list, get, update, and remove topics.
+- Contact Properties — Create, list, get, update, and remove custom contact properties.
+- Webhooks — Create, list, get, update, and remove webhooks.
+
+## Quickstart
+
+1) Create a free Resend account and generate an API key.
+- Create account: https://resend.com/
+- API keys: https://resend.com/api-keys
+- To send to other addresses, verify your domain: https://resend.com/domains
+
+2) Add the MCP server in Claude Desktop.
+
+Open Claude Desktop → Settings → Developer → Edit Config, then add:
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "command": "npx",
+      "args": ["-y", "resend-mcp"],
+      "env": {
+        "RESEND_API_KEY": "re_xxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+Close and reopen Claude Desktop. Verify that the `resend` tool is available in the Claude developer settings.
+
+![Claude Desktop developer settings with Resend MCP server showing](https://github.com/user-attachments/assets/be9549e5-eaef-4946-b10a-e708c1864acf)
+
+3) Ask Claude to email.
+
+Tell Claude something like: “Send me an email summarizing today’s tasks using the resend tool.” Claude will invoke the MCP server and send via Resend.
+
+## Options
+
+You can pass additional arguments to configure the server:
+
+- --key: Your Resend API key (alternative to RESEND_API_KEY env var)
+- --sender: Your sender email address from a verified domain
+- --reply-to: Your reply-to email address
+
+Environment variables:
+
+- RESEND_API_KEY: Your Resend API key (required)
+- SENDER_EMAIL_ADDRESS: Your sender email address from a verified domain (optional)
+- REPLY_TO_EMAIL_ADDRESS: Your reply-to email address (optional)
+
+Note: If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.
+
+## Local development (optional)
+
+Prefer to run from source instead of npx? Build the project and point Claude to your local `dist/index.js`.
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "command": "node",
+      "args": ["ABSOLUTE_PATH_TO_PROJECT/dist/index.js"],
+      "env": {
+        "RESEND_API_KEY": "re_xxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+## Demo
+
+https://github.com/user-attachments/assets/8c05cbf0-1664-4b3b-afb1-663b46af3464
+
+## Helpful links
+
+- Resend docs: https://resend.com/docs
+- Send with Node.js: https://resend.com/docs/send-with-nodejs
+- GitHub (resend-mcp): https://github.com/resend/resend-mcp
+
+---
+
+Need Cursor too? See <Link href="/cursor">Cursor + Resend MCP</Link>.
+
