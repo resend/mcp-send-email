@@ -1,5 +1,6 @@
 export * from './apiKeys.js';
 export * from './broadcasts.js';
+export * from './composeEmailUi.js';
 export * from './contactProperties.js';
 export * from './contacts.js';
 export * from './domains.js';

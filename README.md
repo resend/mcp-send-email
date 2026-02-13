@@ -126,6 +126,58 @@ pnpm run build
 }
 ```
 
+### Running on Localhost (HTTP Server)
+
+You can run the MCP server as an HTTP server on localhost for testing or integration with web applications.
+
+1. **Build the project** (if you haven't already):
+
+   ```bash
+   pnpm install
+   pnpm run build
+   ```
+
+2. **Set your API key**:
+
+   ```bash
+   export RESEND_API_KEY=re_your_key_here
+   ```
+
+3. **Start the HTTP server**:
+
+   ```bash
+   pnpm run dev
+   ```
+
+   Or with a custom port:
+
+   ```bash
+   node build/index.js --http --port 8080 --key=re_your_key_here
+   ```
+
+4. **Access the server**:
+
+   - **Health check**: http://localhost:3000/health
+   - **MCP endpoint**: http://localhost:3000/mcp
+
+The HTTP server supports:
+- **POST /mcp**: Send MCP requests (JSON-RPC)
+- **GET /mcp**: Server-Sent Events (SSE) streaming for long-running operations
+- **GET /sse**: SSE endpoint for ChatGPT compatibility
+- **GET /health**: Health check endpoint
+
+**ChatGPT Custom Apps:**
+- Use `http://localhost:3000/mcp` or `http://localhost:3000/sse` as the server URL
+- The server supports both MCP Apps and ChatGPT Apps SDK protocols
+- Interactive email composition UI is available via the `compose_email` tool
+
+**Command-line options for HTTP mode:**
+- `--http` or `--server`: Enable HTTP server mode
+- `--port` or `-p`: Set the port (default: 3000)
+- `--key`: Your Resend API key (or use `RESEND_API_KEY` environment variable)
+- `--sender`: Sender email address (optional)
+- `--reply-to`: Reply-to email address (optional)
+
 ### Testing with MCP Inspector
 
 > **Note:** Make sure you've built the project first (see [Setup](#setup) section above).

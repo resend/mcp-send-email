@@ -4,9 +4,11 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import minimist from 'minimist';
 import { Resend } from 'resend';
 import packageJson from './package.json' with { type: 'json' };
+import { startHttpServer } from './server/http.js';
 import {
   addApiKeyTools,
   addBroadcastTools,
+  addComposeEmailTool,
   addContactPropertyTools,
   addContactTools,
   addDomainTools,
@@ -46,7 +48,6 @@ if (!apiKey) {
 
 const resend = new Resend(apiKey);
 
-// Create server instance
 const server = new McpServer({
   name: 'email-sending-service',
   version: packageJson.version,
@@ -61,14 +62,23 @@ addContactPropertyTools(server, resend);
 addContactTools(server, resend);
 addDomainTools(server, resend);
 addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
+addComposeEmailTool(server, resend, {
+  senderEmailAddress,
+  replierEmailAddresses,
+});
 addSegmentTools(server, resend);
 addTopicTools(server, resend);
 addWebhookTools(server, resend);
 
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('Email sending service MCP Server running on stdio');
+  if (argv.http || argv.server) {
+    const port = argv.port || argv.p || process.env.PORT || 3000;
+    await startHttpServer(server, port);
+  } else {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error('Email sending service MCP Server running on stdio');
+  }
 }
 
 main().catch((error) => {
