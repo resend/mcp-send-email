@@ -84,11 +84,9 @@ export function addTopicTools(server: McpServer, resend: Resend) {
           },
           ...topics.map((topic) => {
             const t = topic as unknown as {
-              default_subscription?: string;
               visibility?: string;
             };
-            const defaultSub =
-              topic.defaultSubscription ?? t.default_subscription;
+            const defaultSub = topic.default_subscription;
             const visibility = t.visibility;
             return {
               type: 'text' as const,
@@ -130,10 +128,9 @@ export function addTopicTools(server: McpServer, resend: Resend) {
 
       const topic = response.data;
       const t = topic as unknown as {
-        default_subscription?: string;
         visibility?: string;
       };
-      const defaultSub = topic.defaultSubscription ?? t.default_subscription;
+      const defaultSub = topic.default_subscription;
       const visibility = t.visibility;
       return {
         content: [
