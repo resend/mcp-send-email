@@ -10,5 +10,5 @@ export async function runStdio(
   const server = createMcpServer(resend, options);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Email sending service MCP Server running on stdio');
+  console.error('Resend MCP Server running on stdio');
 }

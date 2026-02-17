@@ -22,7 +22,7 @@ export function createMcpServer(
 ): McpServer {
   const { senderEmailAddress, replierEmailAddresses } = options;
   const server = new McpServer({
-    name: 'email-sending-service',
+    name: 'resend',
     version: packageJson.version,
   });
   addApiKeyTools(server, resend);
