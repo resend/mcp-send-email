@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.26.0",
+    "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "minimist": "1.2.8",
     "resend": "6.9.2",

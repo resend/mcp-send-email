@@ -138,6 +138,8 @@ pnpm run build
 
 > **Note:** Make sure you've built the project first (see [Local Development](#local-development) section above).
 
+#### Using Stdio Transport
+
 1. Set your API key:
 
    ```bash
@@ -156,4 +158,25 @@ pnpm run build
    - **Command:** `node`
    - **Args:** `dist/index.js` (or the full path to `dist/index.js`)
    - **Env:** `RESEND_API_KEY=re_your_key_here` (or leave blank if you already exported it in the same terminal).
+   - Click **Connect**, then use "List tools" to verify the server is working.
+
+#### Using HTTP Transport
+
+1. Start the HTTP server in one terminal:
+
+   ```bash
+   export RESEND_API_KEY=re_your_key_here
+   node dist/index.js --http --port 3000
+   ```
+
+2. Start the inspector in another terminal:
+
+   ```bash
+   pnpm inspector
+   ```
+
+3. In the browser (Inspector UI):
+
+   - Choose **Streamable HTTP** (connect to URL).
+   - **URL:** `http://127.0.0.1:3000/mcp`
    - Click **Connect**, then use "List tools" to verify the server is working.

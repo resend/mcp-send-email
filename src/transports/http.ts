@@ -56,6 +56,17 @@ export async function runHttp(
         };
         const server = getServer();
         await server.connect(transport);
+      } else if (sessionId && !sessions[sessionId]) {
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            error: { code: -32001, message: 'Session not found' },
+            id: null,
+          }),
+        );
+        return;
       } else {
         sendJsonRpcError(res, 'Bad Request: No valid session ID provided');
         return;

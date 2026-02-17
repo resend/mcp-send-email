@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import 'dotenv/config';
 import { Resend } from 'resend';
 import { parseArgs, resolveConfigOrExit } from './cli/index.js';
 import { runHttp } from './transports/http.js';
