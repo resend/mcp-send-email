@@ -25,5 +25,7 @@ jobs:
         uses: pnpm/action-setup@9b5745cdf0a2e8c2620f0746130f809adb911c19
       - name: Install packages
         run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Run tests
+        run: pnpm test
       - name: Run Build
         run: pnpm build

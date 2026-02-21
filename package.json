@@ -14,10 +14,13 @@
     "prepare": "npm run build",
     "inspector": "npx @modelcontextprotocol/inspector@latest",
     "lint": "biome check .",
-    "lint:fix": "biome check . --write"
+    "lint:fix": "biome check . --write",
+    "test": "vitest run"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.26.0",
+    "dotenv": "17.3.1",
+    "express": "5.2.1",
     "minimist": "1.2.8",
     "resend": "6.9.2",
     "zod": "4.3.6"
@@ -29,7 +32,8 @@
     "@biomejs/biome": "2.4.2",
     "@types/minimist": "1.2.5",
     "@types/node": "25.0.3",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
   },
   "packageManager": "pnpm@10.30.0"
 }

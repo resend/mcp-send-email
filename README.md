@@ -23,13 +23,17 @@ Create a free Resend account and [create an API key](https://resend.com/api-keys
 
 ## Usage
 
-### Claude Code
+The server supports two transport modes: **stdio** (default) and **HTTP**.
+
+### Stdio Transport (Default)
+
+#### Claude Code
 
 ```bash
 claude mcp add resend -e RESEND_API_KEY=re_xxxxxxxxx -- npx -y resend-mcp
 ```
 
-### Cursor
+#### Cursor
 
 Open the command palette and choose "Cursor Settings" > "MCP" > "Add new global MCP server".
 
@@ -47,7 +51,7 @@ Open the command palette and choose "Cursor Settings" > "MCP" > "Add new global 
 }
 ```
 
-### Claude Desktop
+#### Claude Desktop
 
 Open Claude Desktop settings > "Developer" tab > "Edit Config".
 
@@ -65,6 +69,25 @@ Open Claude Desktop settings > "Developer" tab > "Edit Config".
 }
 ```
 
+### HTTP Transport
+
+Run the server over HTTP for integration with web-based agents:
+
+```bash
+npx -y resend-mcp --http --port 3000
+```
+
+The server will listen on `http://127.0.0.1:3000` and expose the MCP endpoint at `/mcp` using Streamable HTTP. Configure your web-based agent to connect to this endpoint.
+
+You can also set the port via the `MCP_PORT` environment variable:
+
+```bash
+MCP_PORT=3000 npx -y resend-mcp --http
+```
+
+> [!NOTE]
+> The HTTP transport uses session-based connections. Include the `mcp-session-id` header in your requests after the initial initialization.
+
 ### Options
 
 You can pass additional arguments to configure the server:
@@ -72,28 +95,30 @@ You can pass additional arguments to configure the server:
 - `--key`: Your Resend API key (alternative to `RESEND_API_KEY` env var)
 - `--sender`: Default sender email address from a verified domain
 - `--reply-to`: Default reply-to email address (can be specified multiple times)
+- `--http`: Use HTTP transport instead of stdio (default: stdio)
+- `--port`: HTTP port when using `--http` (default: 3000, or `MCP_PORT` env var)
 
 Environment variables:
 
 - `RESEND_API_KEY`: Your Resend API key (required)
 - `SENDER_EMAIL_ADDRESS`: Default sender email address from a verified domain (optional)
 - `REPLY_TO_EMAIL_ADDRESSES`: Comma-separated reply-to email addresses (optional)
+- `MCP_PORT`: HTTP port when using `--http` (optional)
 
 > [!NOTE]
-> If you don't provide a sender email address, the MCP server will ask for one each time you send an email.
+> If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.
 
 ## Local Development
 
-1. Clone and build:
+1. Clone this project and build:
 
-```bash
+```
 git clone https://github.com/resend/resend-mcp.git
-cd resend-mcp
 pnpm install
 pnpm run build
 ```
 
-2. Use the local build in your MCP client:
+2. To use the local build in Cursor or Claude Desktop, replace the `npx` command with the path to your local build:
 
 ```json
 {
@@ -113,6 +138,8 @@ pnpm run build
 
 > **Note:** Make sure you've built the project first (see [Local Development](#local-development) section above).
 
+#### Using Stdio Transport
+
 1. Set your API key:
 
    ```bash
@@ -131,4 +158,25 @@ pnpm run build
    - **Command:** `node`
    - **Args:** `dist/index.js` (or the full path to `dist/index.js`)
    - **Env:** `RESEND_API_KEY=re_your_key_here` (or leave blank if you already exported it in the same terminal).
+   - Click **Connect**, then use "List tools" to verify the server is working.
+
+#### Using HTTP Transport
+
+1. Start the HTTP server in one terminal:
+
+   ```bash
+   export RESEND_API_KEY=re_your_key_here
+   node dist/index.js --http --port 3000
+   ```
+
+2. Start the inspector in another terminal:
+
+   ```bash
+   pnpm inspector
+   ```
+
+3. In the browser (Inspector UI):
+
+   - Choose **Streamable HTTP** (connect to URL).
+   - **URL:** `http://127.0.0.1:3000/mcp`
    - Click **Connect**, then use "List tools" to verify the server is working.
