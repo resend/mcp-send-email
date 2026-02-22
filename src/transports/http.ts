@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { Resend } from 'resend';
@@ -31,7 +30,7 @@ function sendJsonRpcError(
  * Returns null if the header is missing or malformed.
  */
 function extractBearerToken(req: IncomingMessage): string | null {
-  const header = req.headers['authorization'];
+  const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) return null;
   const token = header.slice('Bearer '.length).trim();
   return token || null;
@@ -100,11 +99,7 @@ export async function runHttp(
         );
         return;
       } else {
-        sendJsonRpcError(
-          res,
-          400,
-          'Bad Request: No valid session ID provided',
-        );
+        sendJsonRpcError(res, 400, 'Bad Request: No valid session ID provided');
         return;
       }
 

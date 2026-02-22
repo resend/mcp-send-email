@@ -31,7 +31,7 @@ export function resolveConfig(
     env.RESEND_API_KEY ??
     null;
 
-  const http = parsed.http === true || parsed['http'] === true;
+  const http = parsed.http === true;
   const transport = http ? 'http' : 'stdio';
 
   // Stdio requires an API key at startup. HTTP mode is lenient because
