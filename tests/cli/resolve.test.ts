@@ -3,7 +3,7 @@ import { parseArgs } from '../../src/cli/parse.js';
 import { resolveConfig } from '../../src/cli/resolve.js';
 
 describe('resolveConfig', () => {
-  it('returns error when no API key', () => {
+  it('returns error when no API key in stdio mode', () => {
     const parsed = parseArgs([]);
     const result = resolveConfig(parsed, {});
     expect(result.ok).toBe(false);
@@ -12,11 +12,23 @@ describe('resolveConfig', () => {
     }
   });
 
-  it('returns error when API key is whitespace only', () => {
+  it('returns error when API key is whitespace only in stdio mode', () => {
     const result = resolveConfig(parseArgs(['--key', '   ']), {
       RESEND_API_KEY: '   ',
     });
     expect(result.ok).toBe(false);
+  });
+
+  // HTTP mode allows missing API key because each client provides
+  // their own via the Authorization: Bearer header at request time.
+  it('allows missing API key in HTTP mode', () => {
+    const parsed = parseArgs(['--http']);
+    const result = resolveConfig(parsed, {});
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.transport).toBe('http');
+      expect(result.config.apiKey).toBeUndefined();
+    }
   });
 
   it('resolves config from --key', () => {

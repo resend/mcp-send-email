@@ -1,4 +1,3 @@
-import type { Resend } from 'resend';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { runHttp } from '../../src/transports/http.js';
 
@@ -18,9 +17,8 @@ describe('runHttp', () => {
   });
 
   it('starts server and resolves when listening', async () => {
-    const resend = {} as Resend;
     await expect(
-      runHttp(resend, { replierEmailAddresses: [] }, 0),
+      runHttp({ replierEmailAddresses: [] }, 0),
     ).resolves.toBeUndefined();
   });
 });

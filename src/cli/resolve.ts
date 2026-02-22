@@ -1,7 +1,7 @@
 import type { ParsedArgs } from 'minimist';
 import { DEFAULT_HTTP_PORT } from './constants.js';
 import { parseReplierAddresses } from './parse.js';
-import type { ResolveResult } from './types.js';
+import type { CliConfig, ResolveResult } from './types.js';
 
 function parsePort(parsed: ParsedArgs, env: NodeJS.ProcessEnv): number {
   const fromArg =
@@ -31,7 +31,12 @@ export function resolveConfig(
     env.RESEND_API_KEY ??
     null;
 
-  if (!apiKey || !apiKey.trim()) {
+  const http = parsed.http === true || parsed['http'] === true;
+  const transport = http ? 'http' : 'stdio';
+
+  // Stdio requires an API key at startup. HTTP mode is lenient because
+  // each client provides their own key via the Authorization: Bearer header.
+  if (transport === 'stdio' && (!apiKey || !apiKey.trim())) {
     return {
       ok: false,
       error:
@@ -45,18 +50,16 @@ export function resolveConfig(
       ? env.SENDER_EMAIL_ADDRESS.trim() || undefined
       : undefined);
 
-  const http = parsed.http === true || parsed['http'] === true;
-  const transport = http ? 'http' : 'stdio';
   const port = parsePort(parsed, env);
 
   return {
     ok: true,
     config: {
-      apiKey: apiKey.trim(),
+      apiKey: apiKey?.trim() ?? undefined,
       senderEmailAddress: senderEmailAddress ?? '',
       replierEmailAddresses: parseReplierAddresses(parsed, env),
       transport,
       port,
-    },
+    } as CliConfig,
   };
 }

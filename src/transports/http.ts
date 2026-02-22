@@ -4,14 +4,18 @@ import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
-import type { Resend } from 'resend';
+import { Resend } from 'resend';
 import { createMcpServer } from '../server.js';
 import type { ServerOptions } from '../types.js';
 
 const sessions: Record<string, StreamableHTTPServerTransport> = {};
 
-function sendJsonRpcError(res: ServerResponse, message: string): void {
-  res.statusCode = 400;
+function sendJsonRpcError(
+  res: ServerResponse,
+  statusCode: number,
+  message: string,
+): void {
+  res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json');
   res.end(
     JSON.stringify({
@@ -22,13 +26,27 @@ function sendJsonRpcError(res: ServerResponse, message: string): void {
   );
 }
 
+/**
+ * Extract the Resend API key from the Authorization: Bearer header.
+ * Returns null if the header is missing or malformed.
+ */
+function extractBearerToken(req: IncomingMessage): string | null {
+  const header = req.headers['authorization'];
+  if (!header || !header.startsWith('Bearer ')) return null;
+  const token = header.slice('Bearer '.length).trim();
+  return token || null;
+}
+
+/**
+ * Start the HTTP transport. Each session gets its own Resend client created
+ * from the Bearer token provided by the connecting client. This allows
+ * remote deployment where each user authenticates with their own API key
+ * instead of a single server-side key.
+ */
 export async function runHttp(
-  resend: Resend,
   options: ServerOptions,
   port: number,
 ): Promise<void> {
-  const getServer = (): McpServer => createMcpServer(resend, options);
-
   const app = createMcpExpressApp();
 
   app.all(
@@ -44,6 +62,20 @@ export async function runHttp(
         req.method === 'POST' &&
         isInitializeRequest(req.body)
       ) {
+        // New session: require a Bearer token so we can create a per-session
+        // Resend client scoped to this user's API key.
+        const apiKey = extractBearerToken(req);
+        if (!apiKey) {
+          sendJsonRpcError(
+            res,
+            401,
+            'Unauthorized: provide a Resend API key via Authorization: Bearer <key>',
+          );
+          return;
+        }
+
+        const resend = new Resend(apiKey);
+
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (sid) => {
@@ -54,7 +86,7 @@ export async function runHttp(
           const sid = transport!.sessionId;
           if (sid && sessions[sid]) delete sessions[sid];
         };
-        const server = getServer();
+        const server = createMcpServer(resend, options);
         await server.connect(transport);
       } else if (sessionId && !sessions[sessionId]) {
         res.statusCode = 404;
@@ -68,7 +100,11 @@ export async function runHttp(
         );
         return;
       } else {
-        sendJsonRpcError(res, 'Bad Request: No valid session ID provided');
+        sendJsonRpcError(
+          res,
+          400,
+          'Bad Request: No valid session ID provided',
+        );
         return;
       }
 
