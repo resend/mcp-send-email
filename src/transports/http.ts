@@ -56,10 +56,6 @@ function normalizeOrigin(origin: string): string | null {
   }
 }
 
-function isString(value: string | null): value is string {
-  return value !== null;
-}
-
 function isAllowedOrigin(
   req: IncomingMessage,
   allowedOrigins: ReadonlySet<string>,
@@ -100,7 +96,7 @@ export async function runHttp(
 ): Promise<Server> {
   const app = createMcpExpressApp();
   const normalizedAllowedOrigins = new Set(
-    allowedOrigins.map(normalizeOrigin).filter(isString),
+    allowedOrigins.map(normalizeOrigin).filter((o): o is string => o !== null),
   );
 
   app.get('/health', (_req: IncomingMessage, res: ServerResponse) => {
