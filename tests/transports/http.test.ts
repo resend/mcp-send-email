@@ -1,3 +1,4 @@
+import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { runHttp } from '../../src/transports/http.js';
 
@@ -17,8 +18,21 @@ describe('runHttp', () => {
   });
 
   it('starts server and resolves when listening', async () => {
-    await expect(
-      runHttp({ replierEmailAddresses: [] }, 0),
-    ).resolves.toBeUndefined();
+    const server = await runHttp({ replierEmailAddresses: [] }, 0);
+    expect(server).toBeDefined();
+    server.close();
+  });
+
+  it('GET /health returns 200 with status ok', async () => {
+    const server = await runHttp({ replierEmailAddresses: [] }, 0);
+    const { port } = server.address() as AddressInfo;
+
+    const res = await fetch(`http://127.0.0.1:${port}/health`);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ status: 'ok' });
+
+    server.close();
   });
 });

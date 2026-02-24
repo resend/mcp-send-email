@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
@@ -45,8 +45,13 @@ function extractBearerToken(req: IncomingMessage): string | null {
 export async function runHttp(
   options: ServerOptions,
   port: number,
-): Promise<void> {
+): Promise<Server> {
   const app = createMcpExpressApp();
+
+  app.get('/health', (_req: IncomingMessage, res: ServerResponse) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok' }));
+  });
 
   app.all(
     '/mcp',
@@ -111,7 +116,7 @@ export async function runHttp(
     const server = app.listen(port, () => {
       console.error(`Resend MCP server listening on http://127.0.0.1:${port}`);
       console.error('  Streamable HTTP: POST/GET/DELETE /mcp');
-      resolve();
+      resolve(server);
     });
     server.once('error', reject);
 
