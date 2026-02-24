@@ -1,7 +1,7 @@
 import type { ParsedArgs } from 'minimist';
 import { DEFAULT_HTTP_PORT } from './constants.js';
 import { parseReplierAddresses } from './parse.js';
-import type { CliConfig, ResolveResult } from './types.js';
+import type { ResolveResult } from './types.js';
 
 function parsePort(parsed: ParsedArgs, env: NodeJS.ProcessEnv): number {
   const fromArg =
