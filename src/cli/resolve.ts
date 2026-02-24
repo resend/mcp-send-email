@@ -1,5 +1,5 @@
 import type { ParsedArgs } from 'minimist';
-import { DEFAULT_HTTP_PORT } from './constants.js';
+import { DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT } from './constants.js';
 import { parseReplierAddresses } from './parse.js';
 import type { ResolveResult } from './types.js';
 
@@ -17,6 +17,33 @@ function parsePort(parsed: ParsedArgs, env: NodeJS.ProcessEnv): number {
   if (Number.isInteger(fromEnv) && fromEnv > 0 && fromEnv < 65536)
     return fromEnv;
   return DEFAULT_HTTP_PORT;
+}
+
+function parseHost(parsed: ParsedArgs, env: NodeJS.ProcessEnv): string {
+  const fromArg = typeof parsed.host === 'string' ? parsed.host.trim() : '';
+  if (fromArg) return fromArg;
+  const fromEnv = typeof env.MCP_HOST === 'string' ? env.MCP_HOST.trim() : '';
+  if (fromEnv) return fromEnv;
+  return DEFAULT_HTTP_HOST;
+}
+
+function parseAllowedOrigins(
+  parsed: ParsedArgs,
+  env: NodeJS.ProcessEnv,
+  port: number,
+): string[] {
+  const raw =
+    typeof parsed.origins === 'string'
+      ? parsed.origins
+      : (env.MCP_ALLOWED_ORIGINS ?? '');
+  const fromInput = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (fromInput.length > 0) return fromInput;
+
+  return [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
 }
 
 /**
@@ -50,6 +77,8 @@ export function resolveConfig(
       : undefined);
 
   const port = parsePort(parsed, env);
+  const host = parseHost(parsed, env);
+  const allowedOrigins = parseAllowedOrigins(parsed, env, port);
 
   const base = {
     senderEmailAddress: senderEmailAddress ?? '',
@@ -60,7 +89,13 @@ export function resolveConfig(
   return {
     ok: true,
     config: http
-      ? { ...base, transport: 'http' as const, apiKey: apiKey?.trim() }
+      ? {
+          ...base,
+          transport: 'http' as const,
+          apiKey: apiKey?.trim(),
+          host,
+          allowedOrigins,
+        }
       : { ...base, transport: 'stdio' as const, apiKey: apiKey!.trim() },
   };
 }

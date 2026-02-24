@@ -12,14 +12,23 @@ const sessions: Record<string, StreamableHTTPServerTransport> = {};
 function sendJsonRpcError(
   res: ServerResponse,
   statusCode: number,
+  code: number,
   message: string,
+  type?: string,
 ): void {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json');
+  if (statusCode === 401) {
+    res.setHeader('WWW-Authenticate', 'Bearer realm="resend-mcp"');
+  }
   res.end(
     JSON.stringify({
       jsonrpc: '2.0',
-      error: { code: -32000, message },
+      error: {
+        code,
+        message,
+        ...(type ? { data: { type, status: statusCode } } : {}),
+      },
       id: null,
     }),
   );
@@ -31,9 +40,47 @@ function sendJsonRpcError(
  */
 function extractBearerToken(req: IncomingMessage): string | null {
   const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) return null;
-  const token = header.slice('Bearer '.length).trim();
+  if (!header) return null;
+  const [scheme, ...rest] = header.trim().split(/\s+/);
+  if (!scheme || scheme.toLowerCase() !== 'bearer' || rest.length === 0)
+    return null;
+  const token = rest.join(' ').trim();
   return token || null;
+}
+
+function normalizeOrigin(origin: string): string | null {
+  try {
+    return new URL(origin).origin.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function isString(value: string | null): value is string {
+  return value !== null;
+}
+
+function isAllowedOrigin(
+  req: IncomingMessage,
+  allowedOrigins: ReadonlySet<string>,
+): boolean {
+  const rawOrigin = req.headers.origin;
+  if (!rawOrigin) return true;
+  const normalized = normalizeOrigin(rawOrigin);
+  if (!normalized) return false;
+  return allowedOrigins.has(normalized);
+}
+
+function setCorsHeaders(req: IncomingMessage, res: ServerResponse): void {
+  const origin = req.headers.origin;
+  if (!origin) return;
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Authorization, Content-Type, MCP-Session-Id',
+  );
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
 }
 
 /**
@@ -45,8 +92,16 @@ function extractBearerToken(req: IncomingMessage): string | null {
 export async function runHttp(
   options: ServerOptions,
   port: number,
+  host: string = '127.0.0.1',
+  allowedOrigins: readonly string[] = [
+    `http://127.0.0.1:${port}`,
+    `http://localhost:${port}`,
+  ],
 ): Promise<Server> {
   const app = createMcpExpressApp();
+  const normalizedAllowedOrigins = new Set(
+    allowedOrigins.map(normalizeOrigin).filter(isString),
+  );
 
   app.get('/health', (_req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -56,6 +111,25 @@ export async function runHttp(
   app.all(
     '/mcp',
     async (req: IncomingMessage & { body?: unknown }, res: ServerResponse) => {
+      if (!isAllowedOrigin(req, normalizedAllowedOrigins)) {
+        sendJsonRpcError(
+          res,
+          403,
+          -32003,
+          'Forbidden: origin is not allowed',
+          'forbidden',
+        );
+        return;
+      }
+
+      setCorsHeaders(req, res);
+
+      if (req.method === 'OPTIONS') {
+        res.statusCode = 204;
+        res.end();
+        return;
+      }
+
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
       let transport: StreamableHTTPServerTransport | undefined;
 
@@ -73,7 +147,9 @@ export async function runHttp(
           sendJsonRpcError(
             res,
             401,
-            'Unauthorized: provide a Resend API key via Authorization: Bearer <key>',
+            -32002,
+            'Unauthorized: provide Authorization: Bearer <resend-api-key>',
+            'auth_error',
           );
           return;
         }
@@ -93,18 +169,15 @@ export async function runHttp(
         const server = createMcpServer(resend, options);
         await server.connect(transport);
       } else if (sessionId && !sessions[sessionId]) {
-        res.statusCode = 404;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(
-          JSON.stringify({
-            jsonrpc: '2.0',
-            error: { code: -32001, message: 'Session not found' },
-            id: null,
-          }),
-        );
+        sendJsonRpcError(res, 404, -32001, 'Session not found');
         return;
       } else {
-        sendJsonRpcError(res, 400, 'Bad Request: No valid session ID provided');
+        sendJsonRpcError(
+          res,
+          400,
+          -32000,
+          'Bad Request: No valid session ID provided',
+        );
         return;
       }
 
@@ -113,8 +186,9 @@ export async function runHttp(
   );
 
   return new Promise((resolve, reject) => {
-    const server = app.listen(port, () => {
-      console.error(`Resend MCP server listening on http://127.0.0.1:${port}`);
+    const server = app.listen(port, host);
+    server.once('listening', () => {
+      console.error(`Resend MCP server listening on http://${host}:${port}`);
       console.error('  Streamable HTTP: POST/GET/DELETE /mcp');
       resolve(server);
     });

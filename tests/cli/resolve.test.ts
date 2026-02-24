@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseArgs } from '../../src/cli/parse.js';
 import { resolveConfig } from '../../src/cli/resolve.js';
+import type { HttpConfig } from '../../src/cli/types.js';
 
 describe('resolveConfig', () => {
   it('returns error when no API key in stdio mode', () => {
@@ -122,6 +123,11 @@ describe('resolveConfig', () => {
     if (result.ok) {
       expect(result.config.transport).toBe('http');
       expect(result.config.port).toBe(3000);
+      expect((result.config as HttpConfig).host).toBe('127.0.0.1');
+      expect((result.config as HttpConfig).allowedOrigins).toEqual([
+        'http://127.0.0.1:3000',
+        'http://localhost:3000',
+      ]);
     }
   });
 
@@ -132,6 +138,27 @@ describe('resolveConfig', () => {
     if (result.ok) {
       expect(result.config.transport).toBe('http');
       expect(result.config.port).toBe(8080);
+      expect((result.config as HttpConfig).allowedOrigins).toEqual([
+        'http://127.0.0.1:8080',
+        'http://localhost:8080',
+      ]);
+    }
+  });
+
+  it('uses MCP_HOST and MCP_ALLOWED_ORIGINS in HTTP mode', () => {
+    const parsed = parseArgs(['--key', 're_x', '--http']);
+    const result = resolveConfig(parsed, {
+      RESEND_API_KEY: 're_x',
+      MCP_HOST: '0.0.0.0',
+      MCP_ALLOWED_ORIGINS: 'https://app.example.com, https://admin.example.com',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect((result.config as HttpConfig).host).toBe('0.0.0.0');
+      expect((result.config as HttpConfig).allowedOrigins).toEqual([
+        'https://app.example.com',
+        'https://admin.example.com',
+      ]);
     }
   });
 

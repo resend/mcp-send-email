@@ -12,6 +12,8 @@ Options:
   --reply-to <email>       Reply-to; repeat for multiple (or REPLY_TO_EMAIL_ADDRESSES)
   --http                   Run HTTP server (Streamable HTTP at /mcp) instead of stdio
   --port <number>          HTTP port when using --http (default: 3000, or MCP_PORT)
+  --host <hostname>        HTTP bind host when using --http (default: 127.0.0.1, or MCP_HOST)
+  --origins <list>         Comma-separated Origin allowlist for --http (or MCP_ALLOWED_ORIGINS)
   -h, --help               Show this help
 
 Environment:
@@ -19,6 +21,8 @@ Environment:
   SENDER_EMAIL_ADDRESS     Optional
   REPLY_TO_EMAIL_ADDRESSES Optional, comma-separated
   MCP_PORT                 HTTP port when using --http (optional)
+  MCP_HOST                 HTTP bind host when using --http (optional)
+  MCP_ALLOWED_ORIGINS      Comma-separated Origin allowlist for HTTP (optional)
 `.trim();
 
 export function printHelp(): void {

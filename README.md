@@ -72,6 +72,7 @@ Open Claude Desktop settings > "Developer" tab > "Edit Config".
 ### HTTP Transport
 
 Run the server over HTTP for remote or web-based integrations. In HTTP mode, each client authenticates by passing their Resend API key as a Bearer token in the `Authorization` header.
+HTTP mode also enforces an `Origin` allowlist for browser requests.
 
 Start the server:
 
@@ -110,6 +111,12 @@ You can also set the port via the `MCP_PORT` environment variable:
 MCP_PORT=3000 npx -y resend-mcp --http
 ```
 
+To customize bind host and Origin allowlist:
+
+```bash
+MCP_HOST=0.0.0.0 MCP_ALLOWED_ORIGINS=https://app.example.com npx -y resend-mcp --http --port 3000
+```
+
 ### Options
 
 You can pass additional arguments to configure the server:
@@ -119,6 +126,8 @@ You can pass additional arguments to configure the server:
 - `--reply-to`: Default reply-to email address (can be specified multiple times)
 - `--http`: Use HTTP transport instead of stdio (default: stdio)
 - `--port`: HTTP port when using `--http` (default: 3000, or `MCP_PORT` env var)
+- `--host`: HTTP bind host when using `--http` (default: `127.0.0.1`, or `MCP_HOST`)
+- `--origins`: Comma-separated Origin allowlist when using `--http` (default: `http://127.0.0.1:<port>,http://localhost:<port>`, or `MCP_ALLOWED_ORIGINS`)
 
 Environment variables:
 
@@ -126,6 +135,8 @@ Environment variables:
 - `SENDER_EMAIL_ADDRESS`: Default sender email address from a verified domain (optional)
 - `REPLY_TO_EMAIL_ADDRESSES`: Comma-separated reply-to email addresses (optional)
 - `MCP_PORT`: HTTP port when using `--http` (optional)
+- `MCP_HOST`: HTTP bind host when using `--http` (optional)
+- `MCP_ALLOWED_ORIGINS`: Comma-separated Origin allowlist for HTTP mode (optional)
 
 > [!NOTE]
 > If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.

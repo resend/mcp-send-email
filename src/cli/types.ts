@@ -21,6 +21,8 @@ export interface HttpConfig {
   replierEmailAddresses: string[];
   transport: 'http';
   port: number;
+  host: string;
+  allowedOrigins: string[];
 }
 
 export type CliConfig = StdioConfig | HttpConfig;
