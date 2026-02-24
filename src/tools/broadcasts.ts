@@ -79,10 +79,6 @@ export function addBroadcastTools(
       from,
       replyTo,
     }) => {
-      console.error(
-        `Debug - Creating broadcast: ${name ?? '<no-name>'} to audience: ${audienceId}`,
-      );
-
       const fromEmailAddress = from ?? senderEmailAddress;
       const replyToEmailAddresses = replyTo ?? replierEmailAddresses;
 
@@ -157,8 +153,6 @@ export function addBroadcastTools(
       },
     },
     async ({ id, scheduledAt }) => {
-      console.error(`Debug - Sending broadcast with id: ${id}`);
-
       const response = await resend.broadcasts.send(id, { scheduledAt });
 
       if (response.error) {
@@ -194,8 +188,6 @@ export function addBroadcastTools(
       inputSchema: {},
     },
     async () => {
-      console.error('Debug - Listing broadcasts');
-
       const response = await resend.broadcasts.list();
 
       if (response.error) {
@@ -250,8 +242,6 @@ export function addBroadcastTools(
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Getting broadcast with id: ${id}`);
-
       const response = await resend.broadcasts.get(id);
 
       if (response.error) {
@@ -309,8 +299,6 @@ export function addBroadcastTools(
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Removing broadcast with id: ${id}`);
-
       const response = await resend.broadcasts.remove(id);
 
       if (response.error) {
@@ -362,8 +350,6 @@ export function addBroadcastTools(
       replyTo,
       previewText,
     }) => {
-      console.error(`Debug - Updating broadcast with id: ${id}`);
-
       const response = await resend.broadcasts.update(id, {
         name,
         audienceId,

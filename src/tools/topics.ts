@@ -28,8 +28,6 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ name, defaultSubscription, description }) => {
-      console.error(`Debug - Creating topic with name: ${name}`);
-
       const response = await resend.topics.create({
         name,
         defaultSubscription,
@@ -65,8 +63,6 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       inputSchema: {},
     },
     async () => {
-      console.error('Debug - Listing topics');
-
       const response = await resend.topics.list();
 
       if (response.error) {
@@ -116,8 +112,6 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Getting topic with id: ${id}`);
-
       const response = await resend.topics.get(id);
 
       if (response.error) {
@@ -165,8 +159,6 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id, name, description }) => {
-      console.error(`Debug - Updating topic with id: ${id}`);
-
       const response = await resend.topics.update({
         id,
         ...(name && { name }),
@@ -199,8 +191,6 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Removing topic with id: ${id}`);
-
       const response = await resend.topics.remove(id);
 
       if (response.error) {

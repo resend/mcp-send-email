@@ -13,10 +13,10 @@ const serverOptions = {
 };
 
 function onFatal(err: unknown): void {
-  console.error('Fatal error:', err);
-  if (err instanceof Error && err.stack) {
-    console.error(err.stack);
-  }
+  console.error(
+    'Fatal error:',
+    err instanceof Error ? err.message : 'unexpected error',
+  );
   process.exit(1);
 }
 

@@ -28,10 +28,6 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ key, type, fallbackValue }) => {
-      console.error(
-        `Debug - Creating contact property with key: ${key}, type: ${type}`,
-      );
-
       const response = await resend.contactProperties.create({
         key,
         type,
@@ -96,10 +92,6 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
           'Cannot use both "after" and "before" parameters. Use only one for pagination.',
         );
       }
-
-      console.error(
-        `Debug - Listing contact properties with limit: ${limit}, after: ${after}, before: ${before}`,
-      );
 
       const paginationOptions = after
         ? { limit, after }
@@ -166,10 +158,6 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ contactPropertyId }) => {
-      console.error(
-        `Debug - Getting contact property with id: ${contactPropertyId}`,
-      );
-
       const response = await resend.contactProperties.get(contactPropertyId);
 
       if (response.error) {
@@ -209,10 +197,6 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ contactPropertyId, fallbackValue }) => {
-      console.error(
-        `Debug - Updating contact property with id: ${contactPropertyId}`,
-      );
-
       const response = await resend.contactProperties.update({
         id: contactPropertyId,
         fallbackValue,
@@ -251,10 +235,6 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ contactPropertyId }) => {
-      console.error(
-        `Debug - Removing contact property with id: ${contactPropertyId}`,
-      );
-
       const response = await resend.contactProperties.remove(contactPropertyId);
 
       if (response.error) {

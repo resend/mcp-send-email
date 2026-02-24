@@ -54,8 +54,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
       segmentIds,
       topics,
     }) => {
-      console.error(`Debug - Creating contact with email: ${email}`);
-
       const response = await resend.contacts.create({
         email,
         firstName,
@@ -132,10 +130,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
           'Cannot use both "after" and "before" parameters. Use only one for pagination.',
         );
       }
-
-      console.error(
-        `Debug - Listing contacts with segmentId: ${segmentId}, limit: ${limit}, after: ${after}, before: ${before}`,
-      );
 
       const options: Record<string, unknown> = {};
       if (segmentId) options.segmentId = segmentId;
@@ -219,8 +213,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id, email }) => {
-      console.error(`Debug - Getting contact with id: ${id}, email: ${email}`);
-
       let response: GetContactResponse;
       if (id) {
         response = await resend.contacts.get({ id });
@@ -300,8 +292,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id, email, firstName, lastName, unsubscribed, properties }) => {
-      console.error(`Debug - Updating contact with id: ${id}, email: ${email}`);
-
       const commonOptions = {
         firstName,
         lastName,
@@ -352,8 +342,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id, email }) => {
-      console.error(`Debug - Removing contact with id: ${id}, email: ${email}`);
-
       let response: RemoveContactsResponse;
       if (id) {
         response = await resend.contacts.remove({ id });
@@ -396,10 +384,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ contactId, email, segmentId }) => {
-      console.error(
-        `Debug - Adding contact (id: ${contactId}, email: ${email}) to segment: ${segmentId}`,
-      );
-
       let response;
       if (contactId) {
         response = await resend.contacts.segments.add({ contactId, segmentId });
@@ -446,10 +430,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ contactId, email, segmentId }) => {
-      console.error(
-        `Debug - Removing contact (id: ${contactId}, email: ${email}) from segment: ${segmentId}`,
-      );
-
       let response;
       if (contactId) {
         response = await resend.contacts.segments.remove({
@@ -522,10 +502,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
           'You must provide either `contactId` or `email` to list contact segments.',
         );
       }
-
-      console.error(
-        `Debug - Listing segments for contact (id: ${contactId}, email: ${email})`,
-      );
 
       const contactField = contactId ? { contactId } : { email: email! };
 
@@ -628,10 +604,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
         );
       }
 
-      console.error(
-        `Debug - Listing topics for contact (id: ${id}, email: ${email})`,
-      );
-
       const contactField = id ? { id } : { email: email! };
 
       const paginationOptions = after
@@ -726,10 +698,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
           'You must provide either `id` or `email` to update contact topics.',
         );
       }
-
-      console.error(
-        `Debug - Updating topics for contact (id: ${id}, email: ${email})`,
-      );
 
       const contactField = id ? { id } : { email: email! };
 

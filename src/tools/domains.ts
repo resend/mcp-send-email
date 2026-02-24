@@ -83,8 +83,6 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       tls,
       capabilities,
     }) => {
-      console.error(`Debug - Creating domain: ${name}`);
-
       const response = await resend.domains.create({
         name,
         ...(region && { region }),
@@ -158,10 +156,6 @@ export function addDomainTools(server: McpServer, resend: Resend) {
         );
       }
 
-      console.error(
-        `Debug - Listing domains with limit: ${limit}, after: ${after}, before: ${before}`,
-      );
-
       const paginationOptions = after
         ? { limit, after }
         : before
@@ -225,8 +219,6 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Getting domain with id: ${id}`);
-
       const response = await resend.domains.get(id);
 
       if (response.error) {
@@ -291,8 +283,6 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id, clickTracking, openTracking, tls, capabilities }) => {
-      console.error(`Debug - Updating domain with id: ${id}`);
-
       const response = await resend.domains.update({
         id,
         ...(clickTracking !== undefined && { clickTracking }),
@@ -327,8 +317,6 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Removing domain with id: ${id}`);
-
       const response = await resend.domains.remove(id);
 
       if (response.error) {
@@ -357,8 +345,6 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Verifying domain with id: ${id}`);
-
       const response = await resend.domains.verify(id);
 
       if (response.error) {

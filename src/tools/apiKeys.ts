@@ -30,8 +30,6 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ name, permission, domainId }) => {
-      console.error(`Debug - Creating API key with name: ${name}`);
-
       const response = await resend.apiKeys.create({
         name,
         ...(permission && { permission }),
@@ -94,10 +92,6 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
           'Cannot use both "after" and "before" parameters. Use only one for pagination.',
         );
       }
-
-      console.error(
-        `Debug - Listing API keys with limit: ${limit}, after: ${after}, before: ${before}`,
-      );
 
       const paginationOptions = after
         ? { limit, after }
@@ -162,8 +156,6 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Removing API key with id: ${id}`);
-
       const response = await resend.apiKeys.remove(id);
 
       if (response.error) {

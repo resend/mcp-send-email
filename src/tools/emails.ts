@@ -176,8 +176,6 @@ export function addEmailTools(
         throw new Error('replyTo argument must be provided.');
       }
 
-      console.error(`Debug - Sending email with from: ${fromEmailAddress}`);
-
       // Explicitly structure the request with all parameters to ensure they're passed correctly
       const emailRequest: {
         to: string[];
@@ -332,10 +330,6 @@ export function addEmailTools(
         );
       }
 
-      console.error(
-        `Debug - Listing emails with limit: ${limit}, after: ${after}, before: ${before}`,
-      );
-
       // Build pagination options - Resend SDK requires mutually exclusive after/before
       const paginationOptions = after
         ? { limit, after }
@@ -399,8 +393,6 @@ export function addEmailTools(
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Getting email with ID: ${id}`);
-
       const response = await resend.emails.get(id);
 
       if (response.error) {
@@ -498,10 +490,6 @@ export function addEmailTools(
         );
       }
 
-      console.error(
-        `Debug - Listing received emails with limit: ${limit}, after: ${after}, before: ${before}`,
-      );
-
       const paginationOptions = after
         ? { limit, after }
         : before
@@ -564,8 +552,6 @@ export function addEmailTools(
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Getting received email with ID: ${id}`);
-
       const response = await resend.emails.receiving.get(id);
 
       if (response.error) {
@@ -666,10 +652,6 @@ export function addEmailTools(
         );
       }
 
-      console.error(
-        `Debug - Listing attachments for received email: ${emailId}`,
-      );
-
       const paginationOptions = after
         ? { emailId, limit, after }
         : before
@@ -729,10 +711,6 @@ export function addEmailTools(
       },
     },
     async ({ emailId, id }) => {
-      console.error(
-        `Debug - Getting attachment ${id} for received email: ${emailId}`,
-      );
-
       const response = await resend.emails.receiving.attachments.get({
         emailId,
         id,
@@ -784,8 +762,6 @@ export function addEmailTools(
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Cancelling email with ID: ${id}`);
-
       const response = await resend.emails.cancel(id);
 
       if (response.error) {
@@ -821,10 +797,6 @@ export function addEmailTools(
       },
     },
     async ({ id, scheduledAt }) => {
-      console.error(
-        `Debug - Updating email ${id} with scheduledAt: ${scheduledAt}`,
-      );
-
       const response = await resend.emails.update({ id, scheduledAt });
 
       if (response.error) {
@@ -880,8 +852,6 @@ export function addEmailTools(
           'Cannot use both "after" and "before" parameters. Use only one for pagination.',
         );
       }
-
-      console.error(`Debug - Listing attachments for sent email: ${emailId}`);
 
       const paginationOptions = after
         ? { emailId, limit, after }
@@ -941,10 +911,6 @@ export function addEmailTools(
       },
     },
     async ({ emailId, id }) => {
-      console.error(
-        `Debug - Getting attachment ${id} for sent email: ${emailId}`,
-      );
-
       const response = await resend.emails.attachments.get({
         emailId,
         id,
@@ -1050,8 +1016,6 @@ export function addEmailTools(
       },
     },
     async ({ emails }) => {
-      console.error(`Debug - Sending batch of ${emails.length} emails`);
-
       const emailRequests = emails.map((email) => {
         const fromAddress = email.from ?? senderEmailAddress;
         const replyToAddresses = email.replyTo ?? replierEmailAddresses;

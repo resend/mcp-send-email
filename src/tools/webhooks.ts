@@ -38,10 +38,6 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ endpoint, events }) => {
-      console.error(
-        `Debug - Creating webhook for endpoint: ${endpoint} with events: ${events.join(', ')}`,
-      );
-
       const response = await resend.webhooks.create({ endpoint, events });
 
       if (response.error) {
@@ -76,8 +72,6 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       inputSchema: {},
     },
     async () => {
-      console.error('Debug - Listing webhooks');
-
       const response = await resend.webhooks.list();
 
       if (response.error) {
@@ -120,8 +114,6 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ webhookId }) => {
-      console.error(`Debug - Getting webhook with id: ${webhookId}`);
-
       const response = await resend.webhooks.get(webhookId);
 
       if (response.error) {
@@ -166,8 +158,6 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ webhookId, endpoint, events, status }) => {
-      console.error(`Debug - Updating webhook with id: ${webhookId}`);
-
       const response = await resend.webhooks.update(webhookId, {
         endpoint,
         events,
@@ -204,8 +194,6 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ webhookId }) => {
-      console.error(`Debug - Removing webhook with id: ${webhookId}`);
-
       const response = await resend.webhooks.remove(webhookId);
 
       if (response.error) {

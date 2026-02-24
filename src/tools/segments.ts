@@ -14,8 +14,6 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ name }) => {
-      console.error(`Debug - Creating segment with name: ${name}`);
-
       const response = await resend.segments.create({ name });
 
       if (response.error) {
@@ -79,10 +77,6 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
         );
       }
 
-      console.error(
-        `Debug - Listing segments with limit: ${limit}, after: ${after}, before: ${before}`,
-      );
-
       const paginationOptions = after
         ? { limit, after }
         : before
@@ -145,8 +139,6 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Getting segment with id: ${id}`);
-
       const response = await resend.segments.get(id);
 
       if (response.error) {
@@ -178,8 +170,6 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       },
     },
     async ({ id }) => {
-      console.error(`Debug - Removing segment with id: ${id}`);
-
       const response = await resend.segments.remove(id);
 
       if (response.error) {
