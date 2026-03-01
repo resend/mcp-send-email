@@ -16,6 +16,7 @@ An MCP server for the [Resend](https://resend.com/) platform. Send and receive e
 - **Contact Properties** — Create, list, get, update, and remove custom contact attributes.
 - **API Keys** — Create, list, and remove API keys.
 - **Webhooks** — Create, list, get, update, and remove webhooks for event notifications.
+- **Code Mode** — Search REST method specs and execute sandboxed JavaScript that can orchestrate multi-step REST API flows.
 
 ## Setup
 
@@ -118,6 +119,7 @@ You can pass additional arguments to configure the server:
 - `--sender`: Default sender email address from a verified domain
 - `--reply-to`: Default reply-to email address (can be specified multiple times)
 - `--http`: Use HTTP transport instead of stdio (default: stdio)
+- `--code-mode-only`: Expose only Code Mode tools (`search-resend-api`, `execute-resend-code`)
 - `--port`: HTTP port when using `--http` (default: 3000, or `MCP_PORT` env var)
 
 Environment variables:
@@ -126,6 +128,52 @@ Environment variables:
 - `SENDER_EMAIL_ADDRESS`: Default sender email address from a verified domain (optional)
 - `REPLY_TO_EMAIL_ADDRESSES`: Comma-separated reply-to email addresses (optional)
 - `MCP_PORT`: HTTP port when using `--http` (optional)
+- `RESEND_OPENAPI_SPEC_URL`: Optional URL for the Resend OpenAPI spec (e.g. `https://raw.githubusercontent.com/resend/resend-openapi/refs/heads/main/resend.yaml`). When set, Code Mode loads the spec from this URL instead of the bundled file so you can use the latest spec from GitHub.
+
+### Code Mode
+
+Code Mode uses two tools and the Resend OpenAPI spec (with all `$ref` s pre-resolved) as the single source of truth. This keeps the tool footprint small no matter how many endpoints exist.
+
+- **`search-resend-api`**: Run JavaScript against the spec to discover endpoints. Your code runs as the body of an async function; `spec` is in scope. Use a top-level **return** for the result. Do not pass an arrow function—pass only statements. Right: `return Object.keys(spec.paths);` Wrong: `async (spec) => { return ... }`.
+- **`execute-resend-code`**: Run JavaScript against the Resend API. Your code runs as the body of an async function; `resend` is in scope. Call `resend.request({ method, path, params?, body? })` and use a top-level **return** for the result. Do not pass an arrow function. Optional: `input`, `helpers`, `console`.
+
+Example search (discover email endpoints):
+
+```js
+const results = [];
+for (const [path, methods] of Object.entries(spec.paths)) {
+  if (path.startsWith('/emails') && path !== '/emails/batch') {
+    for (const [method, op] of Object.entries(methods)) {
+      if (op && op.summary) results.push({ method: method.toUpperCase(), path, summary: op.summary });
+    }
+  }
+}
+return results;
+```
+
+Example execute (send an email):
+
+```js
+return await resend.request({
+  method: 'POST',
+  path: '/emails',
+  body: { from: 'you@example.com', to: 'user@example.com', subject: 'Hi', text: 'Hello' },
+});
+```
+
+### Code Mode pattern and security
+
+This server uses the same **Code Mode** idea as [Cloudflare’s MCP post](https://blog.cloudflare.com/code-mode-mcp/) and [Anthropic’s code execution with MCP](https://www.anthropic.com/engineering/code-execution-with-mcp): two tools (search + execute), spec pre-resolved, single request API. There is no Cloudflare or Anthropic integration—only the Resend API.
+
+- **Sandbox**: Code runs in a Node.js `vm` with only `spec` (search) or `resend`, `input`, `helpers`, `console` (execute). No `process`, `require`, or timers.
+- **Execute**: Only `resend.request()` can do I/O; it calls the Resend API only. Timeouts and `maxApiCalls` apply.
+- **Note**: Node’s `vm` is [not a security boundary](https://nodejs.org/api/vm.html#vm-executing-javascript). Fine for normal MCP use (your API key, your agent). For untrusted code, use a real isolate (e.g. separate process).
+
+To test Code Mode as a full replacement for the granular tools:
+
+```bash
+npx -y resend-mcp --code-mode-only
+```
 
 > [!NOTE]
 > If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.

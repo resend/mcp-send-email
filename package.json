@@ -10,7 +10,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('dist/index.js', '755')\"",
+    "clean": "rm -rf dist",
+    "build": "pnpm run clean && tsc && bash scripts/build-post.sh",
     "prepare": "npm run build",
     "inspector": "npx @modelcontextprotocol/inspector@latest",
     "lint": "biome check .",
@@ -23,6 +24,7 @@
     "express": "5.2.1",
     "minimist": "1.2.8",
     "resend": "6.9.2",
+    "yaml": "^2.8.2",
     "zod": "4.3.6"
   },
   "engines": {

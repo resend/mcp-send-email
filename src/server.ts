@@ -4,6 +4,7 @@ import packageJson from '../package.json' with { type: 'json' };
 import {
   addApiKeyTools,
   addBroadcastTools,
+  addCodeModeTools,
   addContactPropertyTools,
   addContactTools,
   addDomainTools,
@@ -20,22 +21,33 @@ export function createMcpServer(
   resend: Resend,
   options: ServerOptions,
 ): McpServer {
-  const { senderEmailAddress, replierEmailAddresses } = options;
+  const { apiKey, senderEmailAddress, replierEmailAddresses, codeModeOnly } =
+    options;
   const server = new McpServer({
     name: 'resend',
     version: packageJson.version,
   });
-  addApiKeyTools(server, resend);
-  addBroadcastTools(server, resend, {
+  addCodeModeTools(server, {
+    apiKey,
     senderEmailAddress,
     replierEmailAddresses,
   });
-  addContactPropertyTools(server, resend);
-  addContactTools(server, resend);
-  addDomainTools(server, resend);
-  addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
-  addSegmentTools(server, resend);
-  addTopicTools(server, resend);
-  addWebhookTools(server, resend);
+  if (!codeModeOnly) {
+    addApiKeyTools(server, resend);
+    addBroadcastTools(server, resend, {
+      senderEmailAddress,
+      replierEmailAddresses,
+    });
+    addContactPropertyTools(server, resend);
+    addContactTools(server, resend);
+    addDomainTools(server, resend);
+    addEmailTools(server, resend, {
+      senderEmailAddress,
+      replierEmailAddresses,
+    });
+    addSegmentTools(server, resend);
+    addTopicTools(server, resend);
+    addWebhookTools(server, resend);
+  }
   return server;
 }

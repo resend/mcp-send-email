@@ -7,6 +7,7 @@ export interface StdioConfig {
   apiKey: string;
   senderEmailAddress: string;
   replierEmailAddresses: string[];
+  codeModeOnly: boolean;
   transport: 'stdio';
   port: number;
 }
@@ -19,6 +20,7 @@ export interface HttpConfig {
   apiKey?: string;
   senderEmailAddress: string;
   replierEmailAddresses: string[];
+  codeModeOnly: boolean;
   transport: 'http';
   port: number;
 }

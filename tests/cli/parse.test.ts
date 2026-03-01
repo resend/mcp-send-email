@@ -45,6 +45,10 @@ describe('parseArgs', () => {
     expect(parseArgs(['--http']).http).toBe(true);
   });
 
+  it('parses --code-mode-only as boolean', () => {
+    expect(parseArgs(['--code-mode-only'])['code-mode-only']).toBe(true);
+  });
+
   it('parses --port', () => {
     const parsed = parseArgs(['--port', '8080']);
     expect(parsed.port).toBe('8080');

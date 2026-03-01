@@ -53,6 +53,7 @@ describe('resolveConfigOrExit', () => {
       apiKey: 're_abc',
       senderEmailAddress: 'x@r.dev',
       replierEmailAddresses: [],
+      codeModeOnly: false,
       transport: 'stdio',
       port: 3000,
     });

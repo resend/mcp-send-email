@@ -8,8 +8,10 @@ import { runStdio } from './transports/stdio.js';
 const parsed = parseArgs(process.argv.slice(2));
 const config = resolveConfigOrExit(parsed, process.env);
 const serverOptions = {
+  apiKey: config.apiKey,
   senderEmailAddress: config.senderEmailAddress,
   replierEmailAddresses: config.replierEmailAddresses,
+  codeModeOnly: config.codeModeOnly,
 };
 
 function onFatal(err: unknown): void {

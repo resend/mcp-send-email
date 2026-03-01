@@ -11,6 +11,7 @@ Options:
   --sender <email>         Default from address (or SENDER_EMAIL_ADDRESS)
   --reply-to <email>       Reply-to; repeat for multiple (or REPLY_TO_EMAIL_ADDRESSES)
   --http                   Run HTTP server (Streamable HTTP at /mcp) instead of stdio
+  --code-mode-only         Expose only search-resend-api and execute-resend-code tools
   --port <number>          HTTP port when using --http (default: 3000, or MCP_PORT)
   -h, --help               Show this help
 

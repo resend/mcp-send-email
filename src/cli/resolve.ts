@@ -32,6 +32,7 @@ export function resolveConfig(
     null;
 
   const http = parsed.http === true;
+  const codeModeOnly = parsed['code-mode-only'] === true;
 
   // Stdio requires an API key at startup. HTTP mode is lenient because
   // each client provides their own key via the Authorization: Bearer header.
@@ -54,6 +55,7 @@ export function resolveConfig(
   const base = {
     senderEmailAddress: senderEmailAddress ?? '',
     replierEmailAddresses: parseReplierAddresses(parsed, env),
+    codeModeOnly,
     port,
   };
 

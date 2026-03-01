@@ -66,8 +66,6 @@ export async function runHttp(
         req.method === 'POST' &&
         isInitializeRequest(req.body)
       ) {
-        // New session: require a Bearer token so we can create a per-session
-        // Resend client scoped to this user's API key.
         const apiKey = extractBearerToken(req);
         if (!apiKey) {
           sendJsonRpcError(
@@ -90,7 +88,7 @@ export async function runHttp(
           const sid = transport!.sessionId;
           if (sid && sessions[sid]) delete sessions[sid];
         };
-        const server = createMcpServer(resend, options);
+        const server = createMcpServer(resend, { ...options, apiKey });
         await server.connect(transport);
       } else if (sessionId && !sessions[sessionId]) {
         res.statusCode = 404;
@@ -124,9 +122,7 @@ export async function runHttp(
       for (const sid of Object.keys(sessions)) {
         try {
           await sessions[sid].close();
-        } catch {
-          // ignore
-        }
+        } catch {}
         delete sessions[sid];
       }
       server.close();

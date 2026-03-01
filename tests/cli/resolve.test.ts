@@ -110,8 +110,18 @@ describe('resolveConfig', () => {
     const result = resolveConfig(parsed, { RESEND_API_KEY: 're_x' });
     expect(result.ok).toBe(true);
     if (result.ok) {
+      expect(result.config.codeModeOnly).toBe(false);
       expect(result.config.transport).toBe('stdio');
       expect(result.config.port).toBe(3000);
+    }
+  });
+
+  it('enables code-mode-only with --code-mode-only', () => {
+    const parsed = parseArgs(['--key', 're_x', '--code-mode-only']);
+    const result = resolveConfig(parsed, { RESEND_API_KEY: 're_x' });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.codeModeOnly).toBe(true);
     }
   });
 
