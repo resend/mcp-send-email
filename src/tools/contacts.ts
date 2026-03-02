@@ -75,10 +75,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
         content: [
           { type: 'text', text: 'Contact created successfully.' },
           { type: 'text', text: `ID: ${created.id}` },
-          {
-            type: 'text',
-            text: "Don't bother telling the user the ID unless they ask for it.",
-          },
         ],
       };
     },
@@ -193,10 +189,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
                 },
               ]
             : []),
-          {
-            type: 'text' as const,
-            text: "Don't bother telling the user the IDs, unsubscribe statuses, or creation dates unless they ask for them.",
-          },
         ],
       };
     },
@@ -321,10 +313,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
         content: [
           { type: 'text', text: 'Contact updated successfully.' },
           { type: 'text', text: `ID: ${updated.id}` },
-          {
-            type: 'text',
-            text: "Don't bother telling the user the ID unless they ask for it.",
-          },
         ],
       };
     },
@@ -405,10 +393,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
         content: [
           { type: 'text', text: 'Contact added to segment successfully.' },
           { type: 'text', text: `Segment ID: ${response.data.id}` },
-          {
-            type: 'text',
-            text: "Don't bother telling the user the ID unless they ask for it.",
-          },
         ],
       };
     },
@@ -551,10 +535,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
                 },
               ]
             : []),
-          {
-            type: 'text' as const,
-            text: "Don't bother telling the user the IDs or creation dates unless they ask for them.",
-          },
         ],
       };
     },
@@ -661,10 +641,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
                 },
               ]
             : []),
-          {
-            type: 'text' as const,
-            text: "Don't bother telling the user the IDs unless they ask for them.",
-          },
         ],
       };
     },
@@ -719,10 +695,6 @@ export function addContactTools(server: McpServer, resend: Resend) {
             text: 'Contact topic subscriptions updated successfully.',
           },
           { type: 'text', text: `Contact ID: ${response.data.id}` },
-          {
-            type: 'text',
-            text: "Don't bother telling the user the ID unless they ask for it.",
-          },
         ],
       };
     },

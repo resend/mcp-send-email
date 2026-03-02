@@ -45,10 +45,6 @@ export function addTopicTools(server: McpServer, resend: Resend) {
         content: [
           { type: 'text', text: 'Topic created successfully.' },
           { type: 'text', text: `Name: ${name}\nID: ${created.id}` },
-          {
-            type: 'text',
-            text: "Don't bother telling the user the ID unless they ask for it.",
-          },
         ],
       };
     },
@@ -89,14 +85,6 @@ export function addTopicTools(server: McpServer, resend: Resend) {
               text: `Name: ${topic.name}\nID: ${topic.id}\nDescription: ${topic.description || '(none)'}\nDefault subscription: ${defaultSub}\nVisibility: ${visibility ?? '(unknown)'}`,
             };
           }),
-          ...(topics.length === 0
-            ? []
-            : [
-                {
-                  type: 'text' as const,
-                  text: "Don't bother telling the user the IDs unless they ask for them.",
-                },
-              ]),
         ],
       };
     },

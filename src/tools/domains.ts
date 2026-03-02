@@ -199,10 +199,6 @@ export function addDomainTools(server: McpServer, resend: Resend) {
                 },
               ]
             : []),
-          {
-            type: 'text' as const,
-            text: "Don't bother telling the user the IDs or creation dates unless they ask for them.",
-          },
         ],
       };
     },

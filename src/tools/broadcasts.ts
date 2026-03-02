@@ -117,10 +117,6 @@ export function addBroadcastTools(
         content: [
           { type: 'text', text: 'Broadcast created successfully.' },
           { type: 'text', text: `ID: ${response.data.id}` },
-          {
-            type: 'text',
-            text: "Don't bother telling the user the ID unless they ask for it.",
-          },
         ],
       };
     },
@@ -165,10 +161,6 @@ export function addBroadcastTools(
         content: [
           { type: 'text', text: 'Broadcast sent successfully.' },
           { type: 'text', text: `ID: ${response.data.id}` },
-          {
-            type: 'text',
-            text: "Don't bother telling the user the ID unless they ask for it.",
-          },
         ],
       };
     },

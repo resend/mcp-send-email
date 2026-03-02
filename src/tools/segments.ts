@@ -27,10 +27,6 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
         content: [
           { type: 'text', text: 'Segment created successfully.' },
           { type: 'text', text: `Name: ${created.name}\nID: ${created.id}` },
-          {
-            type: 'text',
-            text: "Don't bother telling the user the ID unless they ask for it.",
-          },
         ],
       };
     },
@@ -120,10 +116,6 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
                 },
               ]
             : []),
-          {
-            type: 'text' as const,
-            text: "Don't bother telling the user the IDs or creation dates unless they ask for them.",
-          },
         ],
       };
     },

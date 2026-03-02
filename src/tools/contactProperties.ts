@@ -48,10 +48,6 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
             type: 'text',
             text: `Key: ${key}\nType: ${type}\nID: ${created.id}`,
           },
-          {
-            type: 'text',
-            text: "Don't bother telling the user the ID unless they ask for it.",
-          },
         ],
       };
     },
@@ -136,10 +132,6 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
                 },
               ]
             : []),
-          {
-            type: 'text' as const,
-            text: "Don't bother telling the user the IDs or creation dates unless they ask for them.",
-          },
         ],
       };
     },
@@ -212,10 +204,6 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
         content: [
           { type: 'text', text: 'Contact property updated successfully.' },
           { type: 'text', text: `ID: ${response.data.id}` },
-          {
-            type: 'text',
-            text: "Don't bother telling the user the ID unless they ask for it.",
-          },
         ],
       };
     },
