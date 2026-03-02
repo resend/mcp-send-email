@@ -229,5 +229,5 @@ claude mcp add resend --transport http http://127.0.0.1:3000/mcp --header "Autho
 
    - Choose **Streamable HTTP** (connect to URL).
    - **URL:** `http://127.0.0.1:3000/mcp`
-   - Add a header: `Authorization: Bearer re_your_key_here`
+   - Add a custom header: `Authorization: Bearer re_your_key_here` and activate the toggle.
    - Click **Connect**, then use "List tools" to verify the server is working.
