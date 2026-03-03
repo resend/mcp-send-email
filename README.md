@@ -1,6 +1,7 @@
 # Resend MCP Server
 
 [![smithery badge](https://smithery.ai/badge/@resend/resend-mcp)](https://smithery.ai/server/@resend/resend-mcp)
+[![npm version](https://img.shields.io/npm/v/resend-mcp)](https://www.npmjs.com/package/resend-mcp)
 
 An MCP server for the [Resend](https://resend.com/) platform. Send and receive emails, manage contacts, broadcasts, domains, and more — directly from any MCP client like Claude Desktop, Cursor, or Claude Code.
 
