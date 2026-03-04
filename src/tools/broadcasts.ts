@@ -228,7 +228,8 @@ export function addBroadcastTools(
     'get-broadcast',
     {
       title: 'Get Broadcast',
-      description: 'Get a broadcast by ID.',
+      description:
+        'Retrieve full details of a specific broadcast by ID, including HTML and plain text content.',
       inputSchema: {
         id: z.string().nonempty().describe('Broadcast ID'),
       },
@@ -254,26 +255,36 @@ export function addBroadcastTools(
         created_at,
         scheduled_at,
         sent_at,
+        html,
+        text,
       } = response.data;
+
+      let details = [
+        `ID: ${broadcastId}`,
+        `Name: ${name}`,
+        audience_id !== null && `Audience ID: ${audience_id}`,
+        from !== null && `From: ${from}`,
+        subject !== null && `Subject: ${subject}`,
+        reply_to !== null && `Reply-to: ${reply_to.join(', ')}`,
+        preview_text !== null && `Preview text: ${preview_text}`,
+        `Status: ${status}`,
+        `Created at: ${created_at}`,
+        scheduled_at !== null && `Scheduled at: ${scheduled_at}`,
+        sent_at !== null && `Sent at: ${sent_at}`,
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      details += `\n\n--- Plain Text Content ---\n${text || '(none)'}`;
+      if (html) {
+        details += `\n\n--- HTML Content ---\n${html}`;
+      }
+
       return {
         content: [
           {
             type: 'text',
-            text: [
-              `ID: ${broadcastId}`,
-              `Name: ${name}`,
-              audience_id !== null && `Audience ID: ${audience_id}`,
-              from !== null && `From: ${from}`,
-              subject !== null && `Subject: ${subject}`,
-              reply_to !== null && `Reply-to: ${reply_to.join(', ')}`,
-              preview_text !== null && `Preview text: ${preview_text}`,
-              `Status: ${status}`,
-              `Created at: ${created_at}`,
-              scheduled_at !== null && `Scheduled at: ${scheduled_at}`,
-              sent_at !== null && `Sent at: ${sent_at}`,
-            ]
-              .filter(Boolean)
-              .join('\n'),
+            text: details,
           },
         ],
       };
