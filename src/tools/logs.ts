@@ -77,7 +77,14 @@ export function addLogTools(server: McpServer, resend: Resend) {
             text: `Found ${logs.length} log${logs.length === 1 ? '' : 's'}:`,
           },
           ...logs.map(
-            ({ id, created_at, endpoint, method, response_status, user_agent }) => ({
+            ({
+              id,
+              created_at,
+              endpoint,
+              method,
+              response_status,
+              user_agent,
+            }) => ({
               type: 'text' as const,
               text: `ID: ${id}\nEndpoint: ${method} ${endpoint}\nStatus: ${response_status}\nUser Agent: ${user_agent}\nCreated at: ${created_at}`,
             }),
@@ -115,9 +122,7 @@ export function addLogTools(server: McpServer, resend: Resend) {
       const response = await resend.logs.get(logId);
 
       if (response.error) {
-        throw new Error(
-          `Failed to get log: ${JSON.stringify(response.error)}`,
-        );
+        throw new Error(`Failed to get log: ${JSON.stringify(response.error)}`);
       }
 
       const log = response.data;
