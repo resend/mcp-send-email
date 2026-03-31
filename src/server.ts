@@ -8,6 +8,7 @@ import {
   addContactTools,
   addDomainTools,
   addEmailTools,
+  addLogTools,
   addSegmentTools,
   addTemplateTools,
   addTopicTools,
@@ -35,6 +36,7 @@ export function createMcpServer(
   addContactTools(server, resend);
   addDomainTools(server, resend);
   addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
+  addLogTools(server, resend);
   addSegmentTools(server, resend);
   addTemplateTools(server, resend);
   addTopicTools(server, resend);
