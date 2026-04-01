@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
+import { EMAIL_HTML_RULES } from '../lib/email-html-rules.js';
 import type { ResendApiClient } from '../lib/resend-api-client.js';
 
 export function addBroadcastTools(
@@ -50,7 +51,7 @@ export function addBroadcastTools(
           .string()
           .optional()
           .describe(
-            'HTML version of the email content. The following placeholders may be used to personalize the email content: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}',
+            `HTML version of the email content. Placeholders: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}.\n\n${EMAIL_HTML_RULES}`,
           ),
         previewText: z
           .string()
@@ -141,6 +142,10 @@ export function addBroadcastTools(
         content: [
           { type: 'text', text: 'Broadcast created successfully.' },
           { type: 'text', text: `ID: ${response.data.id}` },
+          {
+            type: 'text',
+            text: `Review your broadcast before sending: https://resend.com/broadcasts/${response.data.id}\n\nOpening this link lets you:\n- Preview how the email renders across devices and email clients\n- Verify personalization placeholders resolve correctly\n- Confirm audience targeting and segment selection\n- Catch any last-minute copy or formatting issues before it reaches your contacts`,
+          },
         ],
       };
     },
@@ -359,7 +364,10 @@ export function addBroadcastTools(
           .describe(
             'From email address (e.g. "onboarding@resend.com" or "Resend <onboarding@resend.com>")',
           ),
-        html: z.string().optional().describe('HTML content of the email'),
+        html: z
+          .string()
+          .optional()
+          .describe(`HTML content of the email.\n\n${EMAIL_HTML_RULES}`),
         text: z.string().optional().describe('Plain text content of the email'),
         subject: z.string().optional().describe('Email subject'),
         replyTo: z
@@ -415,6 +423,10 @@ export function addBroadcastTools(
         content: [
           { type: 'text', text: 'Broadcast updated successfully.' },
           { type: 'text', text: `ID: ${id}` },
+          {
+            type: 'text',
+            text: `Review your broadcast before sending: https://resend.com/broadcasts/${id}\n\nOpening this link lets you:\n- Preview how the email renders across devices and email clients\n- Verify personalization placeholders resolve correctly\n- Confirm audience targeting and segment selection\n- Catch any last-minute copy or formatting issues before it reaches your contacts`,
+          },
         ],
       };
     },

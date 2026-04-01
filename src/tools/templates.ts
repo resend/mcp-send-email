@@ -5,6 +5,7 @@ import type {
   UpdateTemplateOptions,
 } from 'resend';
 import { z } from 'zod';
+import { EMAIL_HTML_RULES } from '../lib/email-html-rules.js';
 import type { ResendApiClient } from '../lib/resend-api-client.js';
 
 const templateVariableSchema = z.object({
@@ -12,7 +13,7 @@ const templateVariableSchema = z.object({
     .string()
     .nonempty()
     .describe(
-      'The variable key. Recommend capitalizing (e.g., PRODUCT_NAME). Reserved names: FIRST_NAME, LAST_NAME, EMAIL, RESEND_UNSUBSCRIBE_URL.',
+      'The variable key. Recommend capitalizing (e.g., PRODUCT_NAME). NEVER include reserved names in this list: FIRST_NAME, LAST_NAME, EMAIL, RESEND_UNSUBSCRIBE_URL — they are automatically available and will cause a validation error if added.',
     ),
   type: z
     .enum(['string', 'number'])
@@ -42,7 +43,7 @@ export function addTemplateTools(
           .string()
           .nonempty()
           .describe(
-            'The HTML content of the template. Use triple-brace syntax for variables: {{{VARIABLE_NAME}}}.',
+            `The HTML content of the template. Use triple-brace syntax for variables: {{{VARIABLE_NAME}}}.\n\n${EMAIL_HTML_RULES}`,
           ),
         subject: z
           .string()
@@ -123,6 +124,10 @@ export function addTemplateTools(
           {
             type: 'text',
             text: 'The template is in draft status. Use publish-template to make it available for sending.',
+          },
+          {
+            type: 'text',
+            text: `Review your template before publishing: https://resend.com/templates/${response.data.id}\n\nOpening this link lets you:\n- Preview how the email renders across devices and email clients\n- Verify variables and placeholders are correctly defined\n- Check formatting, layout, and branding before it goes live\n- Catch any issues before the template is used in sends`,
           },
         ],
       };
@@ -277,7 +282,9 @@ export function addTemplateTools(
         html: z
           .string()
           .optional()
-          .describe('New HTML content for the template.'),
+          .describe(
+            `New HTML content for the template.\n\n${EMAIL_HTML_RULES}`,
+          ),
         subject: z.string().optional().describe('New default email subject.'),
         from: z.string().optional().describe('New sender email address.'),
         replyTo: z
@@ -343,6 +350,10 @@ export function addTemplateTools(
           {
             type: 'text',
             text: 'If the template was published, use publish-template to make the changes live.',
+          },
+          {
+            type: 'text',
+            text: `Review your template before publishing: https://resend.com/templates/${id}\n\nOpening this link lets you:\n- Preview how the email renders across devices and email clients\n- Verify variables and placeholders are correctly defined\n- Check formatting, layout, and branding before it goes live\n- Catch any issues before the template is used in sends`,
           },
         ],
       };
