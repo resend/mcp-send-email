@@ -40,13 +40,19 @@ describe('runStdio', () => {
     const resend = {} as Resend;
     await runStdio(
       resend,
-      { senderEmailAddress: 'x@r.dev', replierEmailAddresses: ['a@x.com', 'b@x.com'] },
+      {
+        senderEmailAddress: 'x@r.dev',
+        replierEmailAddresses: ['a@x.com', 'b@x.com'],
+      },
       're_test_key',
     );
     const { createMcpServer } = await import('../../src/server.js');
     expect(createMcpServer).toHaveBeenCalledWith(
       resend,
-      { senderEmailAddress: 'x@r.dev', replierEmailAddresses: ['a@x.com', 'b@x.com'] },
+      {
+        senderEmailAddress: 'x@r.dev',
+        replierEmailAddresses: ['a@x.com', 'b@x.com'],
+      },
       're_test_key',
     );
   });
