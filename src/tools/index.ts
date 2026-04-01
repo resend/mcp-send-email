@@ -3,6 +3,7 @@ export * from './broadcasts.js';
 export * from './contactProperties.js';
 export * from './contacts.js';
 export * from './domains.js';
+export * from './editor.js';
 export * from './emails.js';
 export * from './logs.js';
 export * from './segments.js';

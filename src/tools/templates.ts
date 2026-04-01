@@ -5,6 +5,7 @@ import type {
   UpdateTemplateOptions,
 } from 'resend';
 import { z } from 'zod';
+import type { ResendApiClient } from '../lib/resend-api-client.js';
 
 const templateVariableSchema = z.object({
   key: z
@@ -24,13 +25,17 @@ const templateVariableSchema = z.object({
     ),
 });
 
-export function addTemplateTools(server: McpServer, resend: Resend) {
+export function addTemplateTools(
+  server: McpServer,
+  resend: Resend,
+  apiClient?: ResendApiClient,
+) {
   server.registerTool(
     'create-template',
     {
       title: 'Create Template',
       description:
-        'Create a new email template in Resend. Templates are created in draft status. Use publish-template to make them available for sending. Variables use triple-brace syntax in HTML: {{{VAR_NAME}}}.',
+        'Create a new email template in Resend. Templates are created in draft status. Use publish-template to make them available for sending. Variables use triple-brace syntax in HTML: {{{VAR_NAME}}}. When using content, call connect-to-editor before and disconnect-from-editor after.',
       inputSchema: {
         name: z.string().nonempty().describe('The name of the template.'),
         html: z
@@ -71,12 +76,28 @@ export function addTemplateTools(server: McpServer, resend: Resend) {
           .array(templateVariableSchema)
           .optional()
           .describe('Array of template variables (up to 50 per template).'),
+        content: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe(
+            'TipTap JSON content for editable email body. Call get-tiptap-schema first to get the schema reference.',
+          ),
       },
     },
-    async ({ name, html, subject, from, replyTo, text, alias, variables }) => {
+    async ({
+      name,
+      html,
+      subject,
+      from,
+      replyTo,
+      text,
+      alias,
+      variables,
+      content,
+    }) => {
       const response = await resend.templates.create({
         name,
-        html,
+        html, // must be null
         ...(subject && { subject }),
         ...(from && { from }),
         ...(replyTo && { replyTo }),
@@ -89,6 +110,10 @@ export function addTemplateTools(server: McpServer, resend: Resend) {
         throw new Error(
           `Failed to create template: ${JSON.stringify(response.error)}`,
         );
+      }
+
+      if (content && apiClient) {
+        await apiClient.composeTemplateContent(response.data.id, { content });
       }
 
       return {
@@ -245,7 +270,7 @@ export function addTemplateTools(server: McpServer, resend: Resend) {
     {
       title: 'Update Template',
       description:
-        'Update an existing email template in Resend by ID or alias. After updating a published template, use publish-template again to make the changes live.',
+        'Update an existing email template in Resend by ID or alias. After updating a published template, use publish-template again to make the changes live. When using content, call connect-to-editor before and disconnect-from-editor after.',
       inputSchema: {
         id: z.string().nonempty().describe('The template ID or alias.'),
         name: z.string().optional().describe('New name for the template.'),
@@ -270,6 +295,12 @@ export function addTemplateTools(server: McpServer, resend: Resend) {
           .describe(
             'New array of template variables (replaces existing variables).',
           ),
+        content: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe(
+            'TipTap JSON content for editable email body. Call get-tiptap-schema first to get the schema reference.',
+          ),
       },
     },
     async ({
@@ -282,28 +313,33 @@ export function addTemplateTools(server: McpServer, resend: Resend) {
       text,
       alias,
       variables,
+      content,
     }) => {
-      const response = await resend.templates.update(id, {
-        ...(name && { name }),
-        ...(html && { html }),
-        ...(subject && { subject }),
-        ...(from && { from }),
-        ...(replyTo && { replyTo }),
-        ...(text && { text }),
-        ...(alias && { alias }),
-        ...(variables && { variables }),
-      } as UpdateTemplateOptions);
+      if (content && apiClient) {
+        await apiClient.composeTemplateContent(id, { content });
+      } else {
+        const response = await resend.templates.update(id, {
+          ...(name && { name }),
+          ...(html && { html }),
+          ...(subject && { subject }),
+          ...(from && { from }),
+          ...(replyTo && { replyTo }),
+          ...(text && { text }),
+          ...(alias && { alias }),
+          ...(variables && { variables }),
+        } as UpdateTemplateOptions);
 
-      if (response.error) {
-        throw new Error(
-          `Failed to update template: ${JSON.stringify(response.error)}`,
-        );
+        if (response.error) {
+          throw new Error(
+            `Failed to update template: ${JSON.stringify(response.error)}`,
+          );
+        }
       }
 
       return {
         content: [
           { type: 'text', text: 'Template updated successfully.' },
-          { type: 'text', text: `ID: ${response.data.id}` },
+          { type: 'text', text: `ID: ${id}` },
           {
             type: 'text',
             text: 'If the template was published, use publish-template to make the changes live.',

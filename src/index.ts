@@ -31,5 +31,5 @@ if (config.transport === 'http') {
 } else {
   // Stdio mode: single user, API key is required at startup.
   const resend = new Resend(config.apiKey);
-  runStdio(resend, serverOptions).catch(onFatal);
+  runStdio(resend, serverOptions, config.apiKey).catch(onFatal);
 }

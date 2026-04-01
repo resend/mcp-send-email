@@ -1,10 +1,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
+import type { ResendApiClient } from '../lib/resend-api-client.js';
 
 export function addBroadcastTools(
   server: McpServer,
   resend: Resend,
+  apiClient: ResendApiClient,
   {
     senderEmailAddress,
     replierEmailAddresses,
@@ -28,7 +30,7 @@ export function addBroadcastTools(
 - Newsletter, announcement, or bulk message to one audience
 - Supports personalization: {{{FIRST_NAME}}}, {{{LAST_NAME}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}
 
-**Workflow:** list-audiences (if needed) → create-broadcast → send-broadcast( id ). Optionally update-broadcast before sending.`,
+**Workflow:** list-audiences (if needed) → connect-to-editor (if using content) → create-broadcast → disconnect-from-editor (if using content) → send-broadcast( id ). Optionally update-broadcast before sending.`,
       inputSchema: {
         name: z
           .string()
@@ -56,13 +58,24 @@ export function addBroadcastTools(
           .describe('Preview text for the email'),
         ...(!senderEmailAddress
           ? {
-              from: z.email().nonempty().describe('From email address'),
+              from: z
+                .string()
+                .nonempty()
+                .describe(
+                  'From email address (e.g. "onboarding@resend.com" or "Resend <onboarding@resend.com>")',
+                ),
             }
           : {}),
+        content: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe(
+            'TipTap JSON content for editable email body. Call get-tiptap-schema first to get the schema reference. When provided, the email is editable in the Resend dashboard editor. Cannot be used with html/text.',
+          ),
         ...(replierEmailAddresses.length === 0
           ? {
               replyTo: z
-                .array(z.email())
+                .array(z.string())
                 .optional()
                 .describe('Reply-to email address(es)'),
             }
@@ -76,6 +89,7 @@ export function addBroadcastTools(
       text,
       html,
       previewText,
+      content,
       from,
       replyTo,
     }) => {
@@ -96,12 +110,18 @@ export function addBroadcastTools(
         throw new Error('replyTo argument must be provided.');
       }
 
+      if (content && (html || text)) {
+        throw new Error(
+          'Cannot use content together with html or text. Use content for TipTap editable email, or html/text for static email.',
+        );
+      }
+
       const response = await resend.broadcasts.create({
         name,
         audienceId,
         subject,
         text,
-        html,
+        html, // must be null
         previewText,
         from: fromEmailAddress,
         replyTo: replyToEmailAddresses,
@@ -111,6 +131,10 @@ export function addBroadcastTools(
         throw new Error(
           `Failed to create broadcast: ${JSON.stringify(response.error)}`,
         );
+      }
+
+      if (content) {
+        await apiClient.composeBroadcastContent(response.data.id, { content });
       }
 
       return {
@@ -323,23 +347,35 @@ export function addBroadcastTools(
     'update-broadcast',
     {
       title: 'Update Broadcast',
-      description: 'Update a broadcast by ID.',
+      description:
+        'Update a broadcast by ID. When using content, call connect-to-editor before and disconnect-from-editor after.',
       inputSchema: {
         id: z.string().nonempty().describe('Broadcast ID'),
         name: z.string().optional().describe('Name for the broadcast'),
         audienceId: z.string().optional().describe('Audience ID to send to'),
-        from: z.email().optional().describe('From email address'),
+        from: z
+          .string()
+          .optional()
+          .describe(
+            'From email address (e.g. "onboarding@resend.com" or "Resend <onboarding@resend.com>")',
+          ),
         html: z.string().optional().describe('HTML content of the email'),
         text: z.string().optional().describe('Plain text content of the email'),
         subject: z.string().optional().describe('Email subject'),
         replyTo: z
-          .array(z.email())
+          .array(z.string())
           .optional()
           .describe('Reply-to email address(es)'),
         previewText: z
           .string()
           .optional()
           .describe('Preview text for the email'),
+        content: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe(
+            'TipTap JSON content for editable email body. Call get-tiptap-schema first to get the schema reference.',
+          ),
       },
     },
     async ({
@@ -352,28 +388,33 @@ export function addBroadcastTools(
       subject,
       replyTo,
       previewText,
+      content,
     }) => {
-      const response = await resend.broadcasts.update(id, {
-        name,
-        audienceId,
-        from,
-        html,
-        text,
-        subject,
-        replyTo,
-        previewText,
-      });
+      if (content) {
+        await apiClient.composeBroadcastContent(id, { content });
+      } else {
+        const response = await resend.broadcasts.update(id, {
+          name,
+          audienceId,
+          from,
+          html,
+          text,
+          subject,
+          replyTo,
+          previewText,
+        });
 
-      if (response.error) {
-        throw new Error(
-          `Failed to update broadcast: ${JSON.stringify(response.error)}`,
-        );
+        if (response.error) {
+          throw new Error(
+            `Failed to update broadcast: ${JSON.stringify(response.error)}`,
+          );
+        }
       }
 
       return {
         content: [
           { type: 'text', text: 'Broadcast updated successfully.' },
-          { type: 'text', text: `ID: ${response.data.id}` },
+          { type: 'text', text: `ID: ${id}` },
         ],
       };
     },
