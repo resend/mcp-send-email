@@ -31,7 +31,7 @@ export function addBroadcastTools(
 - Newsletter, announcement, or bulk message to one audience
 - Supports personalization: {{{FIRST_NAME}}}, {{{LAST_NAME}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}
 
-**Workflow:** list-audiences (if needed) → connect-to-editor (if using content) → create-broadcast → disconnect-from-editor (if using content) → send-broadcast( id ). Optionally update-broadcast before sending.`,
+**Workflow:** list-audiences (if needed) → create-broadcast → connect-to-editor + compose-broadcast + disconnect-from-editor (if using TipTap content) → send-broadcast( id ).`,
       inputSchema: {
         name: z
           .string()
@@ -332,11 +332,43 @@ export function addBroadcastTools(
   );
 
   server.registerTool(
+    'compose-broadcast',
+    {
+      title: 'Compose Broadcast',
+      description: `**Purpose:** Set the TipTap JSON content of a broadcast, enabling it to be edited visually in the Resend dashboard editor.
+
+**Workflow:** connect-to-editor → compose-broadcast → disconnect-from-editor
+
+**When to use:**
+- User wants to edit a broadcast in the Resend dashboard editor
+- After create-broadcast, to set rich editable content instead of static HTML`,
+      inputSchema: {
+        id: z.string().nonempty().describe('Broadcast ID'),
+        content: z
+          .record(z.string(), z.unknown())
+          .describe(
+            'TipTap JSON content. Call get-tiptap-schema first to get the schema reference.',
+          ),
+      },
+    },
+    async ({ id, content }) => {
+      await apiClient.composeBroadcastContent(id, { content });
+
+      return {
+        content: [
+          { type: 'text', text: 'Broadcast content composed successfully.' },
+          { type: 'text', text: `ID: ${id}` },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
     'update-broadcast',
     {
       title: 'Update Broadcast',
       description:
-        'Update a broadcast by ID. When using content, call connect-to-editor before and disconnect-from-editor after.',
+        'Update broadcast metadata by ID (name, subject, from, html, text, audience, preview text). To edit TipTap content, use compose-broadcast instead.',
       inputSchema: {
         id: z.string().nonempty().describe('Broadcast ID'),
         name: z.string().optional().describe('Name for the broadcast'),
@@ -361,12 +393,6 @@ export function addBroadcastTools(
           .string()
           .optional()
           .describe('Preview text for the email'),
-        content: z
-          .record(z.string(), z.unknown())
-          .optional()
-          .describe(
-            'TipTap JSON content for editable email body. Call get-tiptap-schema first to get the schema reference.',
-          ),
       },
     },
     async ({
@@ -379,27 +405,22 @@ export function addBroadcastTools(
       subject,
       replyTo,
       previewText,
-      content,
     }) => {
-      if (content) {
-        await apiClient.composeBroadcastContent(id, { content });
-      } else {
-        const response = await resend.broadcasts.update(id, {
-          name,
-          audienceId,
-          from,
-          html,
-          text,
-          subject,
-          replyTo,
-          previewText,
-        });
+      const response = await resend.broadcasts.update(id, {
+        name,
+        audienceId,
+        from,
+        html,
+        text,
+        subject,
+        replyTo,
+        previewText,
+      });
 
-        if (response.error) {
-          throw new Error(
-            `Failed to update broadcast: ${JSON.stringify(response.error)}`,
-          );
-        }
+      if (response.error) {
+        throw new Error(
+          `Failed to update broadcast: ${JSON.stringify(response.error)}`,
+        );
       }
 
       return {
