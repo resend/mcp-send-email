@@ -67,12 +67,6 @@ export function addBroadcastTools(
                 ),
             }
           : {}),
-        content: z
-          .record(z.string(), z.unknown())
-          .optional()
-          .describe(
-            'TipTap JSON content for editable email body. Call get-tiptap-schema first to get the schema reference. When provided, the email is editable in the Resend dashboard editor. Cannot be used with html/text.',
-          ),
         ...(replierEmailAddresses.length === 0
           ? {
               replyTo: z
@@ -90,7 +84,6 @@ export function addBroadcastTools(
       text,
       html,
       previewText,
-      content,
       from,
       replyTo,
     }) => {
@@ -111,18 +104,12 @@ export function addBroadcastTools(
         throw new Error('replyTo argument must be provided.');
       }
 
-      if (content && (html || text)) {
-        throw new Error(
-          'Cannot use content together with html or text. Use content for TipTap editable email, or html/text for static email.',
-        );
-      }
-
       const response = await resend.broadcasts.create({
         name,
         audienceId,
         subject,
         text,
-        html, // must be null
+        html,
         previewText,
         from: fromEmailAddress,
         replyTo: replyToEmailAddresses,
@@ -132,10 +119,6 @@ export function addBroadcastTools(
         throw new Error(
           `Failed to create broadcast: ${JSON.stringify(response.error)}`,
         );
-      }
-
-      if (content) {
-        await apiClient.composeBroadcastContent(response.data.id, { content });
       }
 
       return {

@@ -77,28 +77,12 @@ export function addTemplateTools(
           .array(templateVariableSchema)
           .optional()
           .describe('Array of template variables (up to 50 per template).'),
-        content: z
-          .record(z.string(), z.unknown())
-          .optional()
-          .describe(
-            'TipTap JSON content for editable email body. Call get-tiptap-schema first to get the schema reference.',
-          ),
       },
     },
-    async ({
-      name,
-      html,
-      subject,
-      from,
-      replyTo,
-      text,
-      alias,
-      variables,
-      content,
-    }) => {
+    async ({ name, html, subject, from, replyTo, text, alias, variables }) => {
       const response = await resend.templates.create({
         name,
-        html, // must be null
+        html,
         ...(subject && { subject }),
         ...(from && { from }),
         ...(replyTo && { replyTo }),
@@ -111,10 +95,6 @@ export function addTemplateTools(
         throw new Error(
           `Failed to create template: ${JSON.stringify(response.error)}`,
         );
-      }
-
-      if (content && apiClient) {
-        await apiClient.composeTemplateContent(response.data.id, { content });
       }
 
       return {
