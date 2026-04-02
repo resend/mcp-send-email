@@ -11,8 +11,8 @@ interface EditorConnection {
 
 export function addEditorTools(
   server: McpServer,
-  dashboard?: DashboardClient,
-  apiClient?: ResendApiClient,
+  dashboard: DashboardClient,
+  apiClient: ResendApiClient,
 ) {
   let activeConnection: EditorConnection | null = null;
 

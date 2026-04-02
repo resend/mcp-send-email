@@ -29,7 +29,7 @@ const templateVariableSchema = z.object({
 export function addTemplateTools(
   server: McpServer,
   resend: Resend,
-  apiClient?: ResendApiClient,
+  apiClient: ResendApiClient,
 ) {
   server.registerTool(
     'create-template',
