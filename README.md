@@ -22,6 +22,14 @@ An MCP server for the [Resend](https://resend.com/) platform. Send and receive e
 
 Create a free Resend account and [create an API key](https://resend.com/api-keys). To send to addresses outside of your own, you'll need to [verify your domain](https://resend.com/domains).
 
+### Quick Setup
+
+Use [`add-mcp`](https://github.com/neondatabase/add-mcp) to add the server with the package name and API key in one command:
+
+```bash
+npx add-mcp resend-mcp --name resend --env "RESEND_API_KEY=re_xxxxxxxxx"
+```
+
 ## Usage
 
 The server supports two transport modes: **stdio** (default) and **HTTP**.
