@@ -386,7 +386,7 @@ export function addBroadcastTools(
     {
       title: 'Update Broadcast',
       description:
-        'Update broadcast metadata by ID (name, subject, from, html, text, segment, preview text). To edit TipTap content, use compose-broadcast instead.\n\n**Important:** The API requires `from` and `segmentId` to be set on the broadcast. If the broadcast was created from the dashboard, these may be empty. Always call get-broadcast first to check, and include `from` and `segmentId` in your update if they are not already set. Use list-domains to find verified domains for the from address, and list-segments to find segment IDs.',
+        'Update broadcast metadata by ID (name, subject, from, segment, preview text). For **email content changes, always use compose-broadcast instead** — it produces editable content in the dashboard visual editor. Setting `html` or `text` here locks the broadcast into code-editor mode, which cannot be converted back to the visual editor.\n\n**Important:** The API requires `from` and `segmentId` to be set on the broadcast. If the broadcast was created from the dashboard, these may be empty. Always call get-broadcast first to check, and include `from` and `segmentId` in your update if they are not already set. Use list-domains to find verified domains for the from address, and list-segments to find segment IDs.',
       inputSchema: {
         broadcastId: z.string().nonempty().describe('Broadcast ID'),
         name: z.string().optional().describe('Name for the broadcast'),
@@ -458,7 +458,7 @@ export function addBroadcastTools(
           content: [
             {
               type: 'text',
-              text: `Cannot update: this broadcast is missing required fields: ${missingFields.join(', ')}. Include ${missingFields.length === 1 ? 'this field' : 'these fields'} in your update call to proceed.\n\nCurrent broadcast state:\n${state}\n\nUse list-segments to find segment IDs and list-domains to find verified sending domains for the from address. Then retry this update with the missing fields included.`,
+              text: `Cannot update: this broadcast is missing required fields: ${missingFields.join(', ')}.\n\nCurrent broadcast state:\n${state}\n\nCall list-segments and list-domains to load the available options, then present them to the user and ask which ones to use. Do NOT pick defaults on the user's behalf. Once the user chooses, retry this update with the missing fields included.`,
             },
           ],
         };
