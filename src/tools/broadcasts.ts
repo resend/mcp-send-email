@@ -36,6 +36,8 @@ export function addBroadcastTools(
 - Newsletter, announcement, or bulk message to one segment
 - Supports personalization: {{{FIRST_NAME}}}, {{{LAST_NAME}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}
 
+**"All contacts" note:** Broadcasts require a segment. There is no "all contacts" option in the API. If the user wants to send to all contacts, check list-segments for an existing segment that covers everyone. If none exists, suggest creating one with create-segment.
+
 **Workflow:** list-segments (if needed) → create-broadcast → compose-broadcast (to set email content editable in the dashboard) → send-broadcast.
 
 **Content options after creating:**
