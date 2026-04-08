@@ -170,7 +170,9 @@ export function addBroadcastTools(
       },
     },
     async ({ broadcastId, scheduledAt }) => {
-      const response = await resend.broadcasts.send(broadcastId, { scheduledAt });
+      const response = await resend.broadcasts.send(broadcastId, {
+        scheduledAt,
+      });
 
       if (response.error) {
         throw new Error(
