@@ -25,18 +25,22 @@ export function addBroadcastTools(
     'create-broadcast',
     {
       title: 'Create Broadcast',
-      description: `**Purpose:** Create a broadcast campaign (one email sent to an entire audience). Defines subject, body, and audience; does NOT send yet. Use send-broadcast to send it.
+      description: `**Purpose:** Create a broadcast campaign (one email sent to an entire segment). Defines subject, body, and segment; does NOT send yet. Use send-broadcast to send it.
 
 **NOT for:** Sending a one-off email to specific people (use send-email). Not for adding contacts (use create-contact).
 
 **Returns:** Broadcast ID. Use this ID with send-broadcast to send, or get-broadcast/update-broadcast to manage.
 
 **When to use:**
-- User wants to "email my list", "send a newsletter", "broadcast to my audience", "email all contacts in X"
-- Newsletter, announcement, or bulk message to one audience
+- User wants to "email my list", "send a newsletter", "broadcast to my segment", "email all contacts in X"
+- Newsletter, announcement, or bulk message to one segment
 - Supports personalization: {{{FIRST_NAME}}}, {{{LAST_NAME}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}
 
-**Workflow:** list-segments (if needed) → create-broadcast → compose-broadcast (if using TipTap content) → send-broadcast.`,
+**Workflow:** list-segments (if needed) → create-broadcast → compose-broadcast (to set email content editable in the dashboard) → send-broadcast.
+
+**Content options after creating:**
+- **compose-broadcast** (recommended): Sets TipTap content that the user can visually edit in the Resend dashboard. Use this when the user wants to collaborate on or refine the email in the editor.
+- **update-broadcast with html/text**: Sets static HTML/text content. Use this only when the user explicitly wants to set raw HTML. Switching between compose and html/text modes is lossy — some content or formatting may be lost. Ask the user before switching.`,
       inputSchema: {
         name: z
           .string()
@@ -340,11 +344,16 @@ export function addBroadcastTools(
     'compose-broadcast',
     {
       title: 'Compose Broadcast',
-      description: `**Purpose:** Set the TipTap JSON content of a broadcast, enabling it to be edited visually in the Resend dashboard editor. Automatically connects and disconnects from the editor.
+      description: `**Purpose:** Set the email content of a broadcast using TipTap JSON, making it editable in the Resend dashboard visual editor. The broadcast must be created first with create-broadcast. Automatically connects and disconnects from the editor.
+
+**This is the recommended way to set email content.** Content set via compose-broadcast can be visually edited by the user in the dashboard. Use this for newsletters and any broadcast where the user may want to refine the content.
 
 **When to use:**
-- User wants to edit a broadcast in the Resend dashboard editor
-- After create-broadcast, to set rich editable content instead of static HTML`,
+- After create-broadcast, to set the email body
+- When the user wants to write, edit, or style email content
+- When the user wants to collaborate on the email in the dashboard editor
+
+**Note:** Switching between compose (TipTap) and update (raw HTML) modes is lossy — some content or formatting may be lost. If the broadcast already has HTML content, ask the user before switching to compose mode.`,
       inputSchema: {
         broadcastId: z.string().nonempty().describe('Broadcast ID'),
         content: z
@@ -386,7 +395,7 @@ export function addBroadcastTools(
     {
       title: 'Update Broadcast',
       description:
-        'Update broadcast metadata by ID (name, subject, from, segment, preview text). For **email content changes, always use compose-broadcast instead** — it produces editable content in the dashboard visual editor. Setting `html` or `text` here locks the broadcast into code-editor mode, which cannot be converted back to the visual editor.\n\n**Important:** The API requires `from` and `segmentId` to be set on the broadcast. If the broadcast was created from the dashboard, these may be empty. Always call get-broadcast first to check, and include `from` and `segmentId` in your update if they are not already set. Use list-domains to find verified domains for the from address, and list-segments to find segment IDs.',
+        'Update broadcast metadata by ID (name, subject, from, segment, preview text, reply-to). Can also set raw HTML/text content, but prefer compose-broadcast for email content instead.\n\n**Note about html/text fields:** Setting `html` or `text` here replaces any content set via compose-broadcast. Switching between compose (TipTap) and update (raw HTML) modes is lossy — some content or formatting may be lost. Prefer compose-broadcast for content changes. If the broadcast was composed via the visual editor, ask the user before overwriting with html/text.\n\n**Important:** The API requires `from` and `segmentId` to be set on the broadcast. If the broadcast was created from the dashboard, these may be empty. Always call get-broadcast first to check, and include `from` and `segmentId` in your update if they are not already set. Use list-domains to find verified domains for the from address, and list-segments to find segment IDs.',
       inputSchema: {
         broadcastId: z.string().nonempty().describe('Broadcast ID'),
         name: z.string().optional().describe('Name for the broadcast'),
