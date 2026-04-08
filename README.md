@@ -186,6 +186,45 @@ claude mcp add resend --transport http http://127.0.0.1:3000/mcp --header "Autho
 }
 ```
 
+### Live Testing with an MCP Client
+
+When developing, you can test changes in a real MCP client session while editing code in another.
+
+The idea: run `tsc --watch` to continuously rebuild `dist/`, and point a separate MCP client at the built `dist/index.js` from a different directory. When you want to pick up code changes, restart the MCP client session (MCP servers are long-lived stdio processes that don't hot-reload).
+
+**Example with Claude Code:**
+
+1. Run the TypeScript watcher to auto-rebuild on save:
+
+   ```bash
+   pnpm tsc --watch
+   ```
+
+2. In a separate directory, create a `.mcp.json` pointing at the build output:
+
+   ```bash
+   mkdir -p /tmp/mcp-test
+   ```
+
+   ```json
+   // /tmp/mcp-test/.mcp.json
+   {
+     "mcpServers": {
+       "resend-dev": {
+         "command": "node",
+         "args": ["/absolute/path/to/resend-mcp/dist/index.js"],
+         "env": {
+           "RESEND_API_KEY": "re_xxxxxxxxx"
+         }
+       }
+     }
+   }
+   ```
+
+3. Start Claude Code from that directory and use the MCP tools. After making code changes, start a new Claude Code session to pick up the new build.
+
+The same principle applies to any MCP client — separate your test environment from your dev environment, use an absolute path to `dist/index.js`, and reconnect the MCP server after rebuilding.
+
 ### Testing with MCP Inspector
 
 > **Note:** Make sure you've built the project first (see [Local Development](#local-development) section above).
