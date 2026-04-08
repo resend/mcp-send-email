@@ -30,6 +30,14 @@ export function addTemplateTools(
   server: McpServer,
   resend: Resend,
   apiClient: ResendApiClient,
+  {
+    withEditorSession,
+  }: {
+    withEditorSession: <T>(
+      conn: { resource_type: 'broadcast' | 'template'; resource_id: string },
+      fn: () => Promise<T>,
+    ) => Promise<T>;
+  },
 ) {
   server.registerTool(
     'create-template',
@@ -254,9 +262,7 @@ export function addTemplateTools(
     'compose-template',
     {
       title: 'Compose Template',
-      description: `**Purpose:** Set the TipTap JSON content of a template, enabling it to be edited visually in the Resend dashboard editor.
-
-**Workflow:** connect-to-editor → compose-template → disconnect-from-editor
+      description: `**Purpose:** Set the TipTap JSON content of a template, enabling it to be edited visually in the Resend dashboard editor. Automatically connects and disconnects from the editor.
 
 **When to use:**
 - User wants to edit a template in the Resend dashboard editor
@@ -283,7 +289,10 @@ export function addTemplateTools(
       },
     },
     async ({ id, content }) => {
-      await apiClient.composeTemplateContent(id, { content });
+      await withEditorSession(
+        { resource_type: 'template', resource_id: id },
+        () => apiClient.composeTemplateContent(id, { content }),
+      );
 
       return {
         content: [

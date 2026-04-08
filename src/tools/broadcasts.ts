@@ -11,9 +11,14 @@ export function addBroadcastTools(
   {
     senderEmailAddress,
     replierEmailAddresses,
+    withEditorSession,
   }: {
     senderEmailAddress?: string;
     replierEmailAddresses: string[];
+    withEditorSession: <T>(
+      conn: { resource_type: 'broadcast' | 'template'; resource_id: string },
+      fn: () => Promise<T>,
+    ) => Promise<T>;
   },
 ) {
   server.registerTool(
@@ -31,7 +36,7 @@ export function addBroadcastTools(
 - Newsletter, announcement, or bulk message to one audience
 - Supports personalization: {{{FIRST_NAME}}}, {{{LAST_NAME}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}
 
-**Workflow:** list-audiences (if needed) → create-broadcast → connect-to-editor + compose-broadcast + disconnect-from-editor (if using TipTap content) → send-broadcast( id ).`,
+**Workflow:** list-segments (if needed) → create-broadcast → compose-broadcast (if using TipTap content) → send-broadcast.`,
       inputSchema: {
         name: z
           .string()
@@ -39,7 +44,7 @@ export function addBroadcastTools(
           .describe(
             'Name for the broadcast. If the user does not provide a name, go ahead and create a descriptive name for them, based on the email subject/content and the context of your conversation.',
           ),
-        audienceId: z.string().nonempty().describe('Audience ID to send to'),
+        segmentId: z.string().nonempty().describe('Segment ID to send to'),
         subject: z.string().nonempty().describe('Email subject'),
         text: z
           .string()
@@ -79,7 +84,7 @@ export function addBroadcastTools(
     },
     async ({
       name,
-      audienceId,
+      segmentId,
       subject,
       text,
       html,
@@ -106,7 +111,7 @@ export function addBroadcastTools(
 
       const response = await resend.broadcasts.create({
         name,
-        audienceId,
+        segmentId,
         subject,
         text,
         html,
@@ -149,9 +154,9 @@ export function addBroadcastTools(
 - After create-broadcast; call send-broadcast with the returned ID to deliver to the audience
 - Optional scheduledAt: natural language or ISO 8601 for scheduled send
 
-**Workflow:** create-broadcast → send-broadcast( id ). Use list-broadcasts to find existing draft/sent broadcasts.`,
+**Workflow:** create-broadcast → send-broadcast. Use list-broadcasts to find existing draft/sent broadcasts.`,
       inputSchema: {
-        id: z.string().nonempty().describe('Broadcast ID'),
+        broadcastId: z.string().nonempty().describe('Broadcast ID'),
         scheduledAt: z
           .string()
           .optional()
@@ -160,8 +165,8 @@ export function addBroadcastTools(
           ),
       },
     },
-    async ({ id, scheduledAt }) => {
-      const response = await resend.broadcasts.send(id, { scheduledAt });
+    async ({ broadcastId, scheduledAt }) => {
+      const response = await resend.broadcasts.send(broadcastId, { scheduledAt });
 
       if (response.error) {
         throw new Error(
@@ -184,9 +189,9 @@ export function addBroadcastTools(
       title: 'List Broadcasts',
       description: `**Purpose:** List all broadcast campaigns (newsletters/bulk emails to audiences) with ID, name, audience, status, timestamps.
 
-**NOT for:** Listing transactional emails (use list-emails). Not for listing audiences or contacts (use list-audiences, list-contacts).
+**NOT for:** Listing transactional emails (use list-emails). Not for listing segments or contacts (use list-segments, list-contacts).
 
-**Returns:** For each broadcast: id, name, audience_id, status, created_at, scheduled_at, sent_at.
+**Returns:** For each broadcast: id, name, segment_id, status, created_at, scheduled_at, sent_at.
 
 **When to use:** User asks "show my broadcasts", "what newsletters did I send?", "list campaigns". Use get-broadcast for full details of one.`,
       inputSchema: {},
@@ -221,7 +226,7 @@ export function addBroadcastTools(
               text: [
                 `ID: ${id}`,
                 `Name: ${name}`,
-                audience_id !== null && `Audience ID: ${audience_id}`,
+                audience_id !== null && `Segment ID: ${audience_id}`,
                 `Status: ${status}`,
                 `Created at: ${created_at}`,
                 scheduled_at !== null && `Scheduled at: ${scheduled_at}`,
@@ -243,11 +248,11 @@ export function addBroadcastTools(
       description:
         'Retrieve full details of a specific broadcast by ID, including HTML and plain text content.',
       inputSchema: {
-        id: z.string().nonempty().describe('Broadcast ID'),
+        broadcastId: z.string().nonempty().describe('Broadcast ID'),
       },
     },
-    async ({ id }) => {
-      const response = await resend.broadcasts.get(id);
+    async ({ broadcastId }) => {
+      const response = await resend.broadcasts.get(broadcastId);
 
       if (response.error) {
         throw new Error(
@@ -256,7 +261,7 @@ export function addBroadcastTools(
       }
 
       const {
-        id: broadcastId,
+        id: responseId,
         name,
         audience_id,
         from,
@@ -272,9 +277,9 @@ export function addBroadcastTools(
       } = response.data;
 
       let details = [
-        `ID: ${broadcastId}`,
+        `ID: ${responseId}`,
         `Name: ${name}`,
-        audience_id !== null && `Audience ID: ${audience_id}`,
+        audience_id !== null && `Segment ID: ${audience_id}`,
         from !== null && `From: ${from}`,
         subject !== null && `Subject: ${subject}`,
         reply_to !== null && `Reply-to: ${reply_to.join(', ')}`,
@@ -310,11 +315,11 @@ export function addBroadcastTools(
       description:
         'Remove a broadcast by ID. Before using this tool, you MUST double-check with the user that they want to remove this broadcast. Reference the NAME of the broadcast when double-checking, and warn the user that removing a broadcast is irreversible. You may only use this tool if the user explicitly confirms they want to remove the broadcast after you double-check.',
       inputSchema: {
-        id: z.string().nonempty().describe('Broadcast ID'),
+        broadcastId: z.string().nonempty().describe('Broadcast ID'),
       },
     },
-    async ({ id }) => {
-      const response = await resend.broadcasts.remove(id);
+    async ({ broadcastId }) => {
+      const response = await resend.broadcasts.remove(broadcastId);
 
       if (response.error) {
         throw new Error(
@@ -335,15 +340,13 @@ export function addBroadcastTools(
     'compose-broadcast',
     {
       title: 'Compose Broadcast',
-      description: `**Purpose:** Set the TipTap JSON content of a broadcast, enabling it to be edited visually in the Resend dashboard editor.
-
-**Workflow:** connect-to-editor → compose-broadcast → disconnect-from-editor
+      description: `**Purpose:** Set the TipTap JSON content of a broadcast, enabling it to be edited visually in the Resend dashboard editor. Automatically connects and disconnects from the editor.
 
 **When to use:**
 - User wants to edit a broadcast in the Resend dashboard editor
 - After create-broadcast, to set rich editable content instead of static HTML`,
       inputSchema: {
-        id: z.string().nonempty().describe('Broadcast ID'),
+        broadcastId: z.string().nonempty().describe('Broadcast ID'),
         content: z
           .preprocess(
             (val) => {
@@ -363,13 +366,16 @@ export function addBroadcastTools(
           ),
       },
     },
-    async ({ id, content }) => {
-      await apiClient.composeBroadcastContent(id, { content });
+    async ({ broadcastId, content }) => {
+      await withEditorSession(
+        { resource_type: 'broadcast', resource_id: broadcastId },
+        () => apiClient.composeBroadcastContent(broadcastId, { content }),
+      );
 
       return {
         content: [
           { type: 'text', text: 'Broadcast content composed successfully.' },
-          { type: 'text', text: `ID: ${id}` },
+          { type: 'text', text: `ID: ${broadcastId}` },
         ],
       };
     },
@@ -380,11 +386,11 @@ export function addBroadcastTools(
     {
       title: 'Update Broadcast',
       description:
-        'Update broadcast metadata by ID (name, subject, from, html, text, audience, preview text). To edit TipTap content, use compose-broadcast instead.',
+        'Update broadcast metadata by ID (name, subject, from, html, text, segment, preview text). To edit TipTap content, use compose-broadcast instead.\n\n**Important:** The API requires `from` and `segmentId` to be set on the broadcast. If the broadcast was created from the dashboard, these may be empty. Always call get-broadcast first to check, and include `from` and `segmentId` in your update if they are not already set. Use list-domains to find verified domains for the from address, and list-segments to find segment IDs.',
       inputSchema: {
-        id: z.string().nonempty().describe('Broadcast ID'),
+        broadcastId: z.string().nonempty().describe('Broadcast ID'),
         name: z.string().optional().describe('Name for the broadcast'),
-        audienceId: z.string().optional().describe('Audience ID to send to'),
+        segmentId: z.string().optional().describe('Segment ID to send to'),
         from: z
           .string()
           .optional()
@@ -408,9 +414,9 @@ export function addBroadcastTools(
       },
     },
     async ({
-      id,
+      broadcastId,
       name,
-      audienceId,
+      segmentId,
       from,
       html,
       text,
@@ -418,9 +424,49 @@ export function addBroadcastTools(
       replyTo,
       previewText,
     }) => {
-      const response = await resend.broadcasts.update(id, {
+      // Fetch current broadcast to detect missing required fields.
+      // The API validates the merged result (existing + patch), so updating
+      // a dashboard-created broadcast that lacks `from` or `segment_id` will
+      // fail unless we warn the user upfront.
+      const current = await resend.broadcasts.get(broadcastId);
+      if (current.error) {
+        throw new Error(
+          `Failed to fetch broadcast: ${JSON.stringify(current.error)}`,
+        );
+      }
+
+      const missingFields: string[] = [];
+      if (!current.data.from && !from) {
+        missingFields.push('from');
+      }
+      if (!current.data.audience_id && !segmentId) {
+        missingFields.push('segmentId');
+      }
+
+      if (missingFields.length > 0) {
+        const broadcast = current.data;
+        const state = [
+          `ID: ${broadcast.id}`,
+          `Name: ${broadcast.name ?? '(not set)'}`,
+          `From: ${broadcast.from ?? '(not set)'}`,
+          `Subject: ${broadcast.subject ?? '(not set)'}`,
+          `Segment ID: ${broadcast.audience_id ?? '(not set)'}`,
+          `Status: ${broadcast.status}`,
+        ].join('\n');
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Cannot update: this broadcast is missing required fields: ${missingFields.join(', ')}. Include ${missingFields.length === 1 ? 'this field' : 'these fields'} in your update call to proceed.\n\nCurrent broadcast state:\n${state}\n\nUse list-segments to find segment IDs and list-domains to find verified sending domains for the from address. Then retry this update with the missing fields included.`,
+            },
+          ],
+        };
+      }
+
+      const response = await resend.broadcasts.update(broadcastId, {
         name,
-        audienceId,
+        segmentId,
         from,
         html,
         text,
@@ -438,10 +484,10 @@ export function addBroadcastTools(
       return {
         content: [
           { type: 'text', text: 'Broadcast updated successfully.' },
-          { type: 'text', text: `ID: ${id}` },
+          { type: 'text', text: `ID: ${broadcastId}` },
           {
             type: 'text',
-            text: `Review your broadcast before sending: https://resend.com/broadcasts/${id}\n\nOpening this link lets you:\n- Preview how the email renders across devices and email clients\n- Verify personalization placeholders resolve correctly\n- Confirm audience targeting and segment selection\n- Catch any last-minute copy or formatting issues before it reaches your contacts`,
+            text: `Review your broadcast before sending: https://resend.com/broadcasts/${broadcastId}\n\nOpening this link lets you:\n- Preview how the email renders across devices and email clients\n- Verify personalization placeholders resolve correctly\n- Confirm audience targeting and segment selection\n- Catch any last-minute copy or formatting issues before it reaches your contacts`,
           },
         ],
       };
