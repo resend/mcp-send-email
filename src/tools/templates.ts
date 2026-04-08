@@ -264,7 +264,19 @@ export function addTemplateTools(
       inputSchema: {
         id: z.string().nonempty().describe('The template ID or alias.'),
         content: z
-          .record(z.string(), z.unknown())
+          .preprocess(
+            (val) => {
+              if (typeof val === 'string') {
+                try {
+                  return JSON.parse(val);
+                } catch {
+                  return val;
+                }
+              }
+              return val;
+            },
+            z.record(z.string(), z.unknown()),
+          )
           .describe(
             'TipTap JSON content. Call get-tiptap-schema first to get the schema reference.',
           ),

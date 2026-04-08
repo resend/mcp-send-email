@@ -345,7 +345,19 @@ export function addBroadcastTools(
       inputSchema: {
         id: z.string().nonempty().describe('Broadcast ID'),
         content: z
-          .record(z.string(), z.unknown())
+          .preprocess(
+            (val) => {
+              if (typeof val === 'string') {
+                try {
+                  return JSON.parse(val);
+                } catch {
+                  return val;
+                }
+              }
+              return val;
+            },
+            z.record(z.string(), z.unknown()),
+          )
           .describe(
             'TipTap JSON content. Call get-tiptap-schema first to get the schema reference.',
           ),
