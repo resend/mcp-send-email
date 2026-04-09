@@ -56,7 +56,7 @@ export class ResendEditorClient {
     id: string,
     data: { content: Record<string, unknown> },
   ): Promise<{ id: string; object: string }> {
-    return this.apiRequest('POST', '/editor/compose', {
+    return this.apiRequest('POST', '/editor/content', {
       resource_type: 'broadcast',
       resource_id: id,
       content: data.content,
@@ -67,7 +67,7 @@ export class ResendEditorClient {
     id: string,
     data: { content: Record<string, unknown> },
   ): Promise<{ id: string; object: string }> {
-    return this.apiRequest('POST', '/editor/compose', {
+    return this.apiRequest('POST', '/editor/content', {
       resource_type: 'template',
       resource_id: id,
       content: data.content,
