@@ -1,0 +1,29 @@
+src/lib/resend-api-client.ts
+  3e49dc2efc17d827 76-86
+src/tools/broadcasts.ts
+  3e49dc2efc17d827 34-38,344,346,349-355,381-383
+src/tools/templates.ts
+  3e49dc2efc17d827 38-42,262,264,267-273,299-301
+src/tools/editor.ts
+  3e49dc2efc17d827 85-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.6",
+  "base_commit_sha": "ae86b72a35412624be17f5b77fd376b6eca04366",
+  "prompts": {
+    "3e49dc2efc17d827": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2b0ab1fc-6127-444c-869d-2a131403675e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "João Melo",
+      "messages": [],
+      "total_additions": 89,
+      "total_deletions": 14,
+      "accepted_lines": 88,
+      "overriden_lines": 0
+    }
+  }
+}
