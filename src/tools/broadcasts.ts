@@ -2,12 +2,12 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 import { EMAIL_HTML_RULES } from '../lib/email-html-rules.js';
-import type { ResendApiClient } from '../lib/resend-api-client.js';
+import type { ResendEditorClient } from '../lib/resend-editor-client.js';
 
 export function addBroadcastTools(
   server: McpServer,
   resend: Resend,
-  apiClient: ResendApiClient,
+  apiClient: ResendEditorClient,
   {
     senderEmailAddress,
     replierEmailAddresses,
@@ -352,14 +352,14 @@ export function addBroadcastTools(
 
 **This is the recommended way to set email content.** Content set via compose-broadcast can be visually edited by the user in the dashboard. Use this for newsletters and any broadcast where the user may want to refine the content.
 
-**Workflow:** get-tiptap-json-content (if broadcast already has content) → get-tiptap-schema → compose-broadcast
+**Workflow:** get-tiptap-json-content → get-tiptap-schema → compose-broadcast
 
 **When to use:**
 - After create-broadcast, to set the email body
 - When the user wants to write, edit, or style email content
 - When the user wants to collaborate on the email in the dashboard editor
 
-**Important:** If the broadcast already has content, call get-tiptap-json-content first to retrieve the existing TipTap JSON, then build your changes on top of it. Skipping this will overwrite all existing content.
+**Important:** Always call get-tiptap-json-content first to retrieve the existing TipTap JSON, then build your changes on top of it. Skipping this will overwrite all existing content.
 
 **Note:** Switching between compose (TipTap) and update (raw HTML) modes is lossy — some content or formatting may be lost. If the broadcast already has HTML content, ask the user before switching to compose mode.`,
       inputSchema: {

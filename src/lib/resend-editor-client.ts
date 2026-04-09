@@ -1,6 +1,6 @@
 const DEFAULT_API_URL = 'https://api.resend.com';
 
-export class ResendApiClient {
+export class ResendEditorClient {
   private apiUrl: string;
   private apiKey: string;
 

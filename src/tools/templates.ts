@@ -6,7 +6,7 @@ import type {
 } from 'resend';
 import { z } from 'zod';
 import { EMAIL_HTML_RULES } from '../lib/email-html-rules.js';
-import type { ResendApiClient } from '../lib/resend-api-client.js';
+import type { ResendEditorClient } from '../lib/resend-editor-client.js';
 
 const templateVariableSchema = z.object({
   key: z
@@ -29,7 +29,7 @@ const templateVariableSchema = z.object({
 export function addTemplateTools(
   server: McpServer,
   resend: Resend,
-  apiClient: ResendApiClient,
+  apiClient: ResendEditorClient,
   {
     withEditorSession,
   }: {
@@ -269,14 +269,14 @@ export function addTemplateTools(
 
 **This is the recommended way to set email content.** Content set via compose-template can be visually edited by the user in the dashboard.
 
-**Workflow:** get-tiptap-json-content (if template already has content) → get-tiptap-schema → compose-template
+**Workflow:** get-tiptap-json-content → get-tiptap-schema → compose-template
 
 **When to use:**
 - After create-template, to set the email body
 - When the user wants to write, edit, or style email content
 - When the user wants to collaborate on the email in the dashboard editor
 
-**Important:** If the template already has content, call get-tiptap-json-content first to retrieve the existing TipTap JSON, then build your changes on top of it. Skipping this will overwrite all existing content.
+**Important:** Always call get-tiptap-json-content first to retrieve the existing TipTap JSON, then build your changes on top of it. Skipping this will overwrite all existing content.
 
 **Note:** Switching between compose (TipTap) and update (raw HTML) modes is lossy — some content or formatting may be lost. If the template already has HTML content, ask the user before switching to compose mode.`,
       inputSchema: {

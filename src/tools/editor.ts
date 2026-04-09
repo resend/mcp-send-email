@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { DashboardClient } from '../lib/dashboard-client.js';
-import type { ResendApiClient } from '../lib/resend-api-client.js';
+import type { ResendEditorClient } from '../lib/resend-editor-client.js';
 
 interface EditorConnection {
   resource_type: 'broadcast' | 'template';
@@ -12,7 +12,7 @@ interface EditorConnection {
 export function addEditorTools(
   server: McpServer,
   dashboard: DashboardClient,
-  apiClient: ResendApiClient,
+  apiClient: ResendEditorClient,
 ) {
   let activeConnection: EditorConnection | null = null;
 
@@ -88,7 +88,7 @@ export function addEditorTools(
       description: `**Purpose:** Retrieve the existing TipTap JSON content of a broadcast or template. Returns the full TipTap document JSON currently stored for the resource.
 
 **When to use:**
-- **Always call this before compose-broadcast or compose-template** when the resource already has content, so you can build on the existing document instead of overwriting it
+- **Always call this before compose-broadcast or compose-template** to fetch the current document state — even if you expect it to be empty, the resource may have content set via the dashboard
 - When the user asks to edit, tweak, or modify existing email content
 - To inspect the current TipTap structure of a resource
 
