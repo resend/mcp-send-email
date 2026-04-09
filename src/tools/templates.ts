@@ -35,8 +35,11 @@ export function addTemplateTools(
     'create-template',
     {
       title: 'Create Template',
-      description:
-        'Create a new email template in Resend. Templates are created in draft status. Use publish-template to make them available for sending. Variables use triple-brace syntax in HTML: {{{VAR_NAME}}}. To set TipTap content after creation, use connect-to-editor → compose-template → disconnect-from-editor.',
+      description: `Create a new email template in Resend. Templates are created in draft status. Use publish-template to make them available for sending. Variables use triple-brace syntax in HTML: {{{VAR_NAME}}}.
+
+**Content options after creating:**
+- **compose-template** (recommended): Sets TipTap content that the user can visually edit in the Resend dashboard. Use this when the user wants to collaborate on or refine the template in the editor.
+- **update-template with html/text**: Sets static HTML/text content. Use this only when the user explicitly wants to set raw HTML. Switching between compose and html/text modes is lossy — some content or formatting may be lost. Ask the user before switching.`,
       inputSchema: {
         name: z.string().nonempty().describe('The name of the template.'),
         html: z
@@ -256,11 +259,18 @@ export function addTemplateTools(
       title: 'Compose Template',
       description: `**Purpose:** Set the TipTap JSON content of a template, enabling it to be edited visually in the Resend dashboard editor.
 
-**Workflow:** connect-to-editor → compose-template → disconnect-from-editor
+**This is the recommended way to set email content.** Content set via compose-template can be visually edited by the user in the dashboard.
+
+**Workflow:** get-tiptap-json-content (if template already has content) → get-tiptap-schema → connect-to-editor → compose-template → disconnect-from-editor
 
 **When to use:**
-- User wants to edit a template in the Resend dashboard editor
-- After create-template, to set rich editable content instead of static HTML`,
+- After create-template, to set the email body
+- When the user wants to write, edit, or style email content
+- When the user wants to collaborate on the email in the dashboard editor
+
+**Important:** If the template already has content, call get-tiptap-json-content first to retrieve the existing TipTap JSON, then build your changes on top of it. Skipping this will overwrite all existing content.
+
+**Note:** Switching between compose (TipTap) and update (raw HTML) modes is lossy — some content or formatting may be lost. If the template already has HTML content, ask the user before switching to compose mode.`,
       inputSchema: {
         id: z.string().nonempty().describe('The template ID or alias.'),
         content: z
@@ -286,8 +296,9 @@ export function addTemplateTools(
     'update-template',
     {
       title: 'Update Template',
-      description:
-        'Update template metadata by ID or alias (name, subject, from, html, variables, etc.). After updating a published template, use publish-template again to make the changes live. To edit TipTap content, use compose-template instead.',
+      description: `Update template metadata by ID or alias (name, subject, from, html, variables, etc.). After updating a published template, use publish-template again to make the changes live. To edit TipTap content, use compose-template instead.
+
+**Note on html/text fields:** Setting html or text via this tool replaces any content previously set via compose-template. This switch is lossy — some content or formatting may be lost. Prefer compose-template for content changes. If the template was composed with TipTap content, ask the user before overwriting it with raw HTML.`,
       inputSchema: {
         id: z.string().nonempty().describe('The template ID or alias.'),
         name: z.string().optional().describe('New name for the template.'),

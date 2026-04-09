@@ -73,4 +73,15 @@ export class ResendApiClient {
       content: data.content,
     });
   }
+
+  async getEditorContent(
+    resourceType: 'broadcast' | 'template',
+    resourceId: string,
+  ): Promise<{ content: Record<string, unknown> }> {
+    const params = new URLSearchParams({
+      resource_type: resourceType,
+      resource_id: resourceId,
+    });
+    return this.apiRequest('GET', `/editor/content?${params.toString()}`);
+  }
 }

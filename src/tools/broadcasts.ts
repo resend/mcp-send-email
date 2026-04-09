@@ -31,7 +31,11 @@ export function addBroadcastTools(
 - Newsletter, announcement, or bulk message to one audience
 - Supports personalization: {{{FIRST_NAME}}}, {{{LAST_NAME}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}
 
-**Workflow:** list-audiences (if needed) → create-broadcast → connect-to-editor + compose-broadcast + disconnect-from-editor (if using TipTap content) → send-broadcast( id ).`,
+**Workflow:** list-segments (if needed) → create-broadcast → compose-broadcast (to set email content editable in the dashboard) → send-broadcast.
+
+**Content options after creating:**
+- **compose-broadcast** (recommended): Sets TipTap content that the user can visually edit in the Resend dashboard. Use this when the user wants to collaborate on or refine the email in the editor.
+- **update-broadcast with html/text**: Sets static HTML/text content. Use this only when the user explicitly wants to set raw HTML. Switching between compose and html/text modes is lossy — some content or formatting may be lost. Ask the user before switching.`,
       inputSchema: {
         name: z
           .string()
@@ -337,11 +341,18 @@ export function addBroadcastTools(
       title: 'Compose Broadcast',
       description: `**Purpose:** Set the TipTap JSON content of a broadcast, enabling it to be edited visually in the Resend dashboard editor.
 
-**Workflow:** connect-to-editor → compose-broadcast → disconnect-from-editor
+**This is the recommended way to set email content.** Content set via compose-broadcast can be visually edited by the user in the dashboard. Use this for newsletters and any broadcast where the user may want to refine the content.
+
+**Workflow:** get-tiptap-json-content (if broadcast already has content) → get-tiptap-schema → connect-to-editor → compose-broadcast → disconnect-from-editor
 
 **When to use:**
-- User wants to edit a broadcast in the Resend dashboard editor
-- After create-broadcast, to set rich editable content instead of static HTML`,
+- After create-broadcast, to set the email body
+- When the user wants to write, edit, or style email content
+- When the user wants to collaborate on the email in the dashboard editor
+
+**Important:** If the broadcast already has content, call get-tiptap-json-content first to retrieve the existing TipTap JSON, then build your changes on top of it. Skipping this will overwrite all existing content.
+
+**Note:** Switching between compose (TipTap) and update (raw HTML) modes is lossy — some content or formatting may be lost. If the broadcast already has HTML content, ask the user before switching to compose mode.`,
       inputSchema: {
         id: z.string().nonempty().describe('Broadcast ID'),
         content: z
@@ -367,8 +378,9 @@ export function addBroadcastTools(
     'update-broadcast',
     {
       title: 'Update Broadcast',
-      description:
-        'Update broadcast metadata by ID (name, subject, from, html, text, audience, preview text). To edit TipTap content, use compose-broadcast instead.',
+      description: `Update broadcast metadata by ID (name, subject, from, html, text, audience, preview text). To edit TipTap content, use compose-broadcast instead.
+
+**Note on html/text fields:** Setting html or text via this tool replaces any content previously set via compose-broadcast. This switch is lossy — some content or formatting may be lost. Prefer compose-broadcast for content changes. If the broadcast was composed with TipTap content, ask the user before overwriting it with raw HTML.`,
       inputSchema: {
         id: z.string().nonempty().describe('Broadcast ID'),
         name: z.string().optional().describe('Name for the broadcast'),

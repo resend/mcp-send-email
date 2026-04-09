@@ -82,6 +82,47 @@ export function addEditorTools(
   );
 
   server.registerTool(
+    'get-tiptap-json-content',
+    {
+      title: 'Get TipTap JSON Content',
+      description: `**Purpose:** Retrieve the existing TipTap JSON content of a broadcast or template. Returns the full TipTap document JSON currently stored for the resource.
+
+**When to use:**
+- **Always call this before compose-broadcast or compose-template** when the resource already has content, so you can build on the existing document instead of overwriting it
+- When the user asks to edit, tweak, or modify existing email content
+- To inspect the current TipTap structure of a resource
+
+**Returns:** The TipTap JSON content object for the resource. Use this as the base for modifications, then pass the updated JSON to compose-broadcast or compose-template.`,
+      inputSchema: {
+        resource_type: z
+          .enum(['broadcast', 'template'])
+          .describe('Type of resource to fetch content for'),
+        resource_id: z
+          .string()
+          .nonempty()
+          .describe(
+            'The broadcast ID (UUID) or template identifier (UUID or alias)',
+          ),
+      },
+    },
+    async ({ resource_type, resource_id }) => {
+      const result = await apiClient.getEditorContent(
+        resource_type,
+        resource_id,
+      );
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result.content, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
     'connect-to-editor',
     {
       title: 'Connect to Editor',
