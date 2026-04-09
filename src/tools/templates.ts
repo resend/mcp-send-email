@@ -30,6 +30,14 @@ export function addTemplateTools(
   server: McpServer,
   resend: Resend,
   apiClient: ResendApiClient,
+  {
+    withEditorSession,
+  }: {
+    withEditorSession: <T>(
+      conn: { resource_type: 'broadcast' | 'template'; resource_id: string },
+      fn: () => Promise<T>,
+    ) => Promise<T>;
+  },
 ) {
   server.registerTool(
     'create-template',
@@ -257,11 +265,11 @@ export function addTemplateTools(
     'compose-template',
     {
       title: 'Compose Template',
-      description: `**Purpose:** Set the TipTap JSON content of a template, enabling it to be edited visually in the Resend dashboard editor.
+      description: `**Purpose:** Set the TipTap JSON content of a template, enabling it to be edited visually in the Resend dashboard editor. Automatically connects and disconnects from the editor.
 
 **This is the recommended way to set email content.** Content set via compose-template can be visually edited by the user in the dashboard.
 
-**Workflow:** get-tiptap-json-content (if template already has content) → get-tiptap-schema → connect-to-editor → compose-template → disconnect-from-editor
+**Workflow:** get-tiptap-json-content (if template already has content) → get-tiptap-schema → compose-template
 
 **When to use:**
 - After create-template, to set the email body
@@ -274,14 +282,29 @@ export function addTemplateTools(
       inputSchema: {
         id: z.string().nonempty().describe('The template ID or alias.'),
         content: z
-          .record(z.string(), z.unknown())
+          .preprocess(
+            (val) => {
+              if (typeof val === 'string') {
+                try {
+                  return JSON.parse(val);
+                } catch {
+                  return val;
+                }
+              }
+              return val;
+            },
+            z.record(z.string(), z.unknown()),
+          )
           .describe(
             'TipTap JSON content. Call get-tiptap-schema first to get the schema reference.',
           ),
       },
     },
     async ({ id, content }) => {
-      await apiClient.composeTemplateContent(id, { content });
+      await withEditorSession(
+        { resource_type: 'template', resource_id: id },
+        () => apiClient.composeTemplateContent(id, { content }),
+      );
 
       return {
         content: [
