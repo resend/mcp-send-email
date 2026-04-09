@@ -1,0 +1,25 @@
+src/tools/broadcasts.ts
+  3e49dc2efc17d827 355,405
+src/tools/templates.ts
+  3e49dc2efc17d827 272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.6",
+  "base_commit_sha": "9b65908eb3c0b5b964cf7743cc9eec465977730b",
+  "prompts": {
+    "3e49dc2efc17d827": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2b0ab1fc-6127-444c-869d-2a131403675e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "João Melo",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 34,
+      "overriden_lines": 0
+    }
+  }
+}
