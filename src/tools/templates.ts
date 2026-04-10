@@ -304,10 +304,7 @@ export function addTemplateTools(
           .string()
           .optional()
           .describe('Update the default email subject.'),
-        name: z
-          .string()
-          .optional()
-          .describe('Update the template name.'),
+        name: z.string().optional().describe('Update the template name.'),
       },
     },
     async ({ id, content, subject, name }) => {
