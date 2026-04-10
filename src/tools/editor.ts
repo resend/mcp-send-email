@@ -94,11 +94,23 @@ export function addEditorTools(
       });
 
       if (include_schema) {
-        const { data, version } = await dashboard.getTiptapSchema();
-        contentParts.push({
-          type: 'text',
-          text: `\n\nTipTap Schema Reference (version: ${version}):\n\n${data}`,
-        });
+        if (!dashboard) {
+          throw new Error(
+            'Dashboard client not configured. Provide a Resend API key to fetch the TipTap schema.',
+          );
+        }
+        try {
+          const { data, version } = await dashboard.getTiptapSchema();
+          contentParts.push({
+            type: 'text',
+            text: `\n\nTipTap Schema Reference (version: ${version}):\n\n${data}`,
+          });
+        } catch (err) {
+          contentParts.push({
+            type: 'text',
+            text: `\n\n**Warning:** Failed to fetch TipTap schema: ${err instanceof Error ? err.message : String(err)}. The content above is still valid — retry get-tiptap-json-content with include_schema: true if you need the schema.`,
+          });
+        }
       }
 
       return { content: contentParts };
@@ -112,8 +124,8 @@ export function addEditorTools(
       description: `**Purpose:** Show agent presence in the Resend dashboard editor. Users will see an agent avatar while connected.
 
 **When to use:**
-- Before making edits to a broadcast or template via the dashboard API
 - To signal to dashboard users that an AI agent is working on the content
+- **Not needed before compose-broadcast or compose-template** — those tools handle editor connection automatically. Only call this for manual editor presence outside of compose workflows.
 
 **Returns:** Connection token and room ID.`,
       inputSchema: {
