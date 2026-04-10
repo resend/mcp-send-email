@@ -74,9 +74,9 @@ export function addEditorTools(
           ),
         include_schema: z
           .boolean()
-          .optional()
+          .default(true)
           .describe(
-            'If true, also returns the TipTap schema reference alongside the content. Recommended when you plan to compose content next.',
+            'Returns the TipTap schema reference alongside the content. Required for producing valid TipTap JSON. Set to false only if you already have the schema.',
           ),
       },
     },
@@ -94,11 +94,6 @@ export function addEditorTools(
       });
 
       if (include_schema) {
-        if (!dashboard) {
-          throw new Error(
-            'Dashboard client not configured. Provide a Resend API key to fetch the TipTap schema.',
-          );
-        }
         try {
           const { data, version } = await dashboard.getTiptapSchema();
           contentParts.push({
