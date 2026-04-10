@@ -114,11 +114,7 @@ export function addTemplateTools(
           { type: 'text', text: `ID: ${response.data.id}` },
           {
             type: 'text',
-            text: `**Next step:** Call get-tiptap-json-content with resource_type "template", resource_id "${response.data.id}", and include_schema true — then call compose-template to set the email body content.`,
-          },
-          {
-            type: 'text',
-            text: 'The template is in draft status. Use publish-template to make it available for sending.',
+            text: `**Next step:** Call get-tiptap-json-content with resource_type "template", resource_id "${response.data.id}", and include_schema true — then call compose-template to set the email body content. Use publish-template when the template is ready for sending.`,
           },
           {
             type: 'text',
@@ -320,11 +316,11 @@ export function addTemplateTools(
       );
 
       // Update metadata if any was provided
-      const hasMetadata = subject || name;
+      const hasMetadata = subject !== undefined || name !== undefined;
       if (hasMetadata) {
         const updateResponse = await resend.templates.update(id, {
-          ...(subject && { subject }),
-          ...(name && { name }),
+          ...(subject !== undefined && { subject }),
+          ...(name !== undefined && { name }),
         } as UpdateTemplateOptions);
 
         if (updateResponse.error) {
@@ -334,6 +330,7 @@ export function addTemplateTools(
                 type: 'text',
                 text: 'Template content composed successfully, but metadata update failed.',
               },
+              { type: 'text', text: `ID: ${id}` },
               {
                 type: 'text',
                 text: `Error: ${JSON.stringify(updateResponse.error)}`,
@@ -343,32 +340,34 @@ export function addTemplateTools(
         }
       }
 
-      // Fetch current state to check for missing metadata
-      const current = await resend.templates.get(id);
       const resultParts: Array<{ type: 'text'; text: string }> = [
         { type: 'text', text: 'Template content composed successfully.' },
         { type: 'text', text: `ID: ${id}` },
       ];
 
-      if (!current.error && !current.data.subject) {
-        resultParts.push({
-          type: 'text',
-          text: '**Note:** The template has no subject set. You can set it by calling compose-template again with the subject field, or use update-template.',
-        });
-      }
+      // Only check for missing metadata when the caller didn't provide any
+      if (!hasMetadata) {
+        const current = await resend.templates.get(id);
+        if (!current.error) {
+          if (!current.data.subject) {
+            resultParts.push({
+              type: 'text',
+              text: '**Note:** The template has no subject set. You can set it by calling compose-template again with the subject field, or use update-template.',
+            });
+          }
 
-      if (!current.error) {
-        const status = current.data.status;
-        if (status === 'draft') {
-          resultParts.push({
-            type: 'text',
-            text: 'The template is in draft status. Use publish-template to make it available for sending.',
-          });
-        } else if (status === 'published') {
-          resultParts.push({
-            type: 'text',
-            text: 'The template is published. Use publish-template again to make the latest changes live.',
-          });
+          const status = current.data.status;
+          if (status === 'draft') {
+            resultParts.push({
+              type: 'text',
+              text: 'The template is in draft status. Use publish-template to make it available for sending.',
+            });
+          } else if (status === 'published') {
+            resultParts.push({
+              type: 'text',
+              text: 'The template is published. Use publish-template again to make the latest changes live.',
+            });
+          }
         }
       }
 

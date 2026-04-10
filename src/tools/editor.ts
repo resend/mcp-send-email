@@ -49,39 +49,6 @@ export function addEditorTools(
   }
 
   server.registerTool(
-    'get-tiptap-schema',
-    {
-      title: 'Get TipTap Email Schema',
-      description: `**Purpose:** Retrieve the TipTap JSON schema reference for creating editable email content that works in the Resend dashboard editor.
-
-**When to use:**
-- Before using create-broadcast or update-broadcast with the \`content\` parameter
-- When you need to understand the available TipTap node types and structure
-
-**Returns:** A prompt describing the full TipTap JSON schema, including all node types, marks, and attributes.`,
-      inputSchema: {},
-    },
-    async () => {
-      if (!dashboard) {
-        throw new Error(
-          'Dashboard integration not configured. Provide a Resend API key to enable TipTap schema access.',
-        );
-      }
-
-      const { data, version } = await dashboard.getTiptapSchema();
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `TipTap Schema Reference (version: ${version}):\n\n${data}`,
-          },
-        ],
-      };
-    },
-  );
-
-  server.registerTool(
     'get-tiptap-json-content',
     {
       title: 'Get TipTap JSON Content',
@@ -94,7 +61,7 @@ export function addEditorTools(
 
 **Returns:** The TipTap JSON content object for the resource, and optionally the TipTap schema. Use the content as the base for modifications, then pass the updated JSON to compose-broadcast or compose-template.
 
-**Tip:** Set include_schema to true to get both the existing content and the schema in one call — this avoids a separate get-tiptap-schema call.`,
+**Tip:** Set include_schema to true to get both the existing content and the schema in one call.`,
       inputSchema: {
         resource_type: z
           .enum(['broadcast', 'template'])
@@ -109,7 +76,7 @@ export function addEditorTools(
           .boolean()
           .optional()
           .describe(
-            'If true, also returns the TipTap schema reference alongside the content. Saves a separate get-tiptap-schema call. Recommended when you plan to compose content next.',
+            'If true, also returns the TipTap schema reference alongside the content. Recommended when you plan to compose content next.',
           ),
       },
     },

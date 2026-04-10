@@ -409,12 +409,15 @@ export function addBroadcastTools(
       );
 
       // Update metadata if any was provided
-      const hasMetadata = subject || previewText || name;
+      const hasMetadata =
+        subject !== undefined ||
+        previewText !== undefined ||
+        name !== undefined;
       if (hasMetadata) {
         const updateResponse = await resend.broadcasts.update(broadcastId, {
-          ...(subject && { subject }),
-          ...(previewText && { previewText }),
-          ...(name && { name }),
+          ...(subject !== undefined && { subject }),
+          ...(previewText !== undefined && { previewText }),
+          ...(name !== undefined && { name }),
         });
 
         if (updateResponse.error) {
@@ -424,6 +427,7 @@ export function addBroadcastTools(
                 type: 'text',
                 text: 'Broadcast content composed successfully, but metadata update failed.',
               },
+              { type: 'text', text: `ID: ${broadcastId}` },
               {
                 type: 'text',
                 text: `Error: ${JSON.stringify(updateResponse.error)}`,
@@ -433,22 +437,24 @@ export function addBroadcastTools(
         }
       }
 
-      // Fetch current state to check for missing metadata
-      const current = await resend.broadcasts.get(broadcastId);
       const resultParts: Array<{ type: 'text'; text: string }> = [
         { type: 'text', text: 'Broadcast content composed successfully.' },
         { type: 'text', text: `ID: ${broadcastId}` },
       ];
 
-      if (!current.error) {
-        const missing: string[] = [];
-        if (!current.data.subject) missing.push('subject');
-        if (!current.data.preview_text) missing.push('previewText');
-        if (missing.length > 0) {
-          resultParts.push({
-            type: 'text',
-            text: `**Note:** The broadcast is still missing: ${missing.join(', ')}. You can set these by calling compose-broadcast again with the missing fields, or use update-broadcast.`,
-          });
+      // Only check for missing metadata when the caller didn't provide any
+      if (!hasMetadata) {
+        const current = await resend.broadcasts.get(broadcastId);
+        if (!current.error) {
+          const missing: string[] = [];
+          if (!current.data.subject) missing.push('subject');
+          if (!current.data.preview_text) missing.push('previewText');
+          if (missing.length > 0) {
+            resultParts.push({
+              type: 'text',
+              text: `**Note:** The broadcast is still missing: ${missing.join(', ')}. You can set these by calling compose-broadcast again with the missing fields, or use update-broadcast.`,
+            });
+          }
         }
       }
 
@@ -570,7 +576,7 @@ export function addBroadcastTools(
           { type: 'text', text: `ID: ${broadcastId}` },
           {
             type: 'text',
-            text: `Review your broadcast before sending: https://resend.com/broadcasts/${broadcastId}\n\nOpening this link lets you:\n- Preview how the email renders across devices and email clients\n- Verify personalization placeholders resolve correctly\n- Confirm audience targeting and segment selection\n- Catch any last-minute copy or formatting issues before it reaches your contacts`,
+            text: `Preview: https://resend.com/broadcasts/${broadcastId}`,
           },
         ],
       };
