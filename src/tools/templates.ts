@@ -114,11 +114,15 @@ export function addTemplateTools(
           { type: 'text', text: `ID: ${response.data.id}` },
           {
             type: 'text',
+            text: `**Next step:** Call get-tiptap-json-content with resource_type "template", resource_id "${response.data.id}", and include_schema true — then call compose-template to set the email body content. You can also pass subject and name to compose-template to update metadata in the same step.`,
+          },
+          {
+            type: 'text',
             text: 'The template is in draft status. Use publish-template to make it available for sending.',
           },
           {
             type: 'text',
-            text: `Review your template before publishing: https://resend.com/templates/${response.data.id}\n\nOpening this link lets you:\n- Preview how the email renders across devices and email clients\n- Verify variables and placeholders are correctly defined\n- Check formatting, layout, and branding before it goes live\n- Catch any issues before the template is used in sends`,
+            text: `Preview: https://resend.com/templates/${response.data.id}`,
           },
         ],
       };
@@ -265,11 +269,11 @@ export function addTemplateTools(
     'compose-template',
     {
       title: 'Compose Template',
-      description: `**Purpose:** Set the TipTap JSON content of a template, enabling it to be edited visually in the Resend dashboard editor. Automatically connects and disconnects from the editor.
+      description: `**Purpose:** Set the TipTap JSON content of a template, enabling it to be edited visually in the Resend dashboard editor. Automatically connects and disconnects from the editor. Can also update metadata (subject, name) in the same call.
 
 **This is the recommended way to set email content.** Content set via compose-template can be visually edited by the user in the dashboard.
 
-**Workflow:** get-tiptap-json-content → get-tiptap-schema → compose-template
+**Workflow:** get-tiptap-json-content (with include_schema: true) → compose-template
 
 **When to use:**
 - After create-template, to set the email body
@@ -296,22 +300,74 @@ export function addTemplateTools(
             z.record(z.string(), z.unknown()),
           )
           .describe(
-            'TipTap JSON content. Call get-tiptap-schema first to get the schema reference.',
+            'TipTap JSON content. Call get-tiptap-json-content (with include_schema: true) first to get the existing content and the schema reference.',
           ),
+        subject: z
+          .string()
+          .optional()
+          .describe('Update the default email subject.'),
+        name: z
+          .string()
+          .optional()
+          .describe('Update the template name.'),
       },
     },
-    async ({ id, content }) => {
+    async ({ id, content, subject, name }) => {
+      // Compose the TipTap content with editor session
       await withEditorSession(
         { resource_type: 'template', resource_id: id },
         () => apiClient.composeTemplateContent(id, { content }),
       );
 
-      return {
-        content: [
-          { type: 'text', text: 'Template content composed successfully.' },
-          { type: 'text', text: `ID: ${id}` },
-        ],
-      };
+      // Update metadata if any was provided
+      const hasMetadata = subject || name;
+      if (hasMetadata) {
+        const updateResponse = await resend.templates.update(id, {
+          ...(subject && { subject }),
+          ...(name && { name }),
+        } as UpdateTemplateOptions);
+
+        if (updateResponse.error) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'Template content composed successfully, but metadata update failed.',
+              },
+              {
+                type: 'text',
+                text: `Error: ${JSON.stringify(updateResponse.error)}`,
+              },
+            ],
+          };
+        }
+      }
+
+      // Fetch current state to check for missing metadata
+      const current = await resend.templates.get(id);
+      const resultParts: Array<{ type: 'text'; text: string }> = [
+        { type: 'text', text: 'Template content composed successfully.' },
+        { type: 'text', text: `ID: ${id}` },
+      ];
+
+      if (!current.error && !current.data.subject) {
+        resultParts.push({
+          type: 'text',
+          text: '**Note:** The template has no subject set. You can set it by calling compose-template again with the subject field, or use update-template.',
+        });
+      }
+
+      resultParts.push({
+        type: 'text',
+        text: 'The template is in draft status. Use publish-template to make the changes live.',
+      });
+
+      resultParts.push({
+        type: 'text',
+        text: `Preview: https://resend.com/templates/${id}`,
+      });
+
+      return { content: resultParts };
     },
   );
 

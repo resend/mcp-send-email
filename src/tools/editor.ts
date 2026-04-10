@@ -85,14 +85,16 @@ export function addEditorTools(
     'get-tiptap-json-content',
     {
       title: 'Get TipTap JSON Content',
-      description: `**Purpose:** Retrieve the existing TipTap JSON content of a broadcast or template. Returns the full TipTap document JSON currently stored for the resource.
+      description: `**Purpose:** Retrieve the existing TipTap JSON content of a broadcast or template, optionally bundled with the TipTap schema reference.
 
 **When to use:**
 - **Always call this before compose-broadcast or compose-template** to fetch the current document state — even if you expect it to be empty, the resource may have content set via the dashboard
 - When the user asks to edit, tweak, or modify existing email content
 - To inspect the current TipTap structure of a resource
 
-**Returns:** The TipTap JSON content object for the resource. Use this as the base for modifications, then pass the updated JSON to compose-broadcast or compose-template.`,
+**Returns:** The TipTap JSON content object for the resource, and optionally the TipTap schema. Use the content as the base for modifications, then pass the updated JSON to compose-broadcast or compose-template.
+
+**Tip:** Set include_schema to true to get both the existing content and the schema in one call — this avoids a separate get-tiptap-schema call.`,
       inputSchema: {
         resource_type: z
           .enum(['broadcast', 'template'])
@@ -103,22 +105,36 @@ export function addEditorTools(
           .describe(
             'The broadcast ID (UUID) or template identifier (UUID or alias)',
           ),
+        include_schema: z
+          .boolean()
+          .optional()
+          .describe(
+            'If true, also returns the TipTap schema reference alongside the content. Saves a separate get-tiptap-schema call. Recommended when you plan to compose content next.',
+          ),
       },
     },
-    async ({ resource_type, resource_id }) => {
+    async ({ resource_type, resource_id, include_schema }) => {
+      const contentParts: Array<{ type: 'text'; text: string }> = [];
+
       const result = await apiClient.getEditorContent(
         resource_type,
         resource_id,
       );
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(result.content, null, 2),
-          },
-        ],
-      };
+      contentParts.push({
+        type: 'text',
+        text: `Existing TipTap JSON content:\n\n${JSON.stringify(result.content, null, 2)}`,
+      });
+
+      if (include_schema) {
+        const { data, version } = await dashboard.getTiptapSchema();
+        contentParts.push({
+          type: 'text',
+          text: `\n\nTipTap Schema Reference (version: ${version}):\n\n${data}`,
+        });
+      }
+
+      return { content: contentParts };
     },
   );
 

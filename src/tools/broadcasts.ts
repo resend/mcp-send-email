@@ -138,7 +138,11 @@ export function addBroadcastTools(
           { type: 'text', text: `ID: ${response.data.id}` },
           {
             type: 'text',
-            text: `Review your broadcast before sending: https://resend.com/broadcasts/${response.data.id}\n\nOpening this link lets you:\n- Preview how the email renders across devices and email clients\n- Verify personalization placeholders resolve correctly\n- Confirm audience targeting and segment selection\n- Catch any last-minute copy or formatting issues before it reaches your contacts`,
+            text: `**Next step:** Call get-tiptap-json-content with resource_type "broadcast", resource_id "${response.data.id}", and include_schema true — then call compose-broadcast to set the email body content. You can also pass subject, previewText, and name to compose-broadcast to update metadata in the same step.`,
+          },
+          {
+            type: 'text',
+            text: `Preview: https://resend.com/broadcasts/${response.data.id}`,
           },
         ],
       };
@@ -348,11 +352,11 @@ export function addBroadcastTools(
     'compose-broadcast',
     {
       title: 'Compose Broadcast',
-      description: `**Purpose:** Set the TipTap JSON content of a broadcast, enabling it to be edited visually in the Resend dashboard editor. Automatically connects and disconnects from the editor.
+      description: `**Purpose:** Set the TipTap JSON content of a broadcast, enabling it to be edited visually in the Resend dashboard editor. Automatically connects and disconnects from the editor. Can also update metadata (subject, preview text, name) in the same call.
 
 **This is the recommended way to set email content.** Content set via compose-broadcast can be visually edited by the user in the dashboard. Use this for newsletters and any broadcast where the user may want to refine the content.
 
-**Workflow:** get-tiptap-json-content → get-tiptap-schema → compose-broadcast
+**Workflow:** get-tiptap-json-content (with include_schema: true) → compose-broadcast
 
 **When to use:**
 - After create-broadcast, to set the email body
@@ -379,22 +383,81 @@ export function addBroadcastTools(
             z.record(z.string(), z.unknown()),
           )
           .describe(
-            'TipTap JSON content. Call get-tiptap-schema first to get the schema reference.',
+            'TipTap JSON content. Call get-tiptap-json-content (with include_schema: true) first to get the existing content and the schema reference.',
           ),
+        subject: z
+          .string()
+          .optional()
+          .describe('Update the email subject line.'),
+        previewText: z
+          .string()
+          .optional()
+          .describe(
+            'Update the preview text (shown in inbox before opening the email).',
+          ),
+        name: z
+          .string()
+          .optional()
+          .describe('Update the broadcast name (internal label).'),
       },
     },
-    async ({ broadcastId, content }) => {
+    async ({ broadcastId, content, subject, previewText, name }) => {
+      // Compose the TipTap content with editor session
       await withEditorSession(
         { resource_type: 'broadcast', resource_id: broadcastId },
         () => apiClient.composeBroadcastContent(broadcastId, { content }),
       );
 
-      return {
-        content: [
-          { type: 'text', text: 'Broadcast content composed successfully.' },
-          { type: 'text', text: `ID: ${broadcastId}` },
-        ],
-      };
+      // Update metadata if any was provided
+      const hasMetadata = subject || previewText || name;
+      if (hasMetadata) {
+        const updateResponse = await resend.broadcasts.update(broadcastId, {
+          ...(subject && { subject }),
+          ...(previewText && { previewText }),
+          ...(name && { name }),
+        });
+
+        if (updateResponse.error) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'Broadcast content composed successfully, but metadata update failed.',
+              },
+              {
+                type: 'text',
+                text: `Error: ${JSON.stringify(updateResponse.error)}`,
+              },
+            ],
+          };
+        }
+      }
+
+      // Fetch current state to check for missing metadata
+      const current = await resend.broadcasts.get(broadcastId);
+      const resultParts: Array<{ type: 'text'; text: string }> = [
+        { type: 'text', text: 'Broadcast content composed successfully.' },
+        { type: 'text', text: `ID: ${broadcastId}` },
+      ];
+
+      if (!current.error) {
+        const missing: string[] = [];
+        if (!current.data.subject) missing.push('subject');
+        if (!current.data.preview_text) missing.push('previewText');
+        if (missing.length > 0) {
+          resultParts.push({
+            type: 'text',
+            text: `**Note:** The broadcast is still missing: ${missing.join(', ')}. You can set these by calling compose-broadcast again with the missing fields, or use update-broadcast.`,
+          });
+        }
+      }
+
+      resultParts.push({
+        type: 'text',
+        text: `Preview: https://resend.com/broadcasts/${broadcastId}`,
+      });
+
+      return { content: resultParts };
     },
   );
 
