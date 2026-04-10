@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
@@ -73,10 +72,6 @@ export function addEmailTools(
                 .describe(
                   'Name of the file with extension (e.g., "report.pdf")',
                 ),
-              filePath: z
-                .string()
-                .optional()
-                .describe('Local file path to read and attach'),
               url: z
                 .string()
                 .optional()
@@ -103,7 +98,7 @@ export function addEmailTools(
           )
           .optional()
           .describe(
-            'Array of file attachments. Each needs filename plus one of: filePath, url, or content. Max 40MB total.',
+            'Array of file attachments. Each needs filename plus one of: url or content. Max 40MB total.',
           ),
         tags: z
           .array(
@@ -225,36 +220,29 @@ export function addEmailTools(
       }
 
       if (attachments && attachments.length > 0) {
-        emailRequest.attachments = await Promise.all(
-          attachments.map(async (att) => {
-            const result: {
-              filename?: string;
-              content?: Buffer;
-              path?: string;
-              contentType?: string;
-              contentId?: string;
-            } = {};
+        emailRequest.attachments = attachments.map((att) => {
+          const result: {
+            filename?: string;
+            content?: Buffer;
+            path?: string;
+            contentType?: string;
+            contentId?: string;
+          } = {};
 
-            if (att.filename) result.filename = att.filename;
-            if (att.contentType) result.contentType = att.contentType;
-            if (att.contentId) result.contentId = att.contentId;
+          if (att.filename) result.filename = att.filename;
+          if (att.contentType) result.contentType = att.contentType;
+          if (att.contentId) result.contentId = att.contentId;
 
-            // Priority: filePath > url > content
-            if (att.filePath) {
-              // Read local file
-              const fileBuffer = await fs.readFile(att.filePath);
-              result.content = fileBuffer;
-            } else if (att.url) {
-              // Let Resend fetch from URL
-              result.path = att.url;
-            } else if (att.content) {
-              // Direct Base64 content
-              result.content = Buffer.from(att.content, 'base64');
-            }
+          if (att.url) {
+            // Let Resend fetch from URL
+            result.path = att.url;
+          } else if (att.content) {
+            // Direct Base64 content
+            result.content = Buffer.from(att.content, 'base64');
+          }
 
-            return result;
-          }),
-        );
+          return result;
+        });
       }
 
       if (tags && tags.length > 0) {
