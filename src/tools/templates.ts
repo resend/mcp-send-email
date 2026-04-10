@@ -114,7 +114,7 @@ export function addTemplateTools(
           { type: 'text', text: `ID: ${response.data.id}` },
           {
             type: 'text',
-            text: `**Next step:** Call get-tiptap-json-content with resource_type "template", resource_id "${response.data.id}", and include_schema true — then call compose-template to set the email body content. You can also pass subject and name to compose-template to update metadata in the same step.`,
+            text: `**Next step:** Call get-tiptap-json-content with resource_type "template", resource_id "${response.data.id}", and include_schema true — then call compose-template to set the email body content.`,
           },
           {
             type: 'text',
@@ -357,10 +357,20 @@ export function addTemplateTools(
         });
       }
 
-      resultParts.push({
-        type: 'text',
-        text: 'The template is in draft status. Use publish-template to make the changes live.',
-      });
+      if (!current.error) {
+        const status = current.data.status;
+        if (status === 'draft') {
+          resultParts.push({
+            type: 'text',
+            text: 'The template is in draft status. Use publish-template to make it available for sending.',
+          });
+        } else if (status === 'published') {
+          resultParts.push({
+            type: 'text',
+            text: 'The template is published. Use publish-template again to make the latest changes live.',
+          });
+        }
+      }
 
       resultParts.push({
         type: 'text',

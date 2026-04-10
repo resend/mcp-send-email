@@ -138,7 +138,7 @@ export function addBroadcastTools(
           { type: 'text', text: `ID: ${response.data.id}` },
           {
             type: 'text',
-            text: `**Next step:** Call get-tiptap-json-content with resource_type "broadcast", resource_id "${response.data.id}", and include_schema true — then call compose-broadcast to set the email body content. You can also pass subject, previewText, and name to compose-broadcast to update metadata in the same step.`,
+            text: `**Next step:** Call get-tiptap-json-content with resource_type "broadcast", resource_id "${response.data.id}", and include_schema true — then call compose-broadcast to set the email body content.`,
           },
           {
             type: 'text',
