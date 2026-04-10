@@ -1,7 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import os from 'node:os';
+import { describe, expect, it } from 'vitest';
 
 /**
  * CWE-22: Arbitrary file read via send-email attachment filePath parameter.
@@ -63,10 +62,7 @@ describe('CWE-22: filePath attachment path traversal', () => {
       // Fallback: try to parse a payload with filePath and verify it's stripped or rejected
       // If we can't introspect the schema, inspect the source code directly
       const sourceCode = await fs.readFile(
-        path.join(
-          import.meta.dirname,
-          '../../src/tools/emails.ts',
-        ),
+        path.join(import.meta.dirname, '../../src/tools/emails.ts'),
         'utf8',
       );
       // The source should not contain fs.readFile for attachment processing
@@ -80,10 +76,7 @@ describe('CWE-22: filePath attachment path traversal', () => {
 
   it('should not call fs.readFile for attachment file paths', async () => {
     const sourceCode = await fs.readFile(
-      path.join(
-        import.meta.dirname,
-        '../../src/tools/emails.ts',
-      ),
+      path.join(import.meta.dirname, '../../src/tools/emails.ts'),
       'utf8',
     );
 
@@ -93,10 +86,7 @@ describe('CWE-22: filePath attachment path traversal', () => {
 
   it('should not import node:fs/promises if filePath is removed', async () => {
     const sourceCode = await fs.readFile(
-      path.join(
-        import.meta.dirname,
-        '../../src/tools/emails.ts',
-      ),
+      path.join(import.meta.dirname, '../../src/tools/emails.ts'),
       'utf8',
     );
 
