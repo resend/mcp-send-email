@@ -5,12 +5,14 @@ import { DashboardClient } from './lib/dashboard-client.js';
 import { ResendEditorClient } from './lib/resend-editor-client.js';
 import {
   addApiKeyTools,
+  addAutomationTools,
   addBroadcastTools,
   addContactPropertyTools,
   addContactTools,
   addDomainTools,
   addEditorTools,
   addEmailTools,
+  addEventTools,
   addLogTools,
   addSegmentTools,
   addTemplateTools,
@@ -37,6 +39,7 @@ export function createMcpServer(
 
   const { withEditorSession } = addEditorTools(server, dashboard, apiClient);
   addApiKeyTools(server, resend);
+  addAutomationTools(server, resend);
   addBroadcastTools(server, resend, apiClient, {
     senderEmailAddress,
     replierEmailAddresses,
@@ -46,6 +49,7 @@ export function createMcpServer(
   addContactTools(server, resend);
   addDomainTools(server, resend);
   addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
+  addEventTools(server, resend);
   addLogTools(server, resend);
   addSegmentTools(server, resend);
   addTemplateTools(server, resend, apiClient, { withEditorSession });
