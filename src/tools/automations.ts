@@ -7,114 +7,119 @@ import {
   workflowToSdkOptions,
 } from '../lib/workflow-converter.js';
 
-const WORKFLOW_GUIDANCE = `The workflow is a JSON object with two keys: "trigger" and "steps".
+const WORKFLOW_GUIDANCE = `The workflow is a JSON object with one key: "steps" — an array of step objects.
 
-## Trigger
+Each step has: key (unique string), type, config, and either "next" (string|null) or "branches" (for branching steps).
+Use keys like: "trigger", "send_email_1", "delay_1", "condition_1", "wait_event_1".
 
-The trigger starts the automation when an event fires.
+## Step types
 
-### event_received — fires on a custom event
-{ "type": "event_received", "config": { "event": "<event_name>" }, "next": "<first_step_id>" }
+### trigger — starts the automation when an event fires (required, exactly one)
+config: { "eventName": "<event_name>" }
+Uses "next".
 
-### email_event — fires on an email lifecycle event
-{ "type": "email_event", "config": { "event": "<delivered|bounced|opened|clicked|complained|failed|suppressed>" }, "next": "<first_step_id>" }
-
-## Steps
-
-Each step has: id, type, config, and either "next" (string|null) or "branches" (for branching steps).
-Use IDs like: "send_email_1", "delay_1", "branch_1", "wait_event_1", "contact_update_1".
-
-### send_email — send an email using a template
-{ "id": "send_email_1", "type": "send_email", "config": { "template": { "id": "<template_id>", "variables": {} }, "subject": "", "from": "" }, "next": null }
-Optional: "reply_to", "variables" (map of key to value or "event.field" for dynamic references).
+### send_email — send an email using a published template
+config: { "template": { "id": "<template_id>", "variables": { "<key>": "<value>" } }, "subject": "<override>", "from": "<override>", "replyTo": "<override>" }
+All fields except template.id are optional. Variables can use { "var": "event.<field>" } or { "var": "contact.<field>" } for dynamic values.
+Uses "next".
 
 ### delay — pause the workflow
-{ "id": "delay_1", "type": "delay", "config": { "duration": 1, "unit": "days" }, "next": null }
-Units: seconds, minutes, hours, days, weeks. Max 30 days.
+config: { "duration": "<human-readable>" }
+Examples: "30 minutes", "1 hour", "2 days", "1 week". Max 30 days.
+Uses "next".
 
-### true_false_branch — conditional split
-{ "id": "branch_1", "type": "true_false_branch", "config": { "conditions": [{ "field": "contact.unsubscribed", "operator": "is_equal_to", "value": false }] }, "branches": { "true": "<step_id>", "false": "<step_id_or_null>" } }
-Uses "branches", NOT "next". Operators: is_equal_to, is_not_equal_to, is_greater_than, is_less_than, exists, is_empty, contains, starts_with, ends_with.
-Fields use "contact.<field>" or "event.<field>" namespaces.
+### condition — conditional split based on contact or event data
+config: A condition rule object:
+  Single rule: { "type": "rule", "field": "event.<field>" or "contact.<field>", "operator": "<op>", "value": <value> }
+  Compound: { "type": "and"|"or", "rules": [<rule>, ...] }
+Operators: eq, neq, gt, gte, lt, lte, contains, starts_with, ends_with, exists, is_empty.
+exists/is_empty do not require a value.
+Uses "branches": { "condition_met": "<step_key>", "condition_not_met": "<step_key_or_null>" }
 
-### wait_for_event — pause until an event arrives or timeout
-{ "id": "wait_event_1", "type": "wait_for_event", "config": { "event_name": "resend:email.opened", "timeout": 259200 }, "branches": { "event_received": "<step_id>", "timeout": "<step_id_or_null>" } }
-Uses "branches", NOT "next". Timeout is in seconds. For email lifecycle events, use "resend:email.<event>" format.
+### wait_for_event — pause until a specific event arrives or timeout
+config: { "eventName": "<event_name>", "timeout": "<human-readable>", "filterRule": <optional condition rule> }
+For email lifecycle events use "resend:email.<opened|clicked|bounced|delivered|complained|failed|suppressed>".
+Uses "branches": { "event_received": "<step_key>", "timeout": "<step_key_or_null>" }
 
 ### contact_update — update contact fields
-{ "id": "contact_update_1", "type": "contact_update", "config": { "properties": { "status": "active" } }, "next": null }
-Optional config fields: first_name, last_name, unsubscribed (boolean), properties (custom fields). Values can use { "var": "event.field" } for dynamic data.
+config: { "firstName": "<value>", "lastName": "<value>", "unsubscribed": true|false, "properties": { "<key>": "<value>" } }
+All fields optional. Values can use { "var": "event.<field>" } for dynamic data.
+Uses "next".
 
-### contact_delete — remove the contact
-{ "id": "contact_delete_1", "type": "contact_delete", "config": {}, "next": null }
+### contact_delete — remove the contact from the audience
+config: {}
+Uses "next".
 
 ### add_to_segment — add contact to a segment
-{ "id": "add_to_segment_1", "type": "add_to_segment", "config": { "segment_id": "<segment_id>" }, "next": null }
+config: { "segmentId": "<segment_id>" }
+Uses "next".
 
 ## Rules
-1. Every step must be reachable from the trigger.
+1. Every step must be reachable from the trigger via next/branches.
 2. Terminal steps have "next": null (or null branch values).
-3. The workflow must be tree-shaped — no merging branches.
+3. The workflow must be tree-shaped — no merging branches back together.
 4. Max 20 steps.
 
 ## Example: Linear drip campaign
 
 {
-  "trigger": { "type": "event_received", "config": { "event": "user.created" }, "next": "send_email_1" },
   "steps": [
-    { "id": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_123" }, "subject": "Welcome!", "from": "hello@example.com" }, "next": "delay_1" },
-    { "id": "delay_1", "type": "delay", "config": { "duration": 3, "unit": "days" }, "next": "send_email_2" },
-    { "id": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_456" }, "subject": "Getting started", "from": "hello@example.com" }, "next": null }
+    { "key": "trigger", "type": "trigger", "config": { "eventName": "user.created" }, "next": "send_email_1" },
+    { "key": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_123" }, "subject": "Welcome!" }, "next": "delay_1" },
+    { "key": "delay_1", "type": "delay", "config": { "duration": "3 days" }, "next": "send_email_2" },
+    { "key": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_456" }, "subject": "Getting started" }, "next": null }
   ]
 }
 
 ## Example: Re-engagement with wait_for_event
 
 {
-  "trigger": { "type": "event_received", "config": { "event": "user.created" }, "next": "send_email_1" },
   "steps": [
-    { "id": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_789" }, "subject": "Welcome", "from": "hello@example.com" }, "next": "wait_event_1" },
-    { "id": "wait_event_1", "type": "wait_for_event", "config": { "event_name": "resend:email.opened", "timeout": 259200 }, "branches": { "event_received": null, "timeout": "send_email_2" } },
-    { "id": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_abc" }, "subject": "Did you miss this?", "from": "hello@example.com" }, "next": null }
+    { "key": "trigger", "type": "trigger", "config": { "eventName": "user.created" }, "next": "send_email_1" },
+    { "key": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_789" }, "subject": "Welcome" }, "next": "wait_event_1" },
+    { "key": "wait_event_1", "type": "wait_for_event", "config": { "eventName": "resend:email.opened", "timeout": "3 days" }, "branches": { "event_received": null, "timeout": "send_email_2" } },
+    { "key": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_abc" }, "subject": "Did you miss this?" }, "next": null }
   ]
 }
 
 ## Example: Condition branch
 
 {
-  "trigger": { "type": "event_received", "config": { "event": "trial.ended" }, "next": "branch_1" },
   "steps": [
-    { "id": "branch_1", "type": "true_false_branch", "config": { "conditions": [{ "field": "event.converted", "operator": "is_equal_to", "value": true }] }, "branches": { "true": "send_email_1", "false": "send_email_2" } },
-    { "id": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_thanks" }, "subject": "Thanks for upgrading!", "from": "hello@example.com" }, "next": null },
-    { "id": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_win_back" }, "subject": "We'd love to have you back", "from": "hello@example.com" }, "next": null }
+    { "key": "trigger", "type": "trigger", "config": { "eventName": "trial.ended" }, "next": "condition_1" },
+    { "key": "condition_1", "type": "condition", "config": { "type": "rule", "field": "event.converted", "operator": "eq", "value": true }, "branches": { "condition_met": "send_email_1", "condition_not_met": "send_email_2" } },
+    { "key": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_thanks" }, "subject": "Thanks for upgrading!" }, "next": null },
+    { "key": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_win_back" }, "subject": "We'd love to have you back" }, "next": null }
   ]
 }`;
 
 const workflowSchema = z
   .object({
-    trigger: z
-      .object({
-        type: z.enum(['event_received', 'email_event']),
-        config: z.record(z.string(), z.unknown()),
-        next: z.string().nullable(),
-      })
-      .describe('The trigger that starts the automation.'),
     steps: z
       .array(
         z.object({
-          id: z.string(),
-          type: z.enum([
-            'send_email',
-            'delay',
-            'true_false_branch',
-            'wait_for_event',
-            'contact_delete',
-            'add_to_segment',
-            'contact_update',
-          ]),
-          config: z.record(z.string(), z.unknown()),
-          next: z.string().nullable().optional(),
-          branches: z.record(z.string(), z.string().nullable()).optional(),
+          key: z.string().describe('Unique identifier for this step.'),
+          type: z
+            .string()
+            .describe(
+              'Step type: trigger, send_email, delay, condition, wait_for_event, contact_update, contact_delete, add_to_segment.',
+            ),
+          config: z
+            .record(z.string(), z.unknown())
+            .describe('Step configuration. See tool description for details.'),
+          next: z
+            .string()
+            .nullable()
+            .optional()
+            .describe(
+              'Key of the next step (for linear steps). null for terminal steps.',
+            ),
+          branches: z
+            .record(z.string(), z.string().nullable())
+            .optional()
+            .describe(
+              'Branch targets (for condition and wait_for_event steps).',
+            ),
         }),
       )
       .describe('The workflow steps connected via next/branches.'),
@@ -155,7 +160,7 @@ ${WORKFLOW_GUIDANCE}`,
     },
     async ({ name, status, workflow }) => {
       const { steps, connections } = workflowToSdkOptions(
-        workflow as unknown as WorkflowDefinition,
+        workflow as WorkflowDefinition,
       );
 
       const response = await resend.automations.create({

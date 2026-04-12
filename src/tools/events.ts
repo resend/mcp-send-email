@@ -309,6 +309,9 @@ Events define named triggers that your application sends to start automations. E
             ],
           };
         }
+
+        default:
+          throw new Error(`Unknown action: ${action}`);
       }
     },
   );
