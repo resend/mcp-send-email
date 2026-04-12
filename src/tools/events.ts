@@ -124,9 +124,10 @@ Events define named triggers that your application sends to start automations. E
           .describe('Event ID or name (for get, update, remove).'),
         schema: z
           .record(z.string(), z.enum(['string', 'number', 'boolean', 'date']))
+          .nullable()
           .optional()
           .describe(
-            'Event payload schema (for create, update). Maps field names to types.',
+            'Event payload schema (for create, update). Maps field names to types. Pass null to remove the schema.',
           ),
         limit: z
           .number()

@@ -58,7 +58,6 @@ Uses "next".
 1. Every step must be reachable from the trigger via next/branches.
 2. Terminal steps have "next": null (or null branch values).
 3. The workflow must be tree-shaped — no merging branches back together.
-4. Max 20 steps.
 
 ## Example: Linear drip campaign
 
@@ -238,7 +237,7 @@ ${WORKFLOW_GUIDANCE}`,
       if (name !== undefined) updateOptions.name = name;
       if (status !== undefined) updateOptions.status = status;
 
-      if (workflow) {
+      if (workflow !== undefined) {
         const { steps, connections } = workflowToSdkOptions(
           workflow as WorkflowDefinition,
         );
@@ -354,10 +353,13 @@ ${WORKFLOW_GUIDANCE}`,
       }
 
       const paginationOptions = after
-        ? { limit, after, status }
+        ? { limit, after, ...(status ? { status } : {}) }
         : before
-          ? { limit, before, status }
-          : { limit, status };
+          ? { limit, before, ...(status ? { status } : {}) }
+          : {
+              ...(limit !== undefined ? { limit } : {}),
+              ...(status ? { status } : {}),
+            };
 
       const response = await resend.automations.list(paginationOptions);
 
@@ -519,10 +521,14 @@ ${WORKFLOW_GUIDANCE}`,
       }
 
       const runOptions = after
-        ? { automationId, limit, after, status }
+        ? { automationId, limit, after, ...(status ? { status } : {}) }
         : before
-          ? { automationId, limit, before, status }
-          : { automationId, limit, status };
+          ? { automationId, limit, before, ...(status ? { status } : {}) }
+          : {
+              automationId,
+              ...(limit !== undefined ? { limit } : {}),
+              ...(status ? { status } : {}),
+            };
 
       const response = await resend.automations.runs.list(runOptions);
 

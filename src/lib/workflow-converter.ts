@@ -4,6 +4,7 @@ import type {
   AutomationResponseConnection,
   AutomationResponseStep,
   AutomationStep,
+  AutomationStepType,
 } from 'resend';
 
 // Steps use SDK types directly. The only abstraction is `next`/`branches`
@@ -11,14 +12,14 @@ import type {
 
 interface LinearStep {
   key: string;
-  type: string;
+  type: AutomationStepType;
   config: Record<string, unknown>;
   next: string | null;
 }
 
 interface BranchingStep {
   key: string;
-  type: string;
+  type: AutomationStepType;
   config: Record<string, unknown>;
   branches: Record<string, string | null>;
 }
@@ -30,10 +31,12 @@ export interface WorkflowDefinition {
 }
 
 // Step types that use branches instead of next
-const BRANCHING_STEP_TYPES: Record<string, string[]> = {
+const BRANCHING_STEP_TYPES = {
   condition: ['condition_met', 'condition_not_met'],
   wait_for_event: ['event_received', 'timeout'],
-};
+} as const satisfies Partial<
+  Record<AutomationStepType, readonly AutomationConnectionType[]>
+>;
 
 function hasBranches(step: WorkflowStep): step is BranchingStep {
   return 'branches' in step;
@@ -45,7 +48,23 @@ export function workflowToSdkOptions(workflow: WorkflowDefinition): {
   steps: AutomationStep[];
   connections: AutomationConnection[];
 } {
-  const stepKeys = new Set(workflow.steps.map((s) => s.key));
+  const triggers = workflow.steps.filter((s) => s.type === 'trigger');
+  if (triggers.length === 0) {
+    throw new Error('Workflow must have exactly one "trigger" step.');
+  }
+  if (triggers.length > 1) {
+    throw new Error(
+      `Workflow must have exactly one "trigger" step, but found ${triggers.length}.`,
+    );
+  }
+
+  const keys = workflow.steps.map((s) => s.key);
+  const stepKeys = new Set(keys);
+  if (stepKeys.size !== keys.length) {
+    const dupes = keys.filter((k, i) => keys.indexOf(k) !== i);
+    throw new Error(`Duplicate step keys: ${[...new Set(dupes)].join(', ')}`);
+  }
+
   const steps: AutomationStep[] = [];
   const connections: AutomationConnection[] = [];
 
@@ -109,7 +128,8 @@ export function sdkResponseToWorkflow(
 
   for (const step of responseSteps) {
     const conns = connectionsByFrom.get(step.key);
-    const branchTypes = BRANCHING_STEP_TYPES[step.type];
+    const branchTypes =
+      BRANCHING_STEP_TYPES[step.type as keyof typeof BRANCHING_STEP_TYPES];
 
     if (branchTypes) {
       const branches: Record<string, string | null> = {};
