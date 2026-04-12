@@ -153,7 +153,7 @@ ${WORKFLOW_GUIDANCE}`,
           .enum(['enabled', 'disabled'])
           .optional()
           .describe(
-            'Initial status. Default: enabled. Use "disabled" to create without activating.',
+            'Initial status. Default: disabled. Use "enabled" to activate immediately.',
           ),
         workflow: workflowSchema,
       },
@@ -240,7 +240,7 @@ ${WORKFLOW_GUIDANCE}`,
 
       if (workflow) {
         const { steps, connections } = workflowToSdkOptions(
-          workflow as unknown as WorkflowDefinition,
+          workflow as WorkflowDefinition,
         );
         updateOptions.steps = steps;
         updateOptions.connections = connections;
