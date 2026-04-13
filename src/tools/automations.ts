@@ -19,8 +19,8 @@ config: { "eventName": "<event_name>" }
 Uses "next".
 
 ### send_email — send an email using a published template
-config: { "template": { "id": "<template_id>", "variables": { "<key>": "<value>" } }, "subject": "<override>", "from": "<override>", "replyTo": "<override>" }
-All fields except template.id are optional. Variables can use { "var": "event.<field>" } or { "var": "contact.<field>" } for dynamic values.
+config: { "template": { "id": "<template_id>", "variables": { "<key>": "<value>" } }, "from": "Name <sender@example.com>", "subject": "Email subject", "replyTo": "<address>" }
+**"from" and "subject" are resolved from the step config first, then fall back to the template.** If neither provides a "from", the email will silently fail to send. If neither provides a "subject", the run will error. Best practice: always set "from" and "subject" on the step config so the automation is self-contained. Use list-domains to find verified domains for "from". "replyTo" and "variables" are optional. Variables can use { "var": "event.<field>" } or { "var": "contact.<field>" } for dynamic values.
 Uses "next".
 
 ### delay — pause the workflow
@@ -64,9 +64,9 @@ Uses "next".
 {
   "steps": [
     { "key": "trigger", "type": "trigger", "config": { "eventName": "user.created" }, "next": "send_email_1" },
-    { "key": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_123" }, "subject": "Welcome!" }, "next": "delay_1" },
+    { "key": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_123" }, "from": "Welcome <hello@example.com>", "subject": "Welcome!" }, "next": "delay_1" },
     { "key": "delay_1", "type": "delay", "config": { "duration": "3 days" }, "next": "send_email_2" },
-    { "key": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_456" }, "subject": "Getting started" }, "next": null }
+    { "key": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_456" }, "from": "Welcome <hello@example.com>", "subject": "Getting started" }, "next": null }
   ]
 }
 
@@ -75,9 +75,9 @@ Uses "next".
 {
   "steps": [
     { "key": "trigger", "type": "trigger", "config": { "eventName": "user.created" }, "next": "send_email_1" },
-    { "key": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_789" }, "subject": "Welcome" }, "next": "wait_event_1" },
+    { "key": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_789" }, "from": "Team <team@example.com>", "subject": "Welcome" }, "next": "wait_event_1" },
     { "key": "wait_event_1", "type": "wait_for_event", "config": { "eventName": "resend:email.opened", "timeout": "3 days" }, "branches": { "event_received": null, "timeout": "send_email_2" } },
-    { "key": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_abc" }, "subject": "Did you miss this?" }, "next": null }
+    { "key": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_abc" }, "from": "Team <team@example.com>", "subject": "Did you miss this?" }, "next": null }
   ]
 }
 
@@ -87,8 +87,8 @@ Uses "next".
   "steps": [
     { "key": "trigger", "type": "trigger", "config": { "eventName": "trial.ended" }, "next": "condition_1" },
     { "key": "condition_1", "type": "condition", "config": { "type": "rule", "field": "event.converted", "operator": "eq", "value": true }, "branches": { "condition_met": "send_email_1", "condition_not_met": "send_email_2" } },
-    { "key": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_thanks" }, "subject": "Thanks for upgrading!" }, "next": null },
-    { "key": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_win_back" }, "subject": "We'd love to have you back" }, "next": null }
+    { "key": "send_email_1", "type": "send_email", "config": { "template": { "id": "tmpl_thanks" }, "from": "Team <team@example.com>", "subject": "Thanks for upgrading!" }, "next": null },
+    { "key": "send_email_2", "type": "send_email", "config": { "template": { "id": "tmpl_win_back" }, "from": "Team <team@example.com>", "subject": "We'd love to have you back" }, "next": null }
   ]
 }`;
 
@@ -138,7 +138,7 @@ export function addAutomationTools(server: McpServer, resend: Resend) {
 - User wants to set up automated email sequences (welcome series, drip campaigns, re-engagement)
 - User wants to automate actions based on events (update contacts, add to segments)
 
-**Workflow:** manage-events (create event, if needed) → list-templates (to get template IDs) → create-automation → send-event (to test)
+**Workflow:** manage-events (create event, if needed) → list-templates (to get template IDs) → get-template (to check if template has "from" and "subject" — if not, use list-domains to pick a verified domain for the step config) → create-automation → send-event (to test)
 
 **Returns:** Automation ID and dashboard link.
 
