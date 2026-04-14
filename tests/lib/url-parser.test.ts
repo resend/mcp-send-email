@@ -8,19 +8,13 @@ describe('extractIdFromUrl', () => {
 
   it('extracts broadcast ID from URL', () => {
     expect(
-      extractIdFromUrl(
-        'https://resend.com/broadcasts/abc-123',
-        'broadcasts',
-      ),
+      extractIdFromUrl('https://resend.com/broadcasts/abc-123', 'broadcasts'),
     ).toBe('abc-123');
   });
 
   it('extracts template ID from URL', () => {
     expect(
-      extractIdFromUrl(
-        'https://resend.com/templates/tmpl_456',
-        'templates',
-      ),
+      extractIdFromUrl('https://resend.com/templates/tmpl_456', 'templates'),
     ).toBe('tmpl_456');
   });
 
@@ -58,9 +52,9 @@ describe('extractIdFromUrl', () => {
   });
 
   it('extracts ID without expectedResource filter', () => {
-    expect(
-      extractIdFromUrl('https://resend.com/broadcasts/abc-123'),
-    ).toBe('abc-123');
+    expect(extractIdFromUrl('https://resend.com/broadcasts/abc-123')).toBe(
+      'abc-123',
+    );
   });
 
   it('trims whitespace from input', () => {
@@ -74,10 +68,7 @@ describe('extractIdFromUrl', () => {
 
   it('handles URLs with trailing slash', () => {
     expect(
-      extractIdFromUrl(
-        'https://resend.com/broadcasts/abc-123/',
-        'broadcasts',
-      ),
+      extractIdFromUrl('https://resend.com/broadcasts/abc-123/', 'broadcasts'),
     ).toBe('abc-123');
   });
 
