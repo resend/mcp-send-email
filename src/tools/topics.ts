@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 
 export function addTopicTools(server: McpServer, resend: Resend) {
   server.registerTool(
@@ -94,12 +95,19 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     'get-topic',
     {
       title: 'Get Topic',
-      description: 'Get a topic by ID from Resend.',
+      description:
+        'Get a topic by ID or dashboard URL from Resend.',
       inputSchema: {
-        id: z.string().nonempty().describe('Topic ID'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Topic ID or Resend dashboard URL (e.g. https://resend.com/audience/topics/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'audience/topics');
       const response = await resend.topics.get(id);
 
       if (response.error) {
@@ -130,9 +138,14 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     {
       title: 'Update Topic',
       description:
-        'Update an existing topic in Resend. Note: defaultSubscription cannot be modified after creation.',
+        'Update an existing topic in Resend. Accepts a topic ID or dashboard URL. Note: defaultSubscription cannot be modified after creation.',
       inputSchema: {
-        id: z.string().nonempty().describe('Topic ID'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Topic ID or Resend dashboard URL (e.g. https://resend.com/audience/topics/<id>)',
+          ),
         name: z
           .string()
           .nonempty()
@@ -146,7 +159,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
           .describe('New topic description (max 200 characters)'),
       },
     },
-    async ({ id, name, description }) => {
+    async ({ id: rawId, name, description }) => {
+      const id = extractIdFromUrl(rawId, 'audience/topics');
       const response = await resend.topics.update({
         id,
         ...(name && { name }),
@@ -173,12 +187,18 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     {
       title: 'Remove Topic',
       description:
-        'Remove a topic by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this topic. Reference the NAME of the topic when double-checking, and warn the user that removing a topic is irreversible. You may only use this tool if the user explicitly confirms they want to remove the topic after you double-check.',
+        'Remove a topic by ID or dashboard URL from Resend. Before using this tool, you MUST double-check with the user that they want to remove this topic. Reference the NAME of the topic when double-checking, and warn the user that removing a topic is irreversible. You may only use this tool if the user explicitly confirms they want to remove the topic after you double-check.',
       inputSchema: {
-        id: z.string().nonempty().describe('Topic ID'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Topic ID or Resend dashboard URL (e.g. https://resend.com/audience/topics/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'audience/topics');
       const response = await resend.topics.remove(id);
 
       if (response.error) {

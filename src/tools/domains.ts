@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 
 function formatDnsRecords(
   records: {
@@ -209,12 +210,18 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     {
       title: 'Get Domain',
       description:
-        'Get a domain by ID from Resend. Returns full domain details including DNS records needed for verification.',
+        'Get a domain by ID or dashboard URL from Resend. Returns full domain details including DNS records needed for verification.',
       inputSchema: {
-        id: z.string().nonempty().describe('Domain ID'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Domain ID or Resend dashboard URL (e.g. https://resend.com/domains/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'domains');
       const response = await resend.domains.get(id);
 
       if (response.error) {
@@ -244,9 +251,14 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     {
       title: 'Update Domain',
       description:
-        'Update an existing domain in Resend. Allows changing tracking settings, TLS mode, and capabilities.',
+        'Update an existing domain in Resend. Accepts a domain ID or dashboard URL. Allows changing tracking settings, TLS mode, and capabilities.',
       inputSchema: {
-        id: z.string().nonempty().describe('Domain ID'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Domain ID or Resend dashboard URL (e.g. https://resend.com/domains/<id>)',
+          ),
         clickTracking: z
           .boolean()
           .optional()
@@ -278,7 +290,8 @@ export function addDomainTools(server: McpServer, resend: Resend) {
           ),
       },
     },
-    async ({ id, clickTracking, openTracking, tls, capabilities }) => {
+    async ({ id: rawId, clickTracking, openTracking, tls, capabilities }) => {
+      const id = extractIdFromUrl(rawId, 'domains');
       const response = await resend.domains.update({
         id,
         ...(clickTracking !== undefined && { clickTracking }),
@@ -307,12 +320,18 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     {
       title: 'Remove Domain',
       description:
-        'Remove a domain by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this domain. Reference the NAME of the domain when double-checking, and warn the user that removing a domain is irreversible and will stop all email sending/receiving for that domain. You may only use this tool if the user explicitly confirms they want to remove the domain after you double-check.',
+        'Remove a domain by ID or dashboard URL from Resend. Before using this tool, you MUST double-check with the user that they want to remove this domain. Reference the NAME of the domain when double-checking, and warn the user that removing a domain is irreversible and will stop all email sending/receiving for that domain. You may only use this tool if the user explicitly confirms they want to remove the domain after you double-check.',
       inputSchema: {
-        id: z.string().nonempty().describe('Domain ID'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Domain ID or Resend dashboard URL (e.g. https://resend.com/domains/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'domains');
       const response = await resend.domains.remove(id);
 
       if (response.error) {
@@ -335,12 +354,18 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     {
       title: 'Verify Domain',
       description:
-        'Trigger domain verification in Resend. This starts an asynchronous verification process that checks if the DNS records are correctly configured. The domain status will temporarily show as "pending" during verification.',
+        'Trigger domain verification in Resend. Accepts a domain ID or dashboard URL. This starts an asynchronous verification process that checks if the DNS records are correctly configured. The domain status will temporarily show as "pending" during verification.',
       inputSchema: {
-        id: z.string().nonempty().describe('Domain ID'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Domain ID or Resend dashboard URL (e.g. https://resend.com/domains/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'domains');
       const response = await resend.domains.verify(id);
 
       if (response.error) {

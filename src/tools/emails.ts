@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 
 export function addEmailTools(
   server: McpServer,
@@ -387,12 +388,17 @@ export function addEmailTools(
     {
       title: 'Get Email',
       description:
-        'Retrieve full details of a specific sent transactional email by ID, including HTML and plain text content.',
+        'Retrieve full details of a specific sent transactional email by ID or dashboard URL, including HTML and plain text content.',
       inputSchema: {
-        id: z.string().describe('The email ID to retrieve'),
+        id: z
+          .string()
+          .describe(
+            'Email ID or Resend dashboard URL (e.g. https://resend.com/emails/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'emails');
       const response = await resend.emails.get(id);
 
       if (response.error) {
@@ -756,12 +762,17 @@ export function addEmailTools(
     {
       title: 'Cancel Email',
       description:
-        'Cancel a scheduled email that has not yet been sent. Only works for emails that were scheduled using the scheduledAt parameter.',
+        'Cancel a scheduled email that has not yet been sent. Accepts an email ID or dashboard URL. Only works for emails that were scheduled using the scheduledAt parameter.',
       inputSchema: {
-        id: z.string().describe('The ID of the scheduled email to cancel'),
+        id: z
+          .string()
+          .describe(
+            'Email ID or Resend dashboard URL (e.g. https://resend.com/emails/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'emails');
       const response = await resend.emails.cancel(id);
 
       if (response.error) {
@@ -786,9 +797,13 @@ export function addEmailTools(
     {
       title: 'Update Email',
       description:
-        'Reschedule a scheduled email by updating its scheduled send time. Only works for emails that were scheduled and have not yet been sent.',
+        'Reschedule a scheduled email by updating its scheduled send time. Accepts an email ID or dashboard URL. Only works for emails that were scheduled and have not yet been sent.',
       inputSchema: {
-        id: z.string().describe('The ID of the scheduled email to update'),
+        id: z
+          .string()
+          .describe(
+            'Email ID or Resend dashboard URL (e.g. https://resend.com/emails/<id>)',
+          ),
         scheduledAt: z
           .string()
           .describe(
@@ -796,7 +811,8 @@ export function addEmailTools(
           ),
       },
     },
-    async ({ id, scheduledAt }) => {
+    async ({ id: rawId, scheduledAt }) => {
+      const id = extractIdFromUrl(rawId, 'emails');
       const response = await resend.emails.update({ id, scheduledAt });
 
       if (response.error) {

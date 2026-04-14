@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 
 export function addApiKeyTools(server: McpServer, resend: Resend) {
   server.registerTool(
@@ -146,12 +147,18 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
     {
       title: 'Remove API Key',
       description:
-        'Remove an API key by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this API key. Reference the NAME of the API key when double-checking, and warn the user that removing an API key is irreversible and any services using it will lose access. You may only use this tool if the user explicitly confirms they want to remove the API key after you double-check.',
+        'Remove an API key by ID or dashboard URL from Resend. Before using this tool, you MUST double-check with the user that they want to remove this API key. Reference the NAME of the API key when double-checking, and warn the user that removing an API key is irreversible and any services using it will lose access. You may only use this tool if the user explicitly confirms they want to remove the API key after you double-check.',
       inputSchema: {
-        id: z.string().nonempty().describe('API key ID'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'API key ID or Resend dashboard URL (e.g. https://resend.com/api-keys/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'api-keys');
       const response = await resend.apiKeys.remove(id);
 
       if (response.error) {

@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 
 export function addSegmentTools(server: McpServer, resend: Resend) {
   server.registerTool(
@@ -125,12 +126,19 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
     'get-segment',
     {
       title: 'Get Segment',
-      description: 'Get a segment by ID from Resend.',
+      description:
+        'Get a segment by ID or dashboard URL from Resend.',
       inputSchema: {
-        id: z.string().nonempty().describe('Segment ID'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Segment ID or Resend dashboard URL (e.g. https://resend.com/audience/segments/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'audience/segments');
       const response = await resend.segments.get(id);
 
       if (response.error) {
@@ -156,12 +164,18 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
     {
       title: 'Remove Segment',
       description:
-        'Remove a segment by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this segment. Reference the NAME of the segment when double-checking, and warn the user that removing a segment is irreversible. You may only use this tool if the user explicitly confirms they want to remove the segment after you double-check.',
+        'Remove a segment by ID or dashboard URL from Resend. Before using this tool, you MUST double-check with the user that they want to remove this segment. Reference the NAME of the segment when double-checking, and warn the user that removing a segment is irreversible. You may only use this tool if the user explicitly confirms they want to remove the segment after you double-check.',
       inputSchema: {
-        id: z.string().nonempty().describe('Segment ID'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Segment ID or Resend dashboard URL (e.g. https://resend.com/audience/segments/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'audience/segments');
       const response = await resend.segments.remove(id);
 
       if (response.error) {
