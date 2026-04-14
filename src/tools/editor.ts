@@ -119,8 +119,8 @@ export function addEditorTools(
       description: `**Purpose:** Show agent presence in the Resend dashboard editor. Users will see an agent avatar while connected.
 
 **When to use:**
+- **Always call this before compose-broadcast or compose-template** to establish the editor connection before composing content. Call disconnect-from-editor after composing.
 - To signal to dashboard users that an AI agent is working on the content
-- **Not needed before compose-broadcast or compose-template** — those tools handle editor connection automatically. Only call this for manual editor presence outside of compose workflows.
 
 **Returns:** Connection token and room ID.`,
       inputSchema: {
@@ -197,5 +197,5 @@ export function addEditorTools(
     },
   );
 
-  return { getActiveConnection: () => activeConnection, withEditorSession };
+  return { getActiveConnection: () => activeConnection };
 }

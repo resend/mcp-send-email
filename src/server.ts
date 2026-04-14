@@ -37,13 +37,12 @@ export function createMcpServer(
   const dashboard = new DashboardClient();
   const apiClient = new ResendEditorClient(apiKey);
 
-  const { withEditorSession } = addEditorTools(server, dashboard, apiClient);
+  addEditorTools(server, dashboard, apiClient);
   addApiKeyTools(server, resend);
   addAutomationTools(server, resend);
   addBroadcastTools(server, resend, apiClient, {
     senderEmailAddress,
     replierEmailAddresses,
-    withEditorSession,
   });
   addContactPropertyTools(server, resend);
   addContactTools(server, resend);
@@ -52,7 +51,7 @@ export function createMcpServer(
   addEventTools(server, resend);
   addLogTools(server, resend);
   addSegmentTools(server, resend);
-  addTemplateTools(server, resend, apiClient, { withEditorSession });
+  addTemplateTools(server, resend, apiClient);
   addTopicTools(server, resend);
   addWebhookTools(server, resend);
   return server;
