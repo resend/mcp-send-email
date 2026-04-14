@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 import {
   sdkResponseToWorkflow,
   type WorkflowDefinition,
@@ -211,7 +212,12 @@ ${WORKFLOW_GUIDANCE}`,
 
 ${WORKFLOW_GUIDANCE}`,
       inputSchema: {
-        id: z.string().nonempty().describe('Automation ID to update.'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>)',
+          ),
         name: z.string().optional().describe('New name for the automation.'),
         status: z
           .enum(['enabled', 'disabled'])
@@ -226,7 +232,8 @@ ${WORKFLOW_GUIDANCE}`,
           ),
       },
     },
-    async ({ id, name, status, workflow }) => {
+    async ({ id: rawId, name, status, workflow }) => {
+      const id = extractIdFromUrl(rawId, 'automations');
       const updateOptions: {
         name?: string;
         status?: 'enabled' | 'disabled';
@@ -288,7 +295,7 @@ ${WORKFLOW_GUIDANCE}`,
           .string()
           .optional()
           .describe(
-            'Automation ID to retrieve. If omitted, lists all automations.',
+            'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>). If omitted, lists all automations.',
           ),
         status: z
           .enum(['enabled', 'disabled'])
@@ -310,7 +317,8 @@ ${WORKFLOW_GUIDANCE}`,
           .describe('Cursor for backward pagination (for list mode).'),
       },
     },
-    async ({ id, status, limit, after, before }) => {
+    async ({ id: rawId, status, limit, after, before }) => {
+      const id = rawId ? extractIdFromUrl(rawId, 'automations') : undefined;
       // Get single automation
       if (id) {
         const response = await resend.automations.get(id);
@@ -406,12 +414,18 @@ ${WORKFLOW_GUIDANCE}`,
     {
       title: 'Remove Automation',
       description:
-        'Remove an automation by ID. Before using this tool, you MUST double-check with the user that they want to remove this automation. Reference the NAME of the automation when confirming, and warn the user that removal is irreversible and will stop all future runs. You may only use this tool if the user explicitly confirms.',
+        'Remove an automation by ID or Resend dashboard URL. Before using this tool, you MUST double-check with the user that they want to remove this automation. Reference the NAME of the automation when confirming, and warn the user that removal is irreversible and will stop all future runs. You may only use this tool if the user explicitly confirms.',
       inputSchema: {
-        id: z.string().nonempty().describe('Automation ID to remove.'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'automations');
       const response = await resend.automations.remove(id);
 
       if (response.error) {
@@ -450,7 +464,9 @@ ${WORKFLOW_GUIDANCE}`,
         automationId: z
           .string()
           .nonempty()
-          .describe('The automation ID to get runs for.'),
+          .describe(
+            'The automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>)',
+          ),
         runId: z
           .string()
           .optional()
@@ -477,7 +493,15 @@ ${WORKFLOW_GUIDANCE}`,
           .describe('Cursor for backward pagination (for list mode).'),
       },
     },
-    async ({ automationId, runId, status, limit, after, before }) => {
+    async ({
+      automationId: rawAutomationId,
+      runId,
+      status,
+      limit,
+      after,
+      before,
+    }) => {
+      const automationId = extractIdFromUrl(rawAutomationId, 'automations');
       // Get specific run
       if (runId) {
         const response = await resend.automations.runs.get({

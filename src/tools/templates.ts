@@ -7,6 +7,7 @@ import type {
 import { z } from 'zod';
 import { EMAIL_HTML_RULES } from '../lib/email-html-rules.js';
 import type { ResendEditorClient } from '../lib/resend-editor-client.js';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 
 const templateVariableSchema = z.object({
   key: z
@@ -216,12 +217,18 @@ export function addTemplateTools(
     {
       title: 'Get Template',
       description:
-        'Get an email template by ID or alias from Resend. Returns full template details including HTML content, variables, and publish status.',
+        'Get an email template by ID, alias, or Resend dashboard URL (e.g. https://resend.com/templates/<id>) from Resend. Returns full template details including HTML content, variables, and publish status.',
       inputSchema: {
-        id: z.string().nonempty().describe('The template ID or alias.'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'The template ID, alias, or Resend dashboard URL (e.g. https://resend.com/templates/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'templates');
       const response = await resend.templates.get(id);
 
       if (response.error) {
@@ -282,7 +289,12 @@ export function addTemplateTools(
 
 **Note:** Switching between compose (TipTap) and update (raw HTML) modes is lossy — some content or formatting may be lost. If the template already has HTML content, ask the user before switching to compose mode.`,
       inputSchema: {
-        id: z.string().nonempty().describe('The template ID or alias.'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'The template ID, alias, or Resend dashboard URL (e.g. https://resend.com/templates/<id>)',
+          ),
         content: z
           .preprocess(
             (val) => {
@@ -307,7 +319,8 @@ export function addTemplateTools(
         name: z.string().optional().describe('Update the template name.'),
       },
     },
-    async ({ id, content, subject, name }) => {
+    async ({ id: rawId, content, subject, name }) => {
+      const id = extractIdFromUrl(rawId, 'templates');
       // Compose the TipTap content with editor session
       await withEditorSession(
         { resource_type: 'template', resource_id: id },
@@ -424,11 +437,16 @@ export function addTemplateTools(
     'update-template',
     {
       title: 'Update Template',
-      description: `Update template metadata by ID or alias (name, subject, from, html, variables, etc.). After updating a published template, use publish-template again to make the changes live. To edit TipTap content, use compose-template instead.
+      description: `Update template metadata by ID, alias, or Resend dashboard URL (name, subject, from, html, variables, etc.). After updating a published template, use publish-template again to make the changes live. To edit TipTap content, use compose-template instead.
 
 **Note on html/text fields:** Setting html or text via this tool replaces any content previously set via compose-template. This switch is lossy — some content or formatting may be lost. Prefer compose-template for content changes. If the template was composed with TipTap content, ask the user before overwriting it with raw HTML.`,
       inputSchema: {
-        id: z.string().nonempty().describe('The template ID or alias.'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'The template ID, alias, or Resend dashboard URL (e.g. https://resend.com/templates/<id>)',
+          ),
         name: z.string().optional().describe('New name for the template.'),
         html: z
           .string()
@@ -456,7 +474,7 @@ export function addTemplateTools(
       },
     },
     async ({
-      id,
+      id: rawId,
       name,
       html,
       subject,
@@ -466,6 +484,7 @@ export function addTemplateTools(
       alias,
       variables,
     }) => {
+      const id = extractIdFromUrl(rawId, 'templates');
       const response = await resend.templates.update(id, {
         ...(name && { name }),
         ...(html && { html }),
@@ -505,12 +524,18 @@ export function addTemplateTools(
     {
       title: 'Remove Template',
       description:
-        'Remove an email template by ID or alias from Resend. Before using this tool, you MUST double-check with the user that they want to remove this template. Reference the NAME of the template when double-checking, and warn the user that removing a template is irreversible. You may only use this tool if the user explicitly confirms they want to remove the template after you double-check.',
+        'Remove an email template by ID, alias, or Resend dashboard URL from Resend. Before using this tool, you MUST double-check with the user that they want to remove this template. Reference the NAME of the template when double-checking, and warn the user that removing a template is irreversible. You may only use this tool if the user explicitly confirms they want to remove the template after you double-check.',
       inputSchema: {
-        id: z.string().nonempty().describe('The template ID or alias.'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'The template ID, alias, or Resend dashboard URL (e.g. https://resend.com/templates/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'templates');
       const response = await resend.templates.remove(id);
 
       if (response.error) {
@@ -533,12 +558,18 @@ export function addTemplateTools(
     {
       title: 'Publish Template',
       description:
-        'Publish an email template in Resend. Templates must be published before they can be used for sending emails. Re-publishing a previously published template makes the latest changes live.',
+        'Publish an email template in Resend. Templates must be published before they can be used for sending emails. Re-publishing a previously published template makes the latest changes live. Accepts a template ID, alias, or Resend dashboard URL.',
       inputSchema: {
-        id: z.string().nonempty().describe('The template ID or alias.'),
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'The template ID, alias, or Resend dashboard URL (e.g. https://resend.com/templates/<id>)',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'templates');
       const response = await resend.templates.publish(id);
 
       if (response.error) {
@@ -561,15 +592,18 @@ export function addTemplateTools(
     {
       title: 'Duplicate Template',
       description:
-        'Duplicate an existing email template in Resend. Creates a new draft copy of the template with a new ID.',
+        'Duplicate an existing email template in Resend. Creates a new draft copy of the template with a new ID. Accepts a template ID, alias, or Resend dashboard URL.',
       inputSchema: {
         id: z
           .string()
           .nonempty()
-          .describe('The ID or alias of the template to duplicate.'),
+          .describe(
+            'The ID, alias, or Resend dashboard URL (e.g. https://resend.com/templates/<id>) of the template to duplicate.',
+          ),
       },
     },
-    async ({ id }) => {
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'templates');
       const response = await resend.templates.duplicate(id);
 
       if (response.error) {

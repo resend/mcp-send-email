@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { DashboardClient } from '../lib/dashboard-client.js';
 import type { ResendEditorClient } from '../lib/resend-editor-client.js';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 
 interface EditorConnection {
   resource_type: 'broadcast' | 'template';
@@ -70,7 +71,7 @@ export function addEditorTools(
           .string()
           .nonempty()
           .describe(
-            'The broadcast ID (UUID) or template identifier (UUID or alias)',
+            'The broadcast ID (UUID), template identifier (UUID or alias), or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id> or https://resend.com/templates/<id>)',
           ),
         include_schema: z
           .boolean()
@@ -80,7 +81,11 @@ export function addEditorTools(
           ),
       },
     },
-    async ({ resource_type, resource_id, include_schema }) => {
+    async ({ resource_type, resource_id: rawResourceId, include_schema }) => {
+      const resource_id = extractIdFromUrl(
+        rawResourceId,
+        resource_type === 'broadcast' ? 'broadcasts' : 'templates',
+      );
       const contentParts: Array<{ type: 'text'; text: string }> = [];
 
       const result = await apiClient.getEditorContent(
@@ -127,17 +132,27 @@ export function addEditorTools(
         resource_type: z
           .enum(['broadcast', 'template'])
           .describe('Type of resource to connect to'),
-        resource_id: z.string().nonempty().describe('ID of the resource'),
+        resource_id: z
+          .string()
+          .nonempty()
+          .describe(
+            'ID of the resource or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id> or https://resend.com/templates/<id>)',
+          ),
         agent_name: z
           .string()
           .optional()
           .describe('Display name for the agent avatar'),
       },
     },
-    async ({ resource_type, resource_id, agent_name }) => {
+    async ({ resource_type, resource_id: rawResourceId, agent_name }) => {
       if (!apiClient) {
         throw new Error('API client not configured. Provide a Resend API key.');
       }
+
+      const resource_id = extractIdFromUrl(
+        rawResourceId,
+        resource_type === 'broadcast' ? 'broadcasts' : 'templates',
+      );
 
       const result = await apiClient.createEditorConnection({
         resource_type,

@@ -3,6 +3,7 @@ import type { Resend } from 'resend';
 import { z } from 'zod';
 import { EMAIL_HTML_RULES } from '../lib/email-html-rules.js';
 import type { ResendEditorClient } from '../lib/resend-editor-client.js';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 
 export function addBroadcastTools(
   server: McpServer,
@@ -175,7 +176,12 @@ export function addBroadcastTools(
 
 **Workflow:** create-broadcast → send-broadcast. Use list-broadcasts to find existing draft/sent broadcasts.`,
       inputSchema: {
-        broadcastId: z.string().nonempty().describe('Broadcast ID'),
+        broadcastId: z
+          .string()
+          .nonempty()
+          .describe(
+            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+          ),
         scheduledAt: z
           .string()
           .optional()
@@ -184,7 +190,8 @@ export function addBroadcastTools(
           ),
       },
     },
-    async ({ broadcastId, scheduledAt }) => {
+    async ({ broadcastId: rawBroadcastId, scheduledAt }) => {
+      const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
       const response = await resend.broadcasts.send(broadcastId, {
         scheduledAt,
       });
@@ -267,12 +274,18 @@ export function addBroadcastTools(
     {
       title: 'Get Broadcast',
       description:
-        'Retrieve full details of a specific broadcast by ID, including HTML and plain text content.',
+        'Retrieve full details of a specific broadcast by ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>), including HTML and plain text content.',
       inputSchema: {
-        broadcastId: z.string().nonempty().describe('Broadcast ID'),
+        broadcastId: z
+          .string()
+          .nonempty()
+          .describe(
+            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+          ),
       },
     },
-    async ({ broadcastId }) => {
+    async ({ broadcastId: rawBroadcastId }) => {
+      const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
       const response = await resend.broadcasts.get(broadcastId);
 
       if (response.error) {
@@ -334,12 +347,18 @@ export function addBroadcastTools(
     {
       title: 'Remove Broadcast',
       description:
-        'Remove a broadcast by ID. Before using this tool, you MUST double-check with the user that they want to remove this broadcast. Reference the NAME of the broadcast when double-checking, and warn the user that removing a broadcast is irreversible. You may only use this tool if the user explicitly confirms they want to remove the broadcast after you double-check.',
+        'Remove a broadcast by ID or Resend dashboard URL. Before using this tool, you MUST double-check with the user that they want to remove this broadcast. Reference the NAME of the broadcast when double-checking, and warn the user that removing a broadcast is irreversible. You may only use this tool if the user explicitly confirms they want to remove the broadcast after you double-check.',
       inputSchema: {
-        broadcastId: z.string().nonempty().describe('Broadcast ID'),
+        broadcastId: z
+          .string()
+          .nonempty()
+          .describe(
+            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+          ),
       },
     },
-    async ({ broadcastId }) => {
+    async ({ broadcastId: rawBroadcastId }) => {
+      const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
       const response = await resend.broadcasts.remove(broadcastId);
 
       if (response.error) {
@@ -376,7 +395,12 @@ export function addBroadcastTools(
 
 **Note:** Switching between compose (TipTap) and update (raw HTML) modes is lossy — some content or formatting may be lost. If the broadcast already has HTML content, ask the user before switching to compose mode.`,
       inputSchema: {
-        broadcastId: z.string().nonempty().describe('Broadcast ID'),
+        broadcastId: z
+          .string()
+          .nonempty()
+          .describe(
+            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+          ),
         content: z
           .preprocess(
             (val) => {
@@ -410,7 +434,14 @@ export function addBroadcastTools(
           .describe('Update the broadcast name (internal label).'),
       },
     },
-    async ({ broadcastId, content, subject, previewText, name }) => {
+    async ({
+      broadcastId: rawBroadcastId,
+      content,
+      subject,
+      previewText,
+      name,
+    }) => {
+      const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
       // Compose the TipTap content with editor session
       await withEditorSession(
         { resource_type: 'broadcast', resource_id: broadcastId },
@@ -551,13 +582,18 @@ export function addBroadcastTools(
     'update-broadcast',
     {
       title: 'Update Broadcast',
-      description: `Update broadcast metadata by ID (name, subject, from, html, text, segment, preview text, reply-to). To edit TipTap content, use compose-broadcast instead.
+      description: `Update broadcast metadata by ID or Resend dashboard URL (name, subject, from, html, text, segment, preview text, reply-to). To edit TipTap content, use compose-broadcast instead.
 
 **Important:** The API requires \`from\` and \`segmentId\` to be set on the broadcast. If the broadcast was created from the dashboard, these may be empty. Always call get-broadcast first to check, and include \`from\` and \`segmentId\` in your update if they are not already set. Use list-domains to find verified domains for the from address, and list-segments to find segment IDs.
 
 **Note on html/text fields:** Setting html or text via this tool replaces any content previously set via compose-broadcast. This switch is lossy — some content or formatting may be lost. Prefer compose-broadcast for content changes. If the broadcast was composed with TipTap content, ask the user before overwriting it with raw HTML.`,
       inputSchema: {
-        broadcastId: z.string().nonempty().describe('Broadcast ID'),
+        broadcastId: z
+          .string()
+          .nonempty()
+          .describe(
+            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+          ),
         name: z.string().optional().describe('Name for the broadcast'),
         segmentId: z.string().optional().describe('Segment ID to send to'),
         from: z
@@ -583,7 +619,7 @@ export function addBroadcastTools(
       },
     },
     async ({
-      broadcastId,
+      broadcastId: rawBroadcastId,
       name,
       segmentId,
       from,
@@ -593,6 +629,7 @@ export function addBroadcastTools(
       replyTo,
       previewText,
     }) => {
+      const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
       // Fetch current broadcast to detect missing required fields.
       // The API validates the merged result (existing + patch), so updating
       // a dashboard-created broadcast that lacks `from` or `segment_id` will
