@@ -1,3 +1,5 @@
+const SUPPORTED_RESOURCES = ['broadcasts', 'templates', 'automations'];
+
 /**
  * Extracts a resource ID from a Resend dashboard URL.
  *
@@ -7,6 +9,7 @@
  *   https://resend.com/automations/<id>
  *
  * If the input is not a URL, it is returned as-is (assumed to be a raw ID).
+ * If the input is a URL but cannot be resolved to an ID, an error is thrown.
  */
 export function extractIdFromUrl(
   input: string,
@@ -19,39 +22,48 @@ export function extractIdFromUrl(
     return trimmed;
   }
 
+  // From this point on, the input is a URL — it is never a valid raw ID,
+  // so every failure path should throw rather than return the URL string.
+
   let url: URL;
   try {
     url = new URL(trimmed);
   } catch {
-    // Not a valid URL — treat as raw ID
-    return trimmed;
+    throw new Error(
+      `The input looks like a URL but could not be parsed: ${trimmed}. Please provide a valid Resend dashboard URL or a raw resource ID.`,
+    );
   }
 
   // Only handle resend.com URLs
   if (url.hostname !== 'resend.com' && url.hostname !== 'www.resend.com') {
-    return trimmed;
+    throw new Error(
+      `Unrecognized URL host "${url.hostname}". Expected a resend.com URL (e.g. https://resend.com/${expectedResource ?? 'broadcasts'}/<id>) or a raw resource ID.`,
+    );
   }
 
   // pathname is like /broadcasts/<id> or /templates/<id>
   const segments = url.pathname.split('/').filter(Boolean);
 
   if (segments.length < 2) {
-    return trimmed;
+    const hint = segments[0] ?? expectedResource ?? 'broadcasts';
+    throw new Error(
+      `The URL "${trimmed}" is missing a resource ID. Expected a URL like https://resend.com/${hint}/<id>.`,
+    );
   }
 
   const [resource, id] = segments;
 
   if (expectedResource && resource !== expectedResource) {
-    return trimmed;
+    throw new Error(
+      `Expected a ${expectedResource} URL, but got a ${resource} URL. Please provide a ${expectedResource} ID or URL (e.g. https://resend.com/${expectedResource}/<id>).`,
+    );
   }
 
-  if (
-    resource === 'broadcasts' ||
-    resource === 'templates' ||
-    resource === 'automations'
-  ) {
+  if (SUPPORTED_RESOURCES.includes(resource)) {
     return id;
   }
 
-  return trimmed;
+  throw new Error(
+    `Unsupported resource type "${resource}" in URL. Only broadcasts, templates, and automations URLs are supported.`,
+  );
 }

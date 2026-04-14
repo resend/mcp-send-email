@@ -36,19 +36,28 @@ describe('extractIdFromUrl', () => {
     ).toBe('abc-123');
   });
 
-  it('returns input as-is for mismatched resource type', () => {
-    const url = 'https://resend.com/templates/tmpl_456';
-    expect(extractIdFromUrl(url, 'broadcasts')).toBe(url);
+  it('throws for mismatched resource type', () => {
+    expect(() =>
+      extractIdFromUrl('https://resend.com/templates/tmpl_456', 'broadcasts'),
+    ).toThrow(/expected a broadcasts URL, but got a templates URL/i);
   });
 
-  it('returns input as-is for non-resend URLs', () => {
-    const url = 'https://example.com/broadcasts/abc-123';
-    expect(extractIdFromUrl(url, 'broadcasts')).toBe(url);
+  it('throws for non-resend URLs', () => {
+    expect(() =>
+      extractIdFromUrl('https://example.com/broadcasts/abc-123', 'broadcasts'),
+    ).toThrow(/unrecognized URL host/i);
   });
 
-  it('returns input as-is for URLs with insufficient path segments', () => {
-    const url = 'https://resend.com/broadcasts';
-    expect(extractIdFromUrl(url, 'broadcasts')).toBe(url);
+  it('throws for URLs with insufficient path segments', () => {
+    expect(() =>
+      extractIdFromUrl('https://resend.com/broadcasts', 'broadcasts'),
+    ).toThrow(/missing a resource ID/i);
+  });
+
+  it('throws for unsupported resend.com resource paths', () => {
+    expect(() =>
+      extractIdFromUrl('https://resend.com/domains/some-id'),
+    ).toThrow(/unsupported resource type/i);
   });
 
   it('extracts ID without expectedResource filter', () => {
