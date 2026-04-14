@@ -54,7 +54,7 @@ export function addEditorTools(
       return await fn();
     } finally {
       try {
-        await apiClient.deleteEditorConnection(conn);
+        await apiClient.deleteEditorConnection(activeConnection ?? conn);
       } catch {
         // best-effort
       }
@@ -104,16 +104,23 @@ export function addEditorTools(
 
       // Connect early so the agent avatar is visible while the LLM
       // generates content between this call and compose-*.
-      const agent_name = getAgentName();
-      try {
-        await apiClient.createEditorConnection({
-          resource_type,
-          resource_id,
-          agent_name,
-        });
-        activeConnection = { resource_type, resource_id, agent_name };
-      } catch {
-        // best-effort — proceed even if connect fails
+      // Skip if connect-to-editor was already called for this resource.
+      if (
+        !activeConnection ||
+        activeConnection.resource_type !== resource_type ||
+        activeConnection.resource_id !== resource_id
+      ) {
+        const agent_name = getAgentName();
+        try {
+          await apiClient.createEditorConnection({
+            resource_type,
+            resource_id,
+            agent_name,
+          });
+          activeConnection = { resource_type, resource_id, agent_name };
+        } catch {
+          // best-effort — proceed even if connect fails
+        }
       }
 
       const contentParts: Array<{ type: 'text'; text: string }> = [];
