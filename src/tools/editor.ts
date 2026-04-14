@@ -16,38 +16,6 @@ export function addEditorTools(
 ) {
   let activeConnection: EditorConnection | null = null;
 
-  /**
-   * Connect to the editor for a resource, perform an async action, then
-   * disconnect. Used internally by broadcast tools so the AI avatar shows
-   * up automatically whenever content is pushed.
-   */
-  async function withEditorSession<T>(
-    conn: EditorConnection,
-    fn: () => Promise<T>,
-  ): Promise<T> {
-    if (!apiClient) {
-      return fn();
-    }
-
-    try {
-      await apiClient.createEditorConnection(conn);
-      activeConnection = conn;
-    } catch {
-      // best-effort — proceed even if connect fails
-    }
-
-    try {
-      return await fn();
-    } finally {
-      try {
-        await apiClient.deleteEditorConnection(conn);
-      } catch {
-        // best-effort
-      }
-      activeConnection = null;
-    }
-  }
-
   server.registerTool(
     'get-tiptap-json-content',
     {
