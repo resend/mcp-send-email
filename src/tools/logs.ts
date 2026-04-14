@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 
 export function addLogTools(server: McpServer, resend: Resend) {
   server.registerTool(
@@ -106,7 +107,7 @@ export function addLogTools(server: McpServer, resend: Resend) {
     'get-log',
     {
       title: 'Get Log',
-      description: `**Purpose:** Get detailed information about a specific API request log, including the full request and response bodies.
+      description: `**Purpose:** Get detailed information about a specific API request log by ID or dashboard URL, including the full request and response bodies.
 
 **Returns:** Log details: id, created_at, endpoint, method, response_status, user_agent, request_body, response_body.
 
@@ -115,10 +116,16 @@ export function addLogTools(server: McpServer, resend: Resend) {
 - Debugging a particular API call
 - User says "show me that log", "what was in that request?"`,
       inputSchema: {
-        logId: z.string().nonempty().describe('The Log ID to retrieve'),
+        logId: z
+          .string()
+          .nonempty()
+          .describe(
+            'Log ID or Resend dashboard URL (e.g. https://resend.com/logs/<id>)',
+          ),
       },
     },
-    async ({ logId }) => {
+    async ({ logId: rawLogId }) => {
+      const logId = extractIdFromUrl(rawLogId, 'logs');
       const response = await resend.logs.get(logId);
 
       if (response.error) {

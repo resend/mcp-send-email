@@ -6,6 +6,7 @@ import type {
   UpdateContactResponse,
 } from 'resend';
 import { z } from 'zod';
+import { extractIdFromUrl } from '../lib/url-parser.js';
 
 export function addContactTools(server: McpServer, resend: Resend) {
   server.registerTool(
@@ -198,15 +199,22 @@ export function addContactTools(server: McpServer, resend: Resend) {
     'get-contact',
     {
       title: 'Get Contact',
-      description: 'Get a contact by ID or email from Resend.',
+      description:
+        'Get a contact by ID, dashboard URL, or email from Resend.',
       inputSchema: {
-        id: z.string().optional().describe('Contact ID'),
+        id: z
+          .string()
+          .optional()
+          .describe(
+            'Contact ID or Resend dashboard URL (e.g. https://resend.com/audience/contacts/<id>)',
+          ),
         email: z.email().optional().describe('Contact email address'),
       },
     },
-    async ({ id, email }) => {
+    async ({ id: rawId, email }) => {
       let response: GetContactResponse;
-      if (id) {
+      if (rawId) {
+        const id = extractIdFromUrl(rawId, 'audience/contacts');
         response = await resend.contacts.get({ id });
       } else if (email) {
         response = await resend.contacts.get({ email });
@@ -253,9 +261,15 @@ export function addContactTools(server: McpServer, resend: Resend) {
     'update-contact',
     {
       title: 'Update Contact',
-      description: 'Update a contact in Resend (by ID or email).',
+      description:
+        'Update a contact in Resend (by ID, dashboard URL, or email).',
       inputSchema: {
-        id: z.string().optional().describe('Contact ID'),
+        id: z
+          .string()
+          .optional()
+          .describe(
+            'Contact ID or Resend dashboard URL (e.g. https://resend.com/audience/contacts/<id>)',
+          ),
         email: z.email().optional().describe('Contact email address'),
         firstName: z
           .string()
@@ -283,7 +297,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
           ),
       },
     },
-    async ({ id, email, firstName, lastName, unsubscribed, properties }) => {
+    async ({ id: rawId, email, firstName, lastName, unsubscribed, properties }) => {
       const commonOptions = {
         firstName,
         lastName,
@@ -292,7 +306,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
       };
 
       let response: UpdateContactResponse;
-      if (id) {
+      if (rawId) {
+        const id = extractIdFromUrl(rawId, 'audience/contacts');
         response = await resend.contacts.update({ id, ...commonOptions });
       } else if (email) {
         response = await resend.contacts.update({ email, ...commonOptions });
@@ -323,15 +338,21 @@ export function addContactTools(server: McpServer, resend: Resend) {
     {
       title: 'Remove Contact',
       description:
-        "Remove a contact from Resend (by ID or email). Before using this tool, you MUST double-check with the user that they want to remove this contact. Reference the contact's name (if present) and email address when double-checking, and warn the user that removing a contact is irreversible. You may only use this tool if the user explicitly confirms they want to remove the contact after you double-check.",
+        "Remove a contact from Resend (by ID, dashboard URL, or email). Before using this tool, you MUST double-check with the user that they want to remove this contact. Reference the contact's name (if present) and email address when double-checking, and warn the user that removing a contact is irreversible. You may only use this tool if the user explicitly confirms they want to remove the contact after you double-check.",
       inputSchema: {
-        id: z.string().optional().describe('Contact ID'),
+        id: z
+          .string()
+          .optional()
+          .describe(
+            'Contact ID or Resend dashboard URL (e.g. https://resend.com/audience/contacts/<id>)',
+          ),
         email: z.email().optional().describe('Contact email address'),
       },
     },
-    async ({ id, email }) => {
+    async ({ id: rawId, email }) => {
       let response: RemoveContactsResponse;
-      if (id) {
+      if (rawId) {
+        const id = extractIdFromUrl(rawId, 'audience/contacts');
         response = await resend.contacts.remove({ id });
       } else if (email) {
         response = await resend.contacts.remove({ email });
@@ -361,19 +382,28 @@ export function addContactTools(server: McpServer, resend: Resend) {
     {
       title: 'Add Contact to Segment',
       description:
-        'Add a contact to a segment in Resend (by contact ID or email).',
+        'Add a contact to a segment in Resend (by contact ID, dashboard URL, or email).',
       inputSchema: {
-        contactId: z.string().optional().describe('Contact ID'),
+        contactId: z
+          .string()
+          .optional()
+          .describe(
+            'Contact ID or Resend dashboard URL (e.g. https://resend.com/audience/contacts/<id>)',
+          ),
         email: z.email().optional().describe('Contact email address'),
         segmentId: z
           .string()
           .nonempty()
-          .describe('Segment ID to add the contact to'),
+          .describe(
+            'Segment ID or Resend dashboard URL (e.g. https://resend.com/audience/segments/<id>)',
+          ),
       },
     },
-    async ({ contactId, email, segmentId }) => {
+    async ({ contactId: rawContactId, email, segmentId: rawSegmentId }) => {
+      const segmentId = extractIdFromUrl(rawSegmentId, 'audience/segments');
       let response;
-      if (contactId) {
+      if (rawContactId) {
+        const contactId = extractIdFromUrl(rawContactId, 'audience/contacts');
         response = await resend.contacts.segments.add({ contactId, segmentId });
       } else if (email) {
         response = await resend.contacts.segments.add({ email, segmentId });
@@ -403,19 +433,28 @@ export function addContactTools(server: McpServer, resend: Resend) {
     {
       title: 'Remove Contact from Segment',
       description:
-        'Remove a contact from a segment in Resend (by contact ID or email). Before using this tool, you MUST double-check with the user that they want to remove the contact from the segment.',
+        'Remove a contact from a segment in Resend (by contact ID, dashboard URL, or email). Before using this tool, you MUST double-check with the user that they want to remove the contact from the segment.',
       inputSchema: {
-        contactId: z.string().optional().describe('Contact ID'),
+        contactId: z
+          .string()
+          .optional()
+          .describe(
+            'Contact ID or Resend dashboard URL (e.g. https://resend.com/audience/contacts/<id>)',
+          ),
         email: z.email().optional().describe('Contact email address'),
         segmentId: z
           .string()
           .nonempty()
-          .describe('Segment ID to remove the contact from'),
+          .describe(
+            'Segment ID or Resend dashboard URL (e.g. https://resend.com/audience/segments/<id>)',
+          ),
       },
     },
-    async ({ contactId, email, segmentId }) => {
+    async ({ contactId: rawContactId, email, segmentId: rawSegmentId }) => {
+      const segmentId = extractIdFromUrl(rawSegmentId, 'audience/segments');
       let response;
-      if (contactId) {
+      if (rawContactId) {
+        const contactId = extractIdFromUrl(rawContactId, 'audience/contacts');
         response = await resend.contacts.segments.remove({
           contactId,
           segmentId,
@@ -448,9 +487,14 @@ export function addContactTools(server: McpServer, resend: Resend) {
     {
       title: 'List Contact Segments',
       description:
-        "List all segments a contact belongs to in Resend (by contact ID or email). Don't bother telling the user the IDs or creation dates unless they ask for them.",
+        "List all segments a contact belongs to in Resend (by contact ID, dashboard URL, or email). Don't bother telling the user the IDs or creation dates unless they ask for them.",
       inputSchema: {
-        contactId: z.string().optional().describe('Contact ID'),
+        contactId: z
+          .string()
+          .optional()
+          .describe(
+            'Contact ID or Resend dashboard URL (e.g. https://resend.com/audience/contacts/<id>)',
+          ),
         email: z.email().optional().describe('Contact email address'),
         limit: z
           .number()
@@ -474,20 +518,22 @@ export function addContactTools(server: McpServer, resend: Resend) {
           ),
       },
     },
-    async ({ contactId, email, limit, after, before }) => {
+    async ({ contactId: rawContactId, email, limit, after, before }) => {
       if (after && before) {
         throw new Error(
           'Cannot use both "after" and "before" parameters. Use only one for pagination.',
         );
       }
 
-      if (!contactId && !email) {
+      if (!rawContactId && !email) {
         throw new Error(
           'You must provide either `contactId` or `email` to list contact segments.',
         );
       }
 
-      const contactField = contactId ? { contactId } : { email: email! };
+      const contactField = rawContactId
+        ? { contactId: extractIdFromUrl(rawContactId, 'audience/contacts') }
+        : { email: email! };
 
       const paginationOptions = after
         ? { limit, after }
@@ -545,9 +591,14 @@ export function addContactTools(server: McpServer, resend: Resend) {
     {
       title: 'List Contact Topics',
       description:
-        "List all topic subscriptions for a contact in Resend (by contact ID or email). Don't bother telling the user the IDs unless they ask for them.",
+        "List all topic subscriptions for a contact in Resend (by contact ID, dashboard URL, or email). Don't bother telling the user the IDs unless they ask for them.",
       inputSchema: {
-        id: z.string().optional().describe('Contact ID'),
+        id: z
+          .string()
+          .optional()
+          .describe(
+            'Contact ID or Resend dashboard URL (e.g. https://resend.com/audience/contacts/<id>)',
+          ),
         email: z.email().optional().describe('Contact email address'),
         limit: z
           .number()
@@ -571,20 +622,22 @@ export function addContactTools(server: McpServer, resend: Resend) {
           ),
       },
     },
-    async ({ id, email, limit, after, before }) => {
+    async ({ id: rawId, email, limit, after, before }) => {
       if (after && before) {
         throw new Error(
           'Cannot use both "after" and "before" parameters. Use only one for pagination.',
         );
       }
 
-      if (!id && !email) {
+      if (!rawId && !email) {
         throw new Error(
           'You must provide either `id` or `email` to list contact topics.',
         );
       }
 
-      const contactField = id ? { id } : { email: email! };
+      const contactField = rawId
+        ? { id: extractIdFromUrl(rawId, 'audience/contacts') }
+        : { email: email! };
 
       const paginationOptions = after
         ? { limit, after }
@@ -651,9 +704,14 @@ export function addContactTools(server: McpServer, resend: Resend) {
     {
       title: 'Update Contact Topics',
       description:
-        'Update topic subscriptions for a contact in Resend (by contact ID or email).',
+        'Update topic subscriptions for a contact in Resend (by contact ID, dashboard URL, or email).',
       inputSchema: {
-        id: z.string().optional().describe('Contact ID'),
+        id: z
+          .string()
+          .optional()
+          .describe(
+            'Contact ID or Resend dashboard URL (e.g. https://resend.com/audience/contacts/<id>)',
+          ),
         email: z.email().optional().describe('Contact email address'),
         topics: z
           .array(
@@ -668,14 +726,16 @@ export function addContactTools(server: McpServer, resend: Resend) {
           .describe('Array of topic subscription configurations to update'),
       },
     },
-    async ({ id, email, topics }) => {
-      if (!id && !email) {
+    async ({ id: rawId, email, topics }) => {
+      if (!rawId && !email) {
         throw new Error(
           'You must provide either `id` or `email` to update contact topics.',
         );
       }
 
-      const contactField = id ? { id } : { email: email! };
+      const contactField = rawId
+        ? { id: extractIdFromUrl(rawId, 'audience/contacts') }
+        : { email: email! };
 
       const response = await resend.contacts.topics.update({
         ...contactField,

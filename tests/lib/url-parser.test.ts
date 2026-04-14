@@ -56,7 +56,7 @@ describe('extractIdFromUrl', () => {
 
   it('throws for unsupported resend.com resource paths', () => {
     expect(() =>
-      extractIdFromUrl('https://resend.com/domains/some-id'),
+      extractIdFromUrl('https://resend.com/settings/some-id'),
     ).toThrow(/unsupported resource type/i);
   });
 
@@ -64,6 +64,107 @@ describe('extractIdFromUrl', () => {
     expect(extractIdFromUrl('https://resend.com/broadcasts/abc-123')).toBe(
       'abc-123',
     );
+  });
+
+  // New simple resource types
+  it('extracts domain ID from URL', () => {
+    expect(
+      extractIdFromUrl('https://resend.com/domains/dom-123', 'domains'),
+    ).toBe('dom-123');
+  });
+
+  it('extracts API key ID from URL', () => {
+    expect(
+      extractIdFromUrl('https://resend.com/api-keys/key-456', 'api-keys'),
+    ).toBe('key-456');
+  });
+
+  it('extracts webhook ID from URL', () => {
+    expect(
+      extractIdFromUrl('https://resend.com/webhooks/wh-789', 'webhooks'),
+    ).toBe('wh-789');
+  });
+
+  it('extracts log ID from URL', () => {
+    expect(
+      extractIdFromUrl('https://resend.com/logs/log-001', 'logs'),
+    ).toBe('log-001');
+  });
+
+  it('extracts email ID from URL', () => {
+    expect(
+      extractIdFromUrl('https://resend.com/emails/em-999', 'emails'),
+    ).toBe('em-999');
+  });
+
+  // Nested resource types (audience/*)
+  it('extracts contact ID from nested audience URL', () => {
+    expect(
+      extractIdFromUrl(
+        'https://resend.com/audience/contacts/ct-123',
+        'audience/contacts',
+      ),
+    ).toBe('ct-123');
+  });
+
+  it('extracts segment ID from nested audience URL', () => {
+    expect(
+      extractIdFromUrl(
+        'https://resend.com/audience/segments/seg-456',
+        'audience/segments',
+      ),
+    ).toBe('seg-456');
+  });
+
+  it('extracts topic ID from nested audience URL', () => {
+    expect(
+      extractIdFromUrl(
+        'https://resend.com/audience/topics/top-789',
+        'audience/topics',
+      ),
+    ).toBe('top-789');
+  });
+
+  it('handles nested URLs with trailing slash', () => {
+    expect(
+      extractIdFromUrl(
+        'https://resend.com/audience/contacts/ct-123/',
+        'audience/contacts',
+      ),
+    ).toBe('ct-123');
+  });
+
+  it('handles nested URLs with query parameters', () => {
+    expect(
+      extractIdFromUrl(
+        'https://resend.com/audience/segments/seg-456?tab=details',
+        'audience/segments',
+      ),
+    ).toBe('seg-456');
+  });
+
+  it('throws for mismatched nested resource type', () => {
+    expect(() =>
+      extractIdFromUrl(
+        'https://resend.com/audience/contacts/ct-123',
+        'audience/segments',
+      ),
+    ).toThrow(/expected a audience\/segments URL/i);
+  });
+
+  it('throws when expecting nested resource but getting simple resource', () => {
+    expect(() =>
+      extractIdFromUrl(
+        'https://resend.com/domains/dom-123',
+        'audience/contacts',
+      ),
+    ).toThrow(/expected a audience\/contacts URL/i);
+  });
+
+  it('extracts nested ID without expectedResource filter', () => {
+    expect(
+      extractIdFromUrl('https://resend.com/audience/contacts/ct-123'),
+    ).toBe('ct-123');
   });
 
   it('trims whitespace from input', () => {
