@@ -17,6 +17,11 @@ export function addEditorTools(
 ) {
   let activeConnection: EditorConnection | null = null;
 
+  /** MCP client name (e.g. "claude-code", "cursor") used as the agent_name for editor presence. */
+  function getAgentName(): string | undefined {
+    return server.server.getClientVersion()?.name;
+  }
+
   /**
    * Run an async action and then disconnect from the editor.
    * If get-tiptap-json-content already established a connection, reuse it;
@@ -37,8 +42,9 @@ export function addEditorTools(
 
     if (!alreadyConnected) {
       try {
-        await apiClient.createEditorConnection(conn);
-        activeConnection = conn;
+        const agent_name = conn.agent_name ?? getAgentName();
+        await apiClient.createEditorConnection({ ...conn, agent_name });
+        activeConnection = { ...conn, agent_name };
       } catch {
         // best-effort — proceed even if connect fails
       }
@@ -98,12 +104,14 @@ export function addEditorTools(
 
       // Connect early so the agent avatar is visible while the LLM
       // generates content between this call and compose-*.
+      const agent_name = getAgentName();
       try {
         await apiClient.createEditorConnection({
           resource_type,
           resource_id,
+          agent_name,
         });
-        activeConnection = { resource_type, resource_id };
+        activeConnection = { resource_type, resource_id, agent_name };
       } catch {
         // best-effort — proceed even if connect fails
       }
@@ -176,13 +184,19 @@ export function addEditorTools(
         resource_type === 'broadcast' ? 'broadcasts' : 'templates',
       );
 
+      const resolvedAgentName = agent_name ?? getAgentName();
+
       const result = await apiClient.createEditorConnection({
         resource_type,
         resource_id,
-        agent_name,
+        agent_name: resolvedAgentName,
       });
 
-      activeConnection = { resource_type, resource_id, agent_name };
+      activeConnection = {
+        resource_type,
+        resource_id,
+        agent_name: resolvedAgentName,
+      };
 
       return {
         content: [
