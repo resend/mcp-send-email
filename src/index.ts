@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import './user-agent.js';
 import 'dotenv/config';
 import { Resend } from 'resend';
 import { parseArgs, resolveConfigOrExit } from './cli/index.js';
