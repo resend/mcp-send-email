@@ -14,14 +14,13 @@ permissions:
 jobs:
   pin-dependencies-check:
     runs-on: depot-ubuntu-24.04
-    container:
-      image: node:24-slim
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: pnpm/action-setup@08c4be7e2e672a47d11bd04269e27e5f3e8529cb # v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
-          fetch-depth: 1
-      - name: pnpm setup
-        uses: pnpm/action-setup@9b5745cdf0a2e8c2620f0746130f809adb911c19
+          node-version: 24
+          cache: 'pnpm'
       - name: Check for pinned dependencies
         run: pnpm dlx tsx@4.21.0 ./scripts/check-dependency-versions.ts
