@@ -12,7 +12,7 @@ permissions:
   pull-requests: read
 jobs:
   lint:
-    runs-on: depot-ubuntu-24.04-8
+    runs-on: depot-ubuntu-24.04
     container:
       image: node:24-slim
     steps:
