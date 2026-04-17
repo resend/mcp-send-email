@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: 24
           cache: 'pnpm'
+      - name: Install packages
+        run: pnpm install --frozen-lockfile
       - name: Run Lint
-        run: pnpm dlx @biomejs/biome@2.3.10 check .
-        env:
-          SKIP_ENV_VALIDATION: true
+        run: pnpm lint
