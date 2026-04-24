@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
+import { mailboxSchema } from '../lib/mailbox-schema.js';
 
 export function addEmailTools(
   server: McpServer,
@@ -125,21 +126,18 @@ export function addEmailTools(
         // If sender email address is not provided, the tool requires it as an argument
         ...(!senderEmailAddress
           ? {
-              from: z
-                .email()
-                .nonempty()
-                .describe(
-                  'Sender email address. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
-                ),
+              from: mailboxSchema.describe(
+                'Sender email address. Accepts RFC 5322 mailbox form ("Name <addr@host>") or bare email. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
+              ),
             }
           : {}),
         ...(replierEmailAddresses.length === 0
           ? {
               replyTo: z
-                .array(z.email())
+                .array(mailboxSchema)
                 .optional()
                 .describe(
-                  'Optional email addresses for the email readers to reply to. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
+                  'Optional email addresses for the email readers to reply to. Accepts RFC 5322 mailbox form or bare email. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
                 ),
             }
           : {}),
@@ -974,16 +972,17 @@ export function addEmailTools(
               subject: z.string().describe('Email subject line'),
               text: z.string().describe('Plain text email content'),
               html: z.string().optional().describe('HTML email content'),
-              from: z
-                .email()
+              from: mailboxSchema
                 .optional()
                 .describe(
-                  'Sender email address. Falls back to the configured default sender if not provided.',
+                  'Sender email address. Accepts RFC 5322 mailbox form ("Name <addr@host>") or bare email. Falls back to the configured default sender if not provided.',
                 ),
               replyTo: z
-                .array(z.email())
+                .array(mailboxSchema)
                 .optional()
-                .describe('Reply-to email addresses'),
+                .describe(
+                  'Reply-to email addresses. Accepts RFC 5322 mailbox form or bare email.',
+                ),
               cc: z.array(z.email()).optional().describe('CC email addresses'),
               bcc: z
                 .array(z.email())
