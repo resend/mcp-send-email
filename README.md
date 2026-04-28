@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/resend-resend-mcp-badge.png)](https://mseep.ai/app/resend-resend-mcp)
+
 # Resend MCP Server
 
 [![smithery badge](https://smithery.ai/badge/@resend/resend-mcp)](https://smithery.ai/server/@resend/resend-mcp)
