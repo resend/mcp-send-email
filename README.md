@@ -11,8 +11,8 @@ An MCP server for the [Resend](https://resend.com/) platform. Send and receive e
 - **Received Emails** — List and read inbound emails. List and download received email attachments.
 - **Contacts** — Create, list, get, update, and remove contacts. Manage segment memberships and topic subscriptions. Supports custom contact properties.
 - **Broadcasts** — Create, send, list, get, update, and remove broadcast campaigns. Supports scheduling, personalization placeholders, and preview text.
-- **Templates** — Create, list, get, update, publish, duplicate, and remove reusable email templates. Supports typed variables (`{{{VAR_NAME}}}`) with fallback values and a draft/published lifecycle.
-- **Visual Editor** — Compose broadcast and template content as TipTap JSON that renders live in the [Resend dashboard editor](https://resend.com/blog/ai-email-editor). Tools: `get-tiptap-json-content`, `compose-broadcast`, `compose-template`, `connect-to-editor`, `disconnect-from-editor`. Agents appear as a named avatar in the editor while working.
+- **Templates** — Create, list, get, update, publish, duplicate, and remove reusable email templates.
+- **Visual Editor** — Compose broadcast and template content that renders live in the Resend dashboard. Agents appear as a named avatar in the editor while working.
 - **Domains** — Create, list, get, update, remove, and verify sender domains. Configure tracking, TLS, and sending/receiving capabilities.
 - **Segments** — Create, list, get, and remove audience segments.
 - **Topics** — Create, list, get, update, and remove subscription topics.
