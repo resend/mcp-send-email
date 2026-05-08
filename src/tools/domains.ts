@@ -59,6 +59,12 @@ export function addDomainTools(server: McpServer, resend: Resend) {
           .describe(
             'TLS mode. "opportunistic" attempts secure connection with fallback. "enforced" requires TLS or fails. Defaults to "opportunistic".',
           ),
+        trackingSubdomain: z
+          .string()
+          .optional()
+          .describe(
+            'Custom subdomain for tracking links (e.g., "track" for track.example.com). When set, click and open tracking URLs will use this subdomain instead of the default.',
+          ),
         capabilities: z
           .object({
             sending: z
@@ -81,6 +87,7 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       openTracking,
       clickTracking,
       tls,
+      trackingSubdomain,
       capabilities,
     }) => {
       const response = await resend.domains.create({
@@ -90,6 +97,7 @@ export function addDomainTools(server: McpServer, resend: Resend) {
         ...(openTracking !== undefined && { openTracking }),
         ...(clickTracking !== undefined && { clickTracking }),
         ...(tls && { tls }),
+        ...(trackingSubdomain && { trackingSubdomain }),
         ...(capabilities && { capabilities }),
       });
 
@@ -105,7 +113,7 @@ export function addDomainTools(server: McpServer, resend: Resend) {
           { type: 'text', text: 'Domain created successfully.' },
           {
             type: 'text',
-            text: `Name: ${created.name}\nID: ${created.id}\nStatus: ${created.status}\nRegion: ${created.region}`,
+            text: `Name: ${created.name}\nID: ${created.id}\nStatus: ${created.status}\nRegion: ${created.region}\nOpen Tracking: ${created.open_tracking ?? false}\nClick Tracking: ${created.click_tracking ?? false}${created.tracking_subdomain ? `\nTracking Subdomain: ${created.tracking_subdomain}` : ''}`,
           },
           {
             type: 'text',
@@ -189,7 +197,7 @@ export function addDomainTools(server: McpServer, resend: Resend) {
           },
           ...domains.map((domain) => ({
             type: 'text' as const,
-            text: `Name: ${domain.name}\nID: ${domain.id}\nStatus: ${domain.status}\nRegion: ${domain.region}\nSending: ${domain.capabilities?.sending ?? 'unknown'}\nReceiving: ${domain.capabilities?.receiving ?? 'unknown'}\nCreated at: ${domain.created_at}`,
+            text: `Name: ${domain.name}\nID: ${domain.id}\nStatus: ${domain.status}\nRegion: ${domain.region}\nSending: ${domain.capabilities?.sending ?? 'unknown'}\nReceiving: ${domain.capabilities?.receiving ?? 'unknown'}\nOpen Tracking: ${domain.open_tracking ?? false}\nClick Tracking: ${domain.click_tracking ?? false}${domain.tracking_subdomain ? `\nTracking Subdomain: ${domain.tracking_subdomain}` : ''}\nCreated at: ${domain.created_at}`,
           })),
           ...(hasMore
             ? [
@@ -228,7 +236,7 @@ export function addDomainTools(server: McpServer, resend: Resend) {
         content: [
           {
             type: 'text',
-            text: `Name: ${domain.name}\nID: ${domain.id}\nStatus: ${domain.status}\nRegion: ${domain.region}\nSending: ${domain.capabilities?.sending ?? 'unknown'}\nReceiving: ${domain.capabilities?.receiving ?? 'unknown'}\nCreated at: ${domain.created_at}`,
+            text: `Name: ${domain.name}\nID: ${domain.id}\nStatus: ${domain.status}\nRegion: ${domain.region}\nSending: ${domain.capabilities?.sending ?? 'unknown'}\nReceiving: ${domain.capabilities?.receiving ?? 'unknown'}\nOpen Tracking: ${domain.open_tracking ?? false}\nClick Tracking: ${domain.click_tracking ?? false}${domain.tracking_subdomain ? `\nTracking Subdomain: ${domain.tracking_subdomain}` : ''}\nCreated at: ${domain.created_at}`,
           },
           {
             type: 'text',
@@ -261,6 +269,12 @@ export function addDomainTools(server: McpServer, resend: Resend) {
           .describe(
             'TLS mode. "opportunistic" attempts secure connection with fallback. "enforced" requires TLS or fails.',
           ),
+        trackingSubdomain: z
+          .string()
+          .optional()
+          .describe(
+            'Custom subdomain for tracking links (e.g., "track" for track.example.com). When set, click and open tracking URLs will use this subdomain instead of the default.',
+          ),
         capabilities: z
           .object({
             sending: z
@@ -278,12 +292,20 @@ export function addDomainTools(server: McpServer, resend: Resend) {
           ),
       },
     },
-    async ({ id, clickTracking, openTracking, tls, capabilities }) => {
+    async ({
+      id,
+      clickTracking,
+      openTracking,
+      tls,
+      trackingSubdomain,
+      capabilities,
+    }) => {
       const response = await resend.domains.update({
         id,
         ...(clickTracking !== undefined && { clickTracking }),
         ...(openTracking !== undefined && { openTracking }),
         ...(tls && { tls }),
+        ...(trackingSubdomain && { trackingSubdomain }),
         ...(capabilities && { capabilities }),
       });
 

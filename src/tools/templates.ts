@@ -67,7 +67,7 @@ export function addTemplateTools(
           .string()
           .optional()
           .describe(
-            'Sender email address (e.g., "Your Name <sender@domain.com>"). Can be overridden when sending.',
+            'Sender email address (e.g., "Your Name <sender@example.com>"). Can be overridden when sending.',
           ),
         replyTo: z
           .union([z.string(), z.array(z.string())])
