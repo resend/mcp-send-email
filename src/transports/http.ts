@@ -90,7 +90,7 @@ export async function runHttp(
           const sid = transport!.sessionId;
           if (sid && sessions[sid]) delete sessions[sid];
         };
-        const server = createMcpServer(resend, options);
+        const server = createMcpServer(resend, options, apiKey);
         await server.connect(transport);
       } else if (sessionId && !sessions[sessionId]) {
         res.statusCode = 404;

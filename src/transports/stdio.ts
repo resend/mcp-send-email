@@ -6,8 +6,9 @@ import type { ServerOptions } from '../types.js';
 export async function runStdio(
   resend: Resend,
   options: ServerOptions,
+  apiKey: string,
 ): Promise<void> {
-  const server = createMcpServer(resend, options);
+  const server = createMcpServer(resend, options, apiKey);
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('Resend MCP Server running on stdio');

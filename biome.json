@@ -58,6 +58,12 @@
     }
   },
   "files": {
-    "includes": ["**", "!**/build", "!**/pnpm-lock.yaml"]
+    "includes": [
+      "**",
+      "!**/build",
+      "!**/dist",
+      "!**/.claude",
+      "!**/pnpm-lock.yaml"
+    ]
   }
 }

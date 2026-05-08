@@ -12,17 +12,15 @@ permissions:
   pull-requests: read
 jobs:
   lint:
-    runs-on: blacksmith-2vcpu-ubuntu-2204
+    runs-on: depot-ubuntu-24.04
     container:
-      image: node:24-slim
+      image: node:24
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
-        with:
-          fetch-depth: 1
-      - name: pnpm setup
-        uses: pnpm/action-setup@9b5745cdf0a2e8c2620f0746130f809adb911c19
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - run: git config --global --add safe.directory $GITHUB_WORKSPACE
+      - uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6
+      - name: Install packages
+        run: pnpm install --frozen-lockfile
       - name: Run Lint
-        run: pnpm dlx @biomejs/biome@2.3.10 check .
-        env:
-          SKIP_ENV_VALIDATION: true
+        run: pnpm lint
