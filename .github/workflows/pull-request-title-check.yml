@@ -10,6 +10,7 @@ permissions:
 jobs:
   pull-request-title-check:
     runs-on: depot-ubuntu-24.04
+    timeout-minutes: 5
     container:
       image: node:24-slim
     steps:

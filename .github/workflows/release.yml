@@ -6,9 +6,11 @@ on:
 concurrency:
   group: release
   cancel-in-progress: false
+permissions: {}
 jobs:
   ci:
     runs-on: depot-ubuntu-24.04
+    timeout-minutes: 15
     container:
       image: node:24
     steps:
@@ -26,6 +28,7 @@ jobs:
   release:
     needs: ci
     runs-on: depot-ubuntu-24.04
+    timeout-minutes: 5
     permissions:
       contents: write
     steps:
@@ -48,6 +51,7 @@ jobs:
   publish-npm:
     needs: release
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       id-token: write

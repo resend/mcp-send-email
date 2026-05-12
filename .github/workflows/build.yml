@@ -13,6 +13,7 @@ permissions:
 jobs:
   build:
     runs-on: depot-ubuntu-24.04
+    timeout-minutes: 15
     container:
       image: node:24
     steps:
