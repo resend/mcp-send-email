@@ -18,7 +18,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.26.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
     "dotenv": "17.4.0",
     "express": "5.2.1",
     "minimist": "1.2.8",
