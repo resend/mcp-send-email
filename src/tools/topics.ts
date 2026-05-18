@@ -35,9 +35,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to create topic: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to create topic: ${errorMsg}`);
       }
 
       const created = response.data;
@@ -62,9 +61,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       const response = await resend.topics.list();
 
       if (response.error) {
-        throw new Error(
-          `Failed to list topics: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list topics: ${errorMsg}`);
       }
 
       const topics = response.data.data;
@@ -103,9 +101,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       const response = await resend.topics.get(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to get topic: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to get topic: ${errorMsg}`);
       }
 
       const topic = response.data;
@@ -154,9 +151,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to update topic: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to update topic: ${errorMsg}`);
       }
 
       return {
@@ -182,9 +178,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       const response = await resend.topics.remove(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove topic: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove topic: ${errorMsg}`);
       }
 
       return {

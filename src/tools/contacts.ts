@@ -65,9 +65,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to create contact: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to create contact: ${errorMsg}`);
       }
 
       const created = response.data;
@@ -138,9 +137,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
       );
 
       if (response.error) {
-        throw new Error(
-          `Failed to list contacts: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list contacts: ${errorMsg}`);
       }
 
       const contacts = response.data?.data ?? [];
@@ -217,15 +215,14 @@ export function addContactTools(server: McpServer, resend: Resend) {
       }
 
       if (response.error) {
-        throw new Error(
-          `Failed to get contact: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to get contact: ${errorMsg}`);
       }
 
       const contact = response.data;
-      const props = contact.properties;
+      const props = contact.properties ?? null;
       const propsLine =
-        props && Object.keys(props).length > 0
+        props && typeof props === 'object' && Object.keys(props).length > 0
           ? `Properties: ${JSON.stringify(props)}`
           : null;
       return {
@@ -303,9 +300,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
       }
 
       if (response.error) {
-        throw new Error(
-          `Failed to update contact: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to update contact: ${errorMsg}`);
       }
 
       const updated = response.data;
@@ -342,9 +338,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
       }
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove contact: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove contact: ${errorMsg}`);
       }
 
       return {
@@ -384,9 +379,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
       }
 
       if (response.error) {
-        throw new Error(
-          `Failed to add contact to segment: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to add contact to segment: ${errorMsg}`);
       }
 
       return {
@@ -429,9 +423,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
       }
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove contact from segment: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove contact from segment: ${errorMsg}`);
       }
 
       return {
@@ -503,9 +496,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to list contact segments: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list contact segments: ${errorMsg}`);
       }
 
       const segments = response.data?.data ?? [];
@@ -600,9 +592,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to list contact topics: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list contact topics: ${errorMsg}`);
       }
 
       const topics = response.data?.data ?? [];
@@ -683,9 +674,8 @@ export function addContactTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to update contact topics: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to update contact topics: ${errorMsg}`);
       }
 
       return {

@@ -35,9 +35,8 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       } as Parameters<typeof resend.contactProperties.create>[0]);
 
       if (response.error) {
-        throw new Error(
-          `Failed to create contact property: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to create contact property: ${errorMsg}`);
       }
 
       const created = response.data;
@@ -100,9 +99,8 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       const response = await resend.contactProperties.list(paginationOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to list contact properties: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list contact properties: ${errorMsg}`);
       }
 
       const properties = response.data?.data ?? [];
@@ -153,9 +151,8 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       const response = await resend.contactProperties.get(contactPropertyId);
 
       if (response.error) {
-        throw new Error(
-          `Failed to get contact property: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to get contact property: ${errorMsg}`);
       }
 
       const property = response.data;
@@ -195,9 +192,8 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to update contact property: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to update contact property: ${errorMsg}`);
       }
 
       return {
@@ -226,9 +222,8 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
       const response = await resend.contactProperties.remove(contactPropertyId);
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove contact property: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove contact property: ${errorMsg}`);
       }
 
       return {

@@ -171,9 +171,8 @@ ${WORKFLOW_GUIDANCE}`,
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to create automation: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to create automation: ${errorMsg}`);
       }
 
       const id = response.data.id;
@@ -255,9 +254,8 @@ ${WORKFLOW_GUIDANCE}`,
       const response = await resend.automations.update(id, updateOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to update automation: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to update automation: ${errorMsg}`);
       }
 
       const resultParts: Array<{ type: 'text'; text: string }> = [
@@ -324,9 +322,8 @@ ${WORKFLOW_GUIDANCE}`,
         const response = await resend.automations.get(id);
 
         if (response.error) {
-          throw new Error(
-            `Failed to get automation: ${JSON.stringify(response.error)}`,
-          );
+          const errorMsg = response.error.message || 'Unknown error';
+          throw new Error(`Failed to get automation: ${errorMsg}`);
         }
 
         const automation = response.data;
@@ -372,9 +369,8 @@ ${WORKFLOW_GUIDANCE}`,
       const response = await resend.automations.list(paginationOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to list automations: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list automations: ${errorMsg}`);
       }
 
       const automations = response.data?.data ?? [];
@@ -429,9 +425,8 @@ ${WORKFLOW_GUIDANCE}`,
       const response = await resend.automations.remove(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove automation: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove automation: ${errorMsg}`);
       }
 
       return {
@@ -510,17 +505,21 @@ ${WORKFLOW_GUIDANCE}`,
         });
 
         if (response.error) {
-          throw new Error(
-            `Failed to get automation run: ${JSON.stringify(response.error)}`,
-          );
+          const errorMsg = response.error.message || 'Unknown error';
+          throw new Error(`Failed to get automation run: ${errorMsg}`);
         }
 
         const run = response.data;
         const stepsSummary = run.steps
-          .map(
-            (s) =>
-              `  ${s.key} (${s.type}): ${s.status}${s.error ? ` — Error: ${JSON.stringify(s.error)}` : ''}${s.output ? ` — Output: ${JSON.stringify(s.output)}` : ''}`,
-          )
+          .map((s) => {
+            const errorPart = s.error
+              ? ` — Error: ${typeof s.error === 'object' && s.error !== null && 'message' in s.error ? (s.error as { message?: string }).message : String(s.error)}`
+              : '';
+            const outputPart = s.output
+              ? ` — Output: ${JSON.stringify(s.output)}`
+              : '';
+            return `  ${s.key} (${s.type}): ${s.status}${errorPart}${outputPart}`;
+          })
           .join('\n');
 
         return {
@@ -557,9 +556,8 @@ ${WORKFLOW_GUIDANCE}`,
       const response = await resend.automations.runs.list(runOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to list automation runs: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list automation runs: ${errorMsg}`);
       }
 
       const runs = response.data?.data ?? [];

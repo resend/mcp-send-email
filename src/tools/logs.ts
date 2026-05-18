@@ -56,9 +56,8 @@ export function addLogTools(server: McpServer, resend: Resend) {
       const response = await resend.logs.list(paginationOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to list logs: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list logs: ${errorMsg}`);
       }
 
       const logs = response.data?.data ?? [];
@@ -122,7 +121,8 @@ export function addLogTools(server: McpServer, resend: Resend) {
       const response = await resend.logs.get(logId);
 
       if (response.error) {
-        throw new Error(`Failed to get log: ${JSON.stringify(response.error)}`);
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to get log: ${errorMsg}`);
       }
 
       const log = response.data;

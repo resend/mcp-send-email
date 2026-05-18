@@ -106,9 +106,8 @@ export function addTemplateTools(
       } as CreateTemplateOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to create template: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to create template: ${errorMsg}`);
       }
 
       const resultContent: Array<{ type: 'text'; text: string }> = [
@@ -175,9 +174,8 @@ export function addTemplateTools(
       const response = await resend.templates.list(paginationOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to list templates: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list templates: ${errorMsg}`);
       }
 
       const templates = response.data?.data ?? [];
@@ -232,9 +230,8 @@ export function addTemplateTools(
       const response = await resend.templates.get(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to get template: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to get template: ${errorMsg}`);
       }
 
       const template = response.data;
@@ -351,7 +348,7 @@ export function addTemplateTools(
                 { type: 'text', text: `ID: ${id}` },
                 {
                   type: 'text',
-                  text: `Error: ${JSON.stringify(updateResponse.error)}`,
+                  text: `Error: ${updateResponse.error.message || 'Unknown error'}`,
                 },
                 {
                   type: 'text',
@@ -497,9 +494,8 @@ export function addTemplateTools(
       } as UpdateTemplateOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to update template: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to update template: ${errorMsg}`);
       }
 
       return {
@@ -539,9 +535,8 @@ export function addTemplateTools(
       const response = await resend.templates.remove(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove template: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove template: ${errorMsg}`);
       }
 
       return {
@@ -573,9 +568,8 @@ export function addTemplateTools(
       const response = await resend.templates.publish(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to publish template: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to publish template: ${errorMsg}`);
       }
 
       return {
@@ -607,9 +601,8 @@ export function addTemplateTools(
       const response = await resend.templates.duplicate(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to duplicate template: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to duplicate template: ${errorMsg}`);
       }
 
       return {

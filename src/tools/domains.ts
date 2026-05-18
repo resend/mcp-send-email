@@ -102,9 +102,8 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to create domain: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to create domain: ${errorMsg}`);
       }
 
       const created = response.data;
@@ -175,9 +174,8 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       const response = await resend.domains.list(paginationOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to list domains: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list domains: ${errorMsg}`);
       }
 
       const domains = response.data?.data ?? [];
@@ -226,9 +224,8 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       const response = await resend.domains.get(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to get domain: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to get domain: ${errorMsg}`);
       }
 
       const domain = response.data;
@@ -310,9 +307,8 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to update domain: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to update domain: ${errorMsg}`);
       }
 
       return {
@@ -338,9 +334,8 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       const response = await resend.domains.remove(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove domain: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove domain: ${errorMsg}`);
       }
 
       return {
@@ -366,9 +361,8 @@ export function addDomainTools(server: McpServer, resend: Resend) {
       const response = await resend.domains.verify(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to verify domain: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to verify domain: ${errorMsg}`);
       }
 
       return {

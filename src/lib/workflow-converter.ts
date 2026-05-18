@@ -7,8 +7,36 @@ import type {
   AutomationStepType,
 } from 'resend';
 
-// Steps use SDK types directly. The only abstraction is `next`/`branches`
-// instead of a separate connections array — easier for LLMs to construct.
+/**
+ * Workflow Definition Format
+ *
+ * This module provides a human-friendly workflow abstraction for LLMs to construct
+ * automation workflows. It converts between two representations:
+ *
+ * 1. WorkflowDefinition (LLM-friendly):
+ *    - Uses "next" for linear steps and "branches" for conditional splits
+ *    - Easier to read and construct than connection arrays
+ *
+ * 2. SDK options (server format):
+ *    - Separate "steps" array and "connections" array
+ *    - Native format expected by Resend API
+ *
+ * Key validation:
+ * - Exactly one "trigger" step required
+ * - No duplicate step keys
+ * - All referenced steps must exist
+ * - No circular references (cycle detection prevents infinite loops)
+ * - Tree-shaped workflows (no merging branches back together)
+ *
+ * Example WorkflowDefinition:
+ * {
+ *   steps: [
+ *     { key: "trigger", type: "trigger", config: { eventName: "user.created" }, next: "delay_1" },
+ *     { key: "delay_1", type: "delay", config: { duration: "1 day" }, next: "send_1" },
+ *     { key: "send_1", type: "send_email", config: { template: { id: "t1" } }, next: null }
+ *   ]
+ * }
+ */
 
 interface LinearStep {
   key: string;
@@ -40,6 +68,80 @@ const BRANCHING_STEP_TYPES = {
 
 function hasBranches(step: WorkflowStep): step is BranchingStep {
   return 'branches' in step;
+}
+
+/**
+ * Detect cycles in the workflow graph using depth-first search (DFS).
+ *
+ * Cycles are problematic in automation workflows because they create infinite loops.
+ * A cycle occurs when following the "next" or "branches" connections leads back to
+ * a previously visited step.
+ *
+ * Algorithm:
+ * 1. Use DFS with backtracking to traverse the workflow graph
+ * 2. Track three states: visited (explored), recursion stack (currently visiting)
+ * 3. If we encounter a node in the recursion stack, a cycle exists
+ * 4. Return the cycle path for clear error messaging
+ *
+ * Examples of cycles:
+ * - Self-loop: step_1.next = step_1
+ * - 2-step: step_1.next = step_2, step_2.next = step_1
+ * - 3-step: condition branches to delay, delay loops back to condition
+ *
+ * Time complexity: O(V + E) where V = steps, E = connections
+ * Space complexity: O(V) for recursion stack
+ *
+ * @param connections - All connections in the workflow
+ * @param stepKeys - Set of all valid step keys
+ * @returns Array representing cycle path (e.g., ["step_a", "step_b", "step_a"]),
+ *          or null if no cycle found
+ */
+function detectCycle(
+  connections: AutomationConnection[],
+  stepKeys: Set<string>,
+): string[] | null {
+  const visited = new Set<string>();
+  const recursionStack = new Set<string>();
+  const _parent = new Map<string, string>();
+
+  // Build adjacency list
+  const adj = new Map<string, string[]>();
+  for (const key of stepKeys) {
+    adj.set(key, []);
+  }
+  for (const conn of connections) {
+    adj.get(conn.from)?.push(conn.to);
+  }
+
+  function dfs(node: string, path: string[]): string[] | null {
+    visited.add(node);
+    recursionStack.add(node);
+    const newPath = [...path, node];
+
+    for (const neighbor of adj.get(node) || []) {
+      if (!visited.has(neighbor)) {
+        const result = dfs(neighbor, newPath);
+        if (result) return result;
+      } else if (recursionStack.has(neighbor)) {
+        // Found a cycle
+        const cycleStart = newPath.indexOf(neighbor);
+        return newPath.slice(cycleStart).concat([neighbor]);
+      }
+    }
+
+    recursionStack.delete(node);
+    return null;
+  }
+
+  // Check from each unvisited node
+  for (const node of stepKeys) {
+    if (!visited.has(node)) {
+      const cycle = dfs(node, []);
+      if (cycle) return cycle;
+    }
+  }
+
+  return null;
 }
 
 // -- Workflow → SDK options (extract next/branches into connections) --
@@ -101,6 +203,14 @@ export function workflowToSdkOptions(workflow: WorkflowDefinition): {
         connections.push({ from: step.key, to: step.next });
       }
     }
+  }
+
+  // Check for cycles in the workflow
+  const cycle = detectCycle(connections, stepKeys);
+  if (cycle) {
+    throw new Error(
+      `Workflow contains a cycle. Steps cannot loop back to themselves. Detected cycle: ${cycle.join(' → ')}`,
+    );
   }
 
   return { steps, connections };

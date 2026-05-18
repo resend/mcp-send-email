@@ -17,9 +17,8 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       const response = await resend.segments.create({ name });
 
       if (response.error) {
-        throw new Error(
-          `Failed to create segment: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to create segment: ${errorMsg}`);
       }
 
       const created = response.data;
@@ -84,9 +83,8 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       const response = await resend.segments.list(paginationOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to list segments: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list segments: ${errorMsg}`);
       }
 
       const segments = response.data?.data ?? [];
@@ -134,9 +132,8 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       const response = await resend.segments.get(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to get segment: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to get segment: ${errorMsg}`);
       }
 
       const segment = response.data;
@@ -165,9 +162,8 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       const response = await resend.segments.remove(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove segment: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove segment: ${errorMsg}`);
       }
 
       return {

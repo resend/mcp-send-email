@@ -413,3 +413,218 @@ describe('round-trip', () => {
     expect(roundTripped).toEqual(original);
   });
 });
+
+describe('cycle detection', () => {
+  it('detects direct self-loop (step -> step)', () => {
+    const workflow: WorkflowDefinition = {
+      steps: [
+        {
+          key: 'trigger',
+          type: 'trigger',
+          config: { eventName: 'user.created' },
+          next: 'loop_step',
+        },
+        {
+          key: 'loop_step',
+          type: 'delay',
+          config: { duration: '1 hour' },
+          next: 'loop_step', // Self-loop
+        },
+      ],
+    };
+
+    expect(() => workflowToSdkOptions(workflow)).toThrow(
+      'Workflow contains a cycle',
+    );
+    expect(() => workflowToSdkOptions(workflow)).toThrow(
+      'loop_step → loop_step',
+    );
+  });
+
+  it('detects 2-step cycle (A -> B -> A)', () => {
+    const workflow: WorkflowDefinition = {
+      steps: [
+        {
+          key: 'trigger',
+          type: 'trigger',
+          config: { eventName: 'user.created' },
+          next: 'step_a',
+        },
+        {
+          key: 'step_a',
+          type: 'delay',
+          config: { duration: '1 hour' },
+          next: 'step_b',
+        },
+        {
+          key: 'step_b',
+          type: 'send_email',
+          config: { template: { id: 'tmpl_1' } },
+          next: 'step_a', // Creates cycle back to step_a
+        },
+      ],
+    };
+
+    expect(() => workflowToSdkOptions(workflow)).toThrow(
+      'Workflow contains a cycle',
+    );
+  });
+
+  it('detects 3-step cycle (A -> B -> C -> A)', () => {
+    const workflow: WorkflowDefinition = {
+      steps: [
+        {
+          key: 'trigger',
+          type: 'trigger',
+          config: { eventName: 'user.created' },
+          next: 'step_a',
+        },
+        {
+          key: 'step_a',
+          type: 'delay',
+          config: { duration: '1 hour' },
+          next: 'step_b',
+        },
+        {
+          key: 'step_b',
+          type: 'condition',
+          config: { type: 'rule', field: 'event.x', operator: 'eq', value: 1 },
+          branches: { condition_met: 'step_c', condition_not_met: null },
+        },
+        {
+          key: 'step_c',
+          type: 'send_email',
+          config: { template: { id: 'tmpl_1' } },
+          next: 'step_a', // Creates cycle
+        },
+      ],
+    };
+
+    expect(() => workflowToSdkOptions(workflow)).toThrow(
+      'Workflow contains a cycle',
+    );
+  });
+
+  it('detects cycle through branching (condition creates cycle)', () => {
+    const workflow: WorkflowDefinition = {
+      steps: [
+        {
+          key: 'trigger',
+          type: 'trigger',
+          config: { eventName: 'user.created' },
+          next: 'condition_1',
+        },
+        {
+          key: 'condition_1',
+          type: 'condition',
+          config: {
+            type: 'rule',
+            field: 'event.retry',
+            operator: 'eq',
+            value: true,
+          },
+          branches: {
+            condition_met: 'delay_1', // True branch
+            condition_not_met: null,
+          },
+        },
+        {
+          key: 'delay_1',
+          type: 'delay',
+          config: { duration: '1 hour' },
+          next: 'condition_1', // Cycles back
+        },
+      ],
+    };
+
+    expect(() => workflowToSdkOptions(workflow)).toThrow(
+      'Workflow contains a cycle',
+    );
+  });
+
+  it('allows valid workflow without cycles', () => {
+    const workflow: WorkflowDefinition = {
+      steps: [
+        {
+          key: 'trigger',
+          type: 'trigger',
+          config: { eventName: 'user.created' },
+          next: 'delay_1',
+        },
+        {
+          key: 'delay_1',
+          type: 'delay',
+          config: { duration: '1 hour' },
+          next: 'condition_1',
+        },
+        {
+          key: 'condition_1',
+          type: 'condition',
+          config: { type: 'rule', field: 'event.x', operator: 'eq', value: 1 },
+          branches: { condition_met: 'send_1', condition_not_met: 'send_2' },
+        },
+        {
+          key: 'send_1',
+          type: 'send_email',
+          config: { template: { id: 'tmpl_1' } },
+          next: null,
+        },
+        {
+          key: 'send_2',
+          type: 'send_email',
+          config: { template: { id: 'tmpl_2' } },
+          next: null,
+        },
+      ],
+    };
+
+    // Should not throw
+    const { steps, connections } = workflowToSdkOptions(workflow);
+    expect(steps).toHaveLength(5);
+    expect(connections).toHaveLength(4);
+  });
+
+  it('allows diamond pattern (no cycle, multiple paths)', () => {
+    const workflow: WorkflowDefinition = {
+      steps: [
+        {
+          key: 'trigger',
+          type: 'trigger',
+          config: { eventName: 'user.created' },
+          next: 'condition_1',
+        },
+        {
+          key: 'condition_1',
+          type: 'condition',
+          config: {
+            type: 'rule',
+            field: 'event.vip',
+            operator: 'eq',
+            value: true,
+          },
+          branches: {
+            condition_met: 'send_vip',
+            condition_not_met: 'send_regular',
+          },
+        },
+        {
+          key: 'send_vip',
+          type: 'send_email',
+          config: { template: { id: 'vip_template' } },
+          next: null,
+        },
+        {
+          key: 'send_regular',
+          type: 'send_email',
+          config: { template: { id: 'regular_template' } },
+          next: null,
+        },
+      ],
+    };
+
+    // Should not throw
+    const { steps, connections } = workflowToSdkOptions(workflow);
+    expect(steps).toHaveLength(4);
+    expect(connections).toHaveLength(3);
+  });
+});

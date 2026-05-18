@@ -1,15 +1,33 @@
 const SUPPORTED_RESOURCES = ['broadcasts', 'templates', 'automations'];
 
 /**
- * Extracts a resource ID from a Resend dashboard URL.
+ * Extract a resource ID from a Resend dashboard URL.
  *
  * Accepted URL patterns:
  *   https://resend.com/broadcasts/<id>
  *   https://resend.com/templates/<id>
  *   https://resend.com/automations/<id>
+ *   https://www.resend.com/<resource>/<id>
  *
- * If the input is not a URL, it is returned as-is (assumed to be a raw ID).
- * If the input is a URL but cannot be resolved to an ID, an error is thrown.
+ * URL Edge Cases Handled:
+ * - Trailing slashes: https://resend.com/broadcasts/123/
+ * - Query parameters: https://resend.com/broadcasts/123?tab=content
+ * - Leading/trailing whitespace: "  https://resend.com/broadcasts/123  "
+ * - URL encoding: Standard URL parsing applied
+ *
+ * Input without "http://" or "https://" is treated as a raw ID and returned unchanged.
+ * This allows both URL and ID inputs in the same parameter.
+ *
+ * @param input - Either a Resend dashboard URL or raw resource ID
+ * @param expectedResource - Optional: validate the resource type matches (broadcasts, templates, automations)
+ * @returns Extracted resource ID
+ * @throws Error if input looks like a URL but is malformed or doesn't match expectedResource
+ *
+ * @example
+ * extractIdFromUrl('https://resend.com/broadcasts/abc-123', 'broadcasts') // 'abc-123'
+ * extractIdFromUrl('abc-123') // 'abc-123'
+ * extractIdFromUrl('https://resend.com/broadcasts/123/', 'broadcasts') // '123'
+ * extractIdFromUrl('https://resend.com/templates/456?tab=content') // '456'
  */
 export function extractIdFromUrl(
   input: string,
@@ -42,6 +60,7 @@ export function extractIdFromUrl(
   }
 
   // pathname is like /broadcasts/<id> or /templates/<id>
+  // filter(Boolean) removes empty segments from trailing slashes and leading slash
   const segments = url.pathname.split('/').filter(Boolean);
 
   if (segments.length < 2) {
@@ -52,6 +71,13 @@ export function extractIdFromUrl(
   }
 
   const [resource, id] = segments;
+
+  // Validate that the ID is not empty after stripping
+  if (!id) {
+    throw new Error(
+      `The URL "${trimmed}" has an empty resource ID. Expected a URL like https://resend.com/${resource}/<id>.`,
+    );
+  }
 
   if (expectedResource && resource !== expectedResource) {
     throw new Error(

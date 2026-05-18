@@ -37,9 +37,8 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to create API key: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to create API key: ${errorMsg}`);
       }
 
       const created = response.data;
@@ -104,9 +103,8 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
       const response = await resend.apiKeys.list(paginationOptions);
 
       if (response.error) {
-        throw new Error(
-          `Failed to list API keys: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list API keys: ${errorMsg}`);
       }
 
       const apiKeys = response.data?.data ?? [];
@@ -155,9 +153,8 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
       const response = await resend.apiKeys.remove(id);
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove API key: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove API key: ${errorMsg}`);
       }
 
       return {

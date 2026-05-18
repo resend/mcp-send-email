@@ -128,9 +128,8 @@ export function addBroadcastTools(
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to create broadcast: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to create broadcast: ${errorMsg}`);
       }
 
       const resultContent: Array<{ type: 'text'; text: string }> = [
@@ -197,9 +196,8 @@ export function addBroadcastTools(
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to send broadcast: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to send broadcast: ${errorMsg}`);
       }
 
       return {
@@ -228,9 +226,8 @@ export function addBroadcastTools(
       const response = await resend.broadcasts.list();
 
       if (response.error) {
-        throw new Error(
-          `Failed to list broadcasts: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list broadcasts: ${errorMsg}`);
       }
 
       const broadcasts = response.data.data;
@@ -289,9 +286,8 @@ export function addBroadcastTools(
       const response = await resend.broadcasts.get(broadcastId);
 
       if (response.error) {
-        throw new Error(
-          `Failed to get broadcast: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to get broadcast: ${errorMsg}`);
       }
 
       const {
@@ -362,9 +358,8 @@ export function addBroadcastTools(
       const response = await resend.broadcasts.remove(broadcastId);
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove broadcast: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove broadcast: ${errorMsg}`);
       }
 
       return {
@@ -506,7 +501,7 @@ export function addBroadcastTools(
                 { type: 'text', text: `ID: ${broadcastId}` },
                 {
                   type: 'text',
-                  text: `Error: ${JSON.stringify(updateResponse.error)}`,
+                  text: `Error: ${updateResponse.error.message || 'Unknown error'}`,
                 },
                 {
                   type: 'text',
@@ -636,9 +631,8 @@ export function addBroadcastTools(
       // fail unless we warn the user upfront.
       const current = await resend.broadcasts.get(broadcastId);
       if (current.error) {
-        throw new Error(
-          `Failed to fetch broadcast: ${JSON.stringify(current.error)}`,
-        );
+        const errorMsg = current.error.message || 'Unknown error';
+        throw new Error(`Failed to fetch broadcast: ${errorMsg}`);
       }
 
       const missingFields: string[] = [];
@@ -682,9 +676,8 @@ export function addBroadcastTools(
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to update broadcast: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to update broadcast: ${errorMsg}`);
       }
 
       return {

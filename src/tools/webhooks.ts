@@ -41,9 +41,8 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       const response = await resend.webhooks.create({ endpoint, events });
 
       if (response.error) {
-        throw new Error(
-          `Failed to create webhook: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to create webhook: ${errorMsg}`);
       }
 
       const created = response.data;
@@ -75,9 +74,8 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       const response = await resend.webhooks.list();
 
       if (response.error) {
-        throw new Error(
-          `Failed to list webhooks: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to list webhooks: ${errorMsg}`);
       }
 
       const webhooks = response.data.data;
@@ -109,9 +107,8 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       const response = await resend.webhooks.get(webhookId);
 
       if (response.error) {
-        throw new Error(
-          `Failed to get webhook: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to get webhook: ${errorMsg}`);
       }
 
       const webhook = response.data;
@@ -157,9 +154,8 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       });
 
       if (response.error) {
-        throw new Error(
-          `Failed to update webhook: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to update webhook: ${errorMsg}`);
       }
 
       return {
@@ -185,9 +181,8 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       const response = await resend.webhooks.remove(webhookId);
 
       if (response.error) {
-        throw new Error(
-          `Failed to remove webhook: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to remove webhook: ${errorMsg}`);
       }
 
       return {

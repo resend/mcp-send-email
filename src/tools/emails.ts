@@ -268,9 +268,9 @@ export function addEmailTools(
       const response = await resend.emails.send(emailRequest);
 
       if (response.error) {
-        throw new Error(
-          `Email failed to send: ${JSON.stringify(response.error)}`,
-        );
+        // Sanitize error to avoid exposing sensitive data
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Email failed to send: ${errorMsg}`);
       }
 
       return {

@@ -61,9 +61,8 @@ export function addEventTools(server: McpServer, resend: Resend) {
       const response = await resend.events.send(options);
 
       if (response.error) {
-        throw new Error(
-          `Failed to send event: ${JSON.stringify(response.error)}`,
-        );
+        const errorMsg = response.error.message || 'Unknown error';
+        throw new Error(`Failed to send event: ${errorMsg}`);
       }
 
       return {
@@ -158,9 +157,8 @@ Events define named triggers that your application sends to start automations. E
           });
 
           if (response.error) {
-            throw new Error(
-              `Failed to create event: ${JSON.stringify(response.error)}`,
-            );
+            const errorMsg = response.error.message || 'Unknown error';
+            throw new Error(`Failed to create event: ${errorMsg}`);
           }
 
           return {
@@ -196,9 +194,8 @@ Events define named triggers that your application sends to start automations. E
           const response = await resend.events.list(options);
 
           if (response.error) {
-            throw new Error(
-              `Failed to list events: ${JSON.stringify(response.error)}`,
-            );
+            const errorMsg = response.error.message || 'Unknown error';
+            throw new Error(`Failed to list events: ${errorMsg}`);
           }
 
           const events = response.data?.data ?? [];
@@ -242,9 +239,8 @@ Events define named triggers that your application sends to start automations. E
           const response = await resend.events.get(identifier);
 
           if (response.error) {
-            throw new Error(
-              `Failed to get event: ${JSON.stringify(response.error)}`,
-            );
+            const errorMsg = response.error.message || 'Unknown error';
+            throw new Error(`Failed to get event: ${errorMsg}`);
           }
 
           const event = response.data;
@@ -275,9 +271,8 @@ Events define named triggers that your application sends to start automations. E
           });
 
           if (response.error) {
-            throw new Error(
-              `Failed to update event: ${JSON.stringify(response.error)}`,
-            );
+            const errorMsg = response.error.message || 'Unknown error';
+            throw new Error(`Failed to update event: ${errorMsg}`);
           }
 
           return {
