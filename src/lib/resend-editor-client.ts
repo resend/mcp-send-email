@@ -1,6 +1,6 @@
 const DEFAULT_API_URL = 'https://api.resend.com';
 
-export class ResendApiClient {
+export class ResendEditorClient {
   private apiUrl: string;
   private apiKey: string;
 
@@ -56,7 +56,7 @@ export class ResendApiClient {
     id: string,
     data: { content: Record<string, unknown> },
   ): Promise<{ id: string; object: string }> {
-    return this.apiRequest('POST', '/editor/compose', {
+    return this.apiRequest('POST', '/editor/content', {
       resource_type: 'broadcast',
       resource_id: id,
       content: data.content,
@@ -67,10 +67,21 @@ export class ResendApiClient {
     id: string,
     data: { content: Record<string, unknown> },
   ): Promise<{ id: string; object: string }> {
-    return this.apiRequest('POST', '/editor/compose', {
+    return this.apiRequest('POST', '/editor/content', {
       resource_type: 'template',
       resource_id: id,
       content: data.content,
     });
+  }
+
+  async getEditorContent(
+    resourceType: 'broadcast' | 'template',
+    resourceId: string,
+  ): Promise<{ content: Record<string, unknown> }> {
+    const params = new URLSearchParams({
+      resource_type: resourceType,
+      resource_id: resourceId,
+    });
+    return this.apiRequest('GET', `/editor/content?${params.toString()}`);
   }
 }

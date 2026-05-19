@@ -13,15 +13,12 @@ permissions:
   pull-requests: read
 jobs:
   pin-dependencies-check:
-    runs-on: blacksmith-2vcpu-ubuntu-2204
+    runs-on: depot-ubuntu-24.04
+    timeout-minutes: 5
     container:
       image: node:24-slim
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
-        with:
-          fetch-depth: 1
-      - name: pnpm setup
-        uses: pnpm/action-setup@9b5745cdf0a2e8c2620f0746130f809adb911c19
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Check for pinned dependencies
-        run: pnpm dlx tsx@4.21.0 ./scripts/check-dependency-versions.ts
+        run: node ./scripts/check-dependency-versions.ts
