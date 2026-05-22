@@ -4,7 +4,7 @@ import { TiptapCache } from '../../src/lib/tiptap-cache.js';
 describe('TiptapCache', () => {
   beforeEach(() => {
     // Clear the singleton instance between tests
-    TiptapCache['instance'] = undefined;
+    (TiptapCache as any).instance = undefined;
     vi.useFakeTimers();
   });
 
