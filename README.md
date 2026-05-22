@@ -30,6 +30,14 @@ The server supports two transport modes: **stdio** (default) and **HTTP**.
 
 ### Stdio Transport (Default)
 
+#### Quick Setup
+
+Install for all detected/selected agents and editors:
+
+```bash
+npx add-mcp resend-mcp --name resend --env "RESEND_API_KEY=re_xxxxxxxxx"
+```
+
 #### Claude Code
 
 ```bash
