@@ -10,6 +10,12 @@ interface EditorConnection {
   agent_name?: string;
 }
 
+/**
+ * Shared cache for TipTap schema to avoid redundant fetches across tools and sessions.
+ * This provides "shared session storage" for the schema across all transport connections.
+ */
+let sharedSchemaPromise: Promise<{ data: string; version: string }> | null = null;
+
 export function addEditorTools(
   server: McpServer,
   dashboard: DashboardClient,
@@ -96,7 +102,11 @@ export function addEditorTools(
           ),
       },
     },
-    async ({ resource_type, resource_id: rawResourceId, include_schema }) => {
+    async ({
+      resource_type,
+      resource_id: rawResourceId,
+      include_schema,
+    }: { resource_type: 'broadcast' | 'template', resource_id: string, include_schema: boolean }) => {
       const resource_id = extractIdFromUrl(
         rawResourceId,
         resource_type === 'broadcast' ? 'broadcasts' : 'templates',
@@ -137,7 +147,10 @@ export function addEditorTools(
 
       if (include_schema) {
         try {
-          const { data, version } = await dashboard.getTiptapSchema();
+          if (!sharedSchemaPromise) {
+            sharedSchemaPromise = dashboard.getTiptapSchema();
+          }
+          const { data, version } = await sharedSchemaPromise;
           contentParts.push({
             type: 'text',
             text: `\n\nTipTap Schema Reference (version: ${version}):\n\n${data}`,
@@ -181,7 +194,11 @@ export function addEditorTools(
           .describe('Display name for the agent avatar'),
       },
     },
-    async ({ resource_type, resource_id: rawResourceId, agent_name }) => {
+    async ({
+      resource_type,
+      resource_id: rawResourceId,
+      agent_name,
+    }: { resource_type: 'broadcast' | 'template', resource_id: string, agent_name?: string }) => {
       if (!apiClient) {
         throw new Error('API client not configured. Provide a Resend API key.');
       }
