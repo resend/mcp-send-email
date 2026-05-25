@@ -11,9 +11,7 @@ vi.mock('../../src/server.js', () => ({
 }));
 
 vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
-  StdioServerTransport: vi.fn(function () {
-    return {};
-  }),
+  StdioServerTransport: vi.fn(() => ({})),
 }));
 
 describe('runStdio', () => {

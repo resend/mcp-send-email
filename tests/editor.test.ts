@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { addEditorTools } from '../src/tools/editor.js';
 
 describe('Editor Tools - Tiptap Cache', () => {
@@ -43,24 +43,42 @@ describe('Editor Tools - Tiptap Cache', () => {
     const handler = registeredTools['get-tiptap-json-content'].handler;
 
     // First call: should fetch from dashboard
-    await handler({ resource_type: 'broadcast', resource_id: 'b_123', include_schema: true });
+    await handler({
+      resource_type: 'broadcast',
+      resource_id: 'b_123',
+      include_schema: true,
+    });
     expect(mockDashboard.getTiptapSchema).toHaveBeenCalledTimes(1);
 
     // Second call (simulating same or different session): should use cached value
-    await handler({ resource_type: 'broadcast', resource_id: 'b_456', include_schema: true });
+    await handler({
+      resource_type: 'broadcast',
+      resource_id: 'b_456',
+      include_schema: true,
+    });
     expect(mockDashboard.getTiptapSchema).toHaveBeenCalledTimes(1);
-    
+
     // Verify the schema content is present in the response
-    const result = await handler({ resource_type: 'template', resource_id: 't_789', include_schema: true });
-    const schemaPart = result.content.find((p: any) => p.text.includes('TipTap Schema Reference'));
+    const result = await handler({
+      resource_type: 'template',
+      resource_id: 't_789',
+      include_schema: true,
+    });
+    const schemaPart = result.content.find((p: any) =>
+      p.text.includes('TipTap Schema Reference'),
+    );
     expect(schemaPart).toBeDefined();
     expect(schemaPart.text).toContain('1.0.0');
-    
+
     // Confirm dashboard was still only called once
     expect(mockDashboard.getTiptapSchema).toHaveBeenCalledTimes(1);
 
     // Verify call with include_schema: false does not use or trigger the fetch logic
-    await handler({ resource_type: 'broadcast', resource_id: 'b_123', include_schema: false });
+    await handler({
+      resource_type: 'broadcast',
+      resource_id: 'b_123',
+      include_schema: false,
+    });
     expect(mockDashboard.getTiptapSchema).toHaveBeenCalledTimes(1);
   });
 });

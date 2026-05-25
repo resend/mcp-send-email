@@ -14,7 +14,8 @@ interface EditorConnection {
  * Shared cache for TipTap schema to avoid redundant fetches across tools and sessions.
  * This provides "shared session storage" for the schema across all transport connections.
  */
-let sharedSchemaPromise: Promise<{ data: string; version: string }> | null = null;
+let sharedSchemaPromise: Promise<{ data: string; version: string }> | null =
+  null;
 
 export function addEditorTools(
   server: McpServer,
@@ -106,7 +107,11 @@ export function addEditorTools(
       resource_type,
       resource_id: rawResourceId,
       include_schema,
-    }: { resource_type: 'broadcast' | 'template', resource_id: string, include_schema: boolean }) => {
+    }: {
+      resource_type: 'broadcast' | 'template';
+      resource_id: string;
+      include_schema: boolean;
+    }) => {
       const resource_id = extractIdFromUrl(
         rawResourceId,
         resource_type === 'broadcast' ? 'broadcasts' : 'templates',
@@ -198,7 +203,11 @@ export function addEditorTools(
       resource_type,
       resource_id: rawResourceId,
       agent_name,
-    }: { resource_type: 'broadcast' | 'template', resource_id: string, agent_name?: string }) => {
+    }: {
+      resource_type: 'broadcast' | 'template';
+      resource_id: string;
+      agent_name?: string;
+    }) => {
       if (!apiClient) {
         throw new Error('API client not configured. Provide a Resend API key.');
       }
