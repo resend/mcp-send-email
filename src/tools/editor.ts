@@ -153,7 +153,10 @@ export function addEditorTools(
       if (include_schema) {
         try {
           if (!sharedSchemaPromise) {
-            sharedSchemaPromise = dashboard.getTiptapSchema();
+            sharedSchemaPromise = dashboard.getTiptapSchema().catch((err) => {
+              sharedSchemaPromise = null; // Clear cache on network failure so it can retry later
+              throw err;
+            });
           }
           const { data, version } = await sharedSchemaPromise;
           contentParts.push({
