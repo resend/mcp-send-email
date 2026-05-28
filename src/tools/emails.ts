@@ -975,7 +975,7 @@ export function addEmailTools(
               text: z.string().describe('Plain text email content'),
               html: z.string().optional().describe('HTML email content'),
               from: z
-                .email()
+                .string()
                 .optional()
                 .describe(
                   'Sender email address. Falls back to the configured default sender if not provided.',
