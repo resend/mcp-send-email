@@ -14,10 +14,10 @@ import { z } from 'zod';
 export const mailboxSchema = z.string().refine(
   (s) => {
     if (typeof s !== 'string' || s.length === 0) return false;
-    // Match `Display Name <addr@host>` or `"Quoted Name" <addr@host>`.
-    // Display name must be non-empty (no leading `<`).
+    // Match `Display Name <addr@host>`, `"Quoted Name" <addr@host>`, or
+    // bare `<addr@host>` (RFC 5322: display-name is optional in name-addr).
     const rfcMailbox =
-      /^\s*(?:"[^"\\]*(?:\\.[^"\\]*)*"|[^<>,]+?)\s*<([^@<>\s,]+@[^@<>\s,]+)>\s*$/;
+      /^\s*(?:"[^"\\]*(?:\\.[^"\\]*)*"|[^<>,]+?)?\s*<([^@<>\s,]+@[^@<>\s,]+)>\s*$/;
     const match = s.match(rfcMailbox);
     const innerAddress = match ? match[1] : s;
     return z.email().safeParse(innerAddress).success;

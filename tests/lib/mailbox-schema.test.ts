@@ -22,6 +22,8 @@ describe('mailboxSchema', () => {
       // Display name can contain common punctuation and symbols
       "O'Brien <obrien@example.com>",
       'Team @ Acme <team@example.com>',
+      // RFC 5322: display-name is optional — bare angle-addr is valid
+      '<user@example.com>',
     ])('accepts %s', (input) => {
       expect(mailboxSchema.safeParse(input).success).toBe(true);
     });
@@ -35,9 +37,6 @@ describe('mailboxSchema', () => {
       '@domain.com',
       'user@',
       '<@example.com>',
-      // Bracketed form without a display name is unusual — reject to keep
-      // downstream `From:` headers intent-aligned.
-      '<user@example.com>',
       // Display name with invalid inner address.
       'Name <bad email@example.com>',
       // Missing closing bracket.
