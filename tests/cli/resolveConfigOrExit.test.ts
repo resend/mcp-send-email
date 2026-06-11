@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import packageJson from '../../package.json' with { type: 'json' };
 import { resolveConfigOrExit } from '../../src/cli/index.js';
 import { parseArgs } from '../../src/cli/parse.js';
 
 describe('resolveConfigOrExit', () => {
   let exitSpy: ReturnType<typeof vi.spyOn>;
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     exitSpy = vi
@@ -13,11 +15,13 @@ describe('resolveConfigOrExit', () => {
         throw new Error(`process.exit(${code})`);
       }) as ReturnType<typeof vi.spyOn>;
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
     exitSpy.mockRestore();
     consoleErrorSpy.mockRestore();
+    consoleLogSpy.mockRestore();
   });
 
   it('calls process.exit(0) and prints help when --help', () => {
@@ -34,6 +38,29 @@ describe('resolveConfigOrExit', () => {
   it('calls process.exit(0) when -h', () => {
     expect(() => resolveConfigOrExit(parseArgs(['-h']), {})).toThrow();
     expect(exitSpy).toHaveBeenCalledWith(0);
+  });
+
+  it('calls process.exit(0) and prints version when --version', () => {
+    expect(() => resolveConfigOrExit(parseArgs(['--version']), {})).toThrow();
+    expect(consoleLogSpy).toHaveBeenCalledWith(packageJson.version);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+  });
+
+  it('calls process.exit(0) and prints version when -v', () => {
+    expect(() => resolveConfigOrExit(parseArgs(['-v']), {})).toThrow();
+    expect(consoleLogSpy).toHaveBeenCalledWith(packageJson.version);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+  });
+
+  it('reports unknown flags before API key validation', () => {
+    expect(() =>
+      resolveConfigOrExit(parseArgs(['--definitely-not-a-real-flag']), {}),
+    ).toThrow();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Error:',
+      'Unknown option: --definitely-not-a-real-flag',
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it('calls process.exit(1) and console.error when config invalid', () => {

@@ -26,6 +26,11 @@ describe('parseArgs', () => {
     expect(parseArgs(['--help']).help).toBe(true);
   });
 
+  it('parses -v and --version', () => {
+    expect(parseArgs(['-v']).version).toBe(true);
+    expect(parseArgs(['--version']).version).toBe(true);
+  });
+
   it('parses single --reply-to', () => {
     const parsed = parseArgs(['--reply-to', 'reply@example.com']);
     expect(parsed['reply-to']).toBe('reply@example.com');

@@ -13,6 +13,7 @@ Options:
   --http                   Run HTTP server (Streamable HTTP at /mcp) instead of stdio
   --port <number>          HTTP port when using --http (default: 3000, or MCP_PORT)
   -h, --help               Show this help
+  -v, --version            Show the installed version
 
 Environment:
   RESEND_API_KEY           Required if --key not set
