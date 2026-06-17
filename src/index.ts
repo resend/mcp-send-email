@@ -28,7 +28,10 @@ if (config.transport === 'http') {
   // HTTP mode: no Resend client needed at startup. Each connecting client
   // provides their own API key via the Authorization: Bearer header,
   // and a per-session Resend client is created in the transport layer.
-  runHttp(serverOptions, config.port).catch(onFatal);
+  runHttp(serverOptions, config.port, {
+    host: config.host,
+    allowedHosts: config.allowedHosts,
+  }).catch(onFatal);
 } else {
   // Stdio mode: single user, API key is required at startup.
   const resend = new Resend(config.apiKey);

@@ -36,6 +36,29 @@ function extractBearerToken(req: IncomingMessage): string | null {
   return token || null;
 }
 
+export interface HttpTransportOptions {
+  /**
+   * Host used to derive the SDK's DNS-rebinding protection. Defaults to
+   * `'127.0.0.1'`, which keeps localhost-only `Host` header validation enabled
+   * — the safe default for servers run locally.
+   *
+   * Set to `'0.0.0.0'` when deploying behind a reverse proxy / load balancer
+   * where the server is already protected by per-request auth (the Bearer API
+   * key). This disables `Host` validation so the proxy's forwarded `Host` and
+   * load-balancer health-check requests (which use the task's private IP) are
+   * accepted instead of rejected with `403 Invalid Host`.
+   */
+  host?: string;
+  /**
+   * Explicit allow-list of acceptable `Host` header hostnames. When provided,
+   * only these are accepted (overrides the `host`-based default). Use this to
+   * pin specific public hostnames instead of disabling validation entirely.
+   * Note: a load balancer health check sends the task IP as `Host`, so an
+   * allow-list must also include that if the LB health-checks this server.
+   */
+  allowedHosts?: string[];
+}
+
 /**
  * Start the HTTP transport. Each session gets its own Resend client created
  * from the Bearer token provided by the connecting client. This allows
@@ -45,8 +68,10 @@ function extractBearerToken(req: IncomingMessage): string | null {
 export async function runHttp(
   options: ServerOptions,
   port: number,
+  httpOptions: HttpTransportOptions = {},
 ): Promise<Server> {
-  const app = createMcpExpressApp();
+  const { host = '127.0.0.1', allowedHosts } = httpOptions;
+  const app = createMcpExpressApp({ host, allowedHosts });
 
   app.get('/health', (_req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });

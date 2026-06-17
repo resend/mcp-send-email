@@ -31,3 +31,30 @@ export function parseReplierAddresses(
   }
   return [];
 }
+
+/**
+ * Parse the allowed-hosts list from argv and env. argv wins. Returns undefined
+ * when neither is set, so the SDK's host-based default applies.
+ */
+export function parseAllowedHosts(
+  parsed: ParsedArgs,
+  env: NodeJS.ProcessEnv,
+): string[] | undefined {
+  if (Array.isArray(parsed['allowed-hosts'])) return parsed['allowed-hosts'];
+  if (typeof parsed['allowed-hosts'] === 'string') {
+    const list = parsed['allowed-hosts']
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return list.length ? list : undefined;
+  }
+  const v = env.MCP_ALLOWED_HOSTS;
+  if (typeof v === 'string' && v.trim()) {
+    const list = v
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return list.length ? list : undefined;
+  }
+  return undefined;
+}

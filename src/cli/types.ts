@@ -21,6 +21,14 @@ export interface HttpConfig {
   replierEmailAddresses: string[];
   transport: 'http';
   port: number;
+  /**
+   * Host used for the SDK's DNS-rebinding protection. Undefined keeps the
+   * localhost-only default. Set to '0.0.0.0' to disable Host validation when
+   * running behind a proxy / load balancer (protected by per-request auth).
+   */
+  host?: string;
+  /** Explicit allow-list of acceptable Host header hostnames. */
+  allowedHosts?: string[];
 }
 
 export type CliConfig = StdioConfig | HttpConfig;

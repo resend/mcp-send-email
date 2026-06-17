@@ -134,6 +134,21 @@ import { runHttp } from 'resend-mcp/http';
 const server = await runHttp({}, 3000);
 ```
 
+By default the server applies localhost-only `Host` validation (DNS-rebinding
+protection). When deploying behind a reverse proxy or load balancer — where the
+server is protected by the per-request Bearer API key — set `host` to `0.0.0.0`
+so the proxy's forwarded `Host` and load-balancer health checks aren't rejected
+with `403 Invalid Host`:
+
+```ts
+const server = await runHttp({}, 3000, { host: '0.0.0.0' });
+// or pin specific hostnames instead of disabling validation:
+const server = await runHttp({}, 3000, { allowedHosts: ['mcp.example.com'] });
+```
+
+Via the CLI this maps to `--host` / `--allowed-hosts` (or `MCP_HOST` /
+`MCP_ALLOWED_HOSTS`).
+
 ### Options
 
 You can pass additional arguments to configure the server:
@@ -143,6 +158,8 @@ You can pass additional arguments to configure the server:
 - `--reply-to`: Default reply-to email address (can be specified multiple times)
 - `--http`: Use HTTP transport instead of stdio (default: stdio)
 - `--port`: HTTP port when using `--http` (default: 3000, or `MCP_PORT` env var)
+- `--host`: Host for DNS-rebinding protection when using `--http` (default: `127.0.0.1`, or `MCP_HOST`). Set to `0.0.0.0` to disable `Host` validation behind a proxy/load balancer.
+- `--allowed-hosts`: Comma-separated `Host` allow-list when using `--http` (or `MCP_ALLOWED_HOSTS`)
 
 Environment variables:
 
@@ -150,6 +167,8 @@ Environment variables:
 - `SENDER_EMAIL_ADDRESS`: Default sender email address from a verified domain (optional)
 - `REPLY_TO_EMAIL_ADDRESSES`: Comma-separated reply-to email addresses (optional)
 - `MCP_PORT`: HTTP port when using `--http` (optional)
+- `MCP_HOST`: Host for DNS-rebinding protection when using `--http` (optional)
+- `MCP_ALLOWED_HOSTS`: Comma-separated `Host` allow-list when using `--http` (optional)
 
 > [!NOTE]
 > If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.
