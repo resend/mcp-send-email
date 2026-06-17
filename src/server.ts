@@ -28,7 +28,7 @@ export function createMcpServer(
   options: ServerOptions,
   apiKey: string,
 ): McpServer {
-  const { senderEmailAddress, replierEmailAddresses } = options;
+  const { senderEmailAddress, replierEmailAddresses = [] } = options;
   const server = new McpServer({
     name: 'resend',
     version: packageJson.version,

@@ -6,6 +6,18 @@
   "bin": {
     "resend-mcp": "dist/index.js"
   },
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./http": {
+      "types": "./dist/transports/http.d.ts",
+      "default": "./dist/transports/http.js"
+    }
+  },
   "files": [
     "dist"
   ],

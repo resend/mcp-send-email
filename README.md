@@ -121,6 +121,19 @@ You can also set the port via the `MCP_PORT` environment variable:
 MCP_PORT=3000 npx -y resend-mcp --http
 ```
 
+#### Use as a library
+
+The HTTP transport is also exported so it can be embedded in another service instead of being run via the CLI. Each connecting client authenticates with its own Resend API key passed as a Bearer token.
+
+```ts
+import { runHttp } from 'resend-mcp/http';
+
+// Options are optional — pass `senderEmailAddress` / `replierEmailAddresses`
+// to set defaults. Binds the port and returns the Node http.Server, exposing
+// the MCP endpoint at POST/GET/DELETE /mcp and a GET /health check.
+const server = await runHttp({}, 3000);
+```
+
 ### Options
 
 You can pass additional arguments to configure the server:

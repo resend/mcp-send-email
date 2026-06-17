@@ -1,4 +1,4 @@
 export interface ServerOptions {
   senderEmailAddress?: string;
-  replierEmailAddresses: string[];
+  replierEmailAddresses?: string[];
 }
