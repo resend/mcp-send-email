@@ -76,7 +76,11 @@ describe('runHttp', () => {
     });
     const { port } = server.address() as AddressInfo;
 
-    const res = await getWithHost(port, '/health', 'remote-mcp.apps.example.com');
+    const res = await getWithHost(
+      port,
+      '/health',
+      'remote-mcp.apps.example.com',
+    );
     expect(res.status).toBe(200);
 
     server.close();
