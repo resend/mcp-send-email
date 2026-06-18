@@ -187,18 +187,18 @@ describe('resolveConfig', () => {
   it('resolves apiUrl from RESEND_BASE_URL', () => {
     const result = resolveConfig(parseArgs(['--key', 're_x']), {
       RESEND_API_KEY: 're_x',
-      RESEND_BASE_URL: 'https://api.resend-staging.com',
+      RESEND_BASE_URL: 'https://api.example.com',
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.config.apiUrl).toBe('https://api.resend-staging.com');
+      expect(result.config.apiUrl).toBe('https://api.example.com');
     }
   });
 
   it('--api-url overrides RESEND_BASE_URL', () => {
     const result = resolveConfig(
       parseArgs(['--key', 're_x', '--api-url', 'http://localhost:8787']),
-      { RESEND_API_KEY: 're_x', RESEND_BASE_URL: 'https://api.resend.com' },
+      { RESEND_API_KEY: 're_x', RESEND_BASE_URL: 'https://api.example.com' },
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -227,30 +227,28 @@ describe('resolveConfig', () => {
 
   it('resolves dashboardUrl from --dashboard-url over RESEND_DASHBOARD_URL', () => {
     const result = resolveConfig(
-      parseArgs([
-        '--key',
-        're_x',
-        '--dashboard-url',
-        'https://resend-staging.com',
-      ]),
-      { RESEND_API_KEY: 're_x', RESEND_DASHBOARD_URL: 'https://resend.com' },
+      parseArgs(['--key', 're_x', '--dashboard-url', 'https://app.example.com']),
+      {
+        RESEND_API_KEY: 're_x',
+        RESEND_DASHBOARD_URL: 'https://dash.example.com',
+      },
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.config.dashboardUrl).toBe('https://resend-staging.com');
+      expect(result.config.dashboardUrl).toBe('https://app.example.com');
     }
   });
 
   it('carries apiUrl/dashboardUrl on http config too', () => {
     const result = resolveConfig(parseArgs(['--http']), {
-      RESEND_BASE_URL: 'https://api.resend-staging.com',
-      RESEND_DASHBOARD_URL: 'https://resend-staging.com',
+      RESEND_BASE_URL: 'https://api.example.com',
+      RESEND_DASHBOARD_URL: 'https://app.example.com',
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.config.transport).toBe('http');
-      expect(result.config.apiUrl).toBe('https://api.resend-staging.com');
-      expect(result.config.dashboardUrl).toBe('https://resend-staging.com');
+      expect(result.config.apiUrl).toBe('https://api.example.com');
+      expect(result.config.dashboardUrl).toBe('https://app.example.com');
     }
   });
 });
