@@ -227,7 +227,12 @@ describe('resolveConfig', () => {
 
   it('resolves dashboardUrl from --dashboard-url over RESEND_DASHBOARD_URL', () => {
     const result = resolveConfig(
-      parseArgs(['--key', 're_x', '--dashboard-url', 'https://app.example.com']),
+      parseArgs([
+        '--key',
+        're_x',
+        '--dashboard-url',
+        'https://app.example.com',
+      ]),
       {
         RESEND_API_KEY: 're_x',
         RESEND_DASHBOARD_URL: 'https://dash.example.com',
