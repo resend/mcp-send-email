@@ -49,6 +49,17 @@ describe('parseArgs', () => {
     const parsed = parseArgs(['--port', '8080']);
     expect(parsed.port).toBe('8080');
   });
+
+  it('parses --api-url and --dashboard-url as strings', () => {
+    const parsed = parseArgs([
+      '--api-url',
+      'http://localhost:8787',
+      '--dashboard-url',
+      'http://localhost:3001',
+    ]);
+    expect(parsed['api-url']).toBe('http://localhost:8787');
+    expect(parsed['dashboard-url']).toBe('http://localhost:3001');
+  });
 });
 
 describe('parseReplierAddresses', () => {

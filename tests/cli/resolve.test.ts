@@ -172,4 +172,85 @@ describe('resolveConfig', () => {
     if (invalid.ok) expect(invalid.config.port).toBe(3000);
     if (outOfRange.ok) expect(outOfRange.config.port).toBe(3000);
   });
+
+  it('apiUrl and dashboardUrl are undefined when unset', () => {
+    const result = resolveConfig(parseArgs(['--key', 're_x']), {
+      RESEND_API_KEY: 're_x',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.apiUrl).toBeUndefined();
+      expect(result.config.dashboardUrl).toBeUndefined();
+    }
+  });
+
+  it('resolves apiUrl from RESEND_BASE_URL', () => {
+    const result = resolveConfig(parseArgs(['--key', 're_x']), {
+      RESEND_API_KEY: 're_x',
+      RESEND_BASE_URL: 'https://api.resend-staging.com',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.apiUrl).toBe('https://api.resend-staging.com');
+    }
+  });
+
+  it('--api-url overrides RESEND_BASE_URL', () => {
+    const result = resolveConfig(
+      parseArgs(['--key', 're_x', '--api-url', 'http://localhost:8787']),
+      { RESEND_API_KEY: 're_x', RESEND_BASE_URL: 'https://api.resend.com' },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.apiUrl).toBe('http://localhost:8787');
+    }
+  });
+
+  it('strips a trailing slash from apiUrl and dashboardUrl', () => {
+    const result = resolveConfig(
+      parseArgs([
+        '--key',
+        're_x',
+        '--api-url',
+        'http://localhost:8787/',
+        '--dashboard-url',
+        'http://localhost:3001/',
+      ]),
+      { RESEND_API_KEY: 're_x' },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.apiUrl).toBe('http://localhost:8787');
+      expect(result.config.dashboardUrl).toBe('http://localhost:3001');
+    }
+  });
+
+  it('resolves dashboardUrl from --dashboard-url over RESEND_DASHBOARD_URL', () => {
+    const result = resolveConfig(
+      parseArgs([
+        '--key',
+        're_x',
+        '--dashboard-url',
+        'https://resend-staging.com',
+      ]),
+      { RESEND_API_KEY: 're_x', RESEND_DASHBOARD_URL: 'https://resend.com' },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.dashboardUrl).toBe('https://resend-staging.com');
+    }
+  });
+
+  it('carries apiUrl/dashboardUrl on http config too', () => {
+    const result = resolveConfig(parseArgs(['--http']), {
+      RESEND_BASE_URL: 'https://api.resend-staging.com',
+      RESEND_DASHBOARD_URL: 'https://resend-staging.com',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.config.transport).toBe('http');
+      expect(result.config.apiUrl).toBe('https://api.resend-staging.com');
+      expect(result.config.dashboardUrl).toBe('https://resend-staging.com');
+    }
+  });
 });

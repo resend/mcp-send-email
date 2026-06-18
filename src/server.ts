@@ -28,14 +28,19 @@ export function createMcpServer(
   options: ServerOptions,
   apiKey: string,
 ): McpServer {
-  const { senderEmailAddress, replierEmailAddresses = [] } = options;
+  const {
+    senderEmailAddress,
+    replierEmailAddresses = [],
+    apiUrl,
+    dashboardUrl,
+  } = options;
   const server = new McpServer({
     name: 'resend',
     version: packageJson.version,
   });
 
-  const dashboard = new DashboardClient();
-  const apiClient = new ResendEditorClient(apiKey);
+  const dashboard = new DashboardClient({ dashboardUrl });
+  const apiClient = new ResendEditorClient(apiKey, { apiUrl });
 
   const { withEditorSession } = addEditorTools(server, dashboard, apiClient);
   addApiKeyTools(server, resend);

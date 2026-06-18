@@ -14,6 +14,44 @@ function resolveHost(
   return undefined;
 }
 
+/**
+ * Resolve the Resend API base URL. argv wins over env, env over default.
+ * Returns undefined when neither is set so the SDK's default applies. A
+ * trailing slash is stripped because the SDK concatenates `${baseUrl}${path}`
+ * with no normalization, so a trailing `/` would produce a double slash.
+ */
+function resolveApiUrl(
+  parsed: ParsedArgs,
+  env: NodeJS.ProcessEnv,
+): string | undefined {
+  const raw =
+    typeof parsed['api-url'] === 'string' && parsed['api-url'].trim() !== ''
+      ? parsed['api-url'].trim()
+      : typeof env.RESEND_BASE_URL === 'string' && env.RESEND_BASE_URL.trim()
+        ? env.RESEND_BASE_URL.trim()
+        : undefined;
+  return raw ? raw.replace(/\/$/, '') : undefined;
+}
+
+/**
+ * Resolve the dashboard origin used by editor/TipTap tooling. argv wins over
+ * env. Trailing slash stripped for the same reason as resolveApiUrl.
+ */
+function resolveDashboardUrl(
+  parsed: ParsedArgs,
+  env: NodeJS.ProcessEnv,
+): string | undefined {
+  const raw =
+    typeof parsed['dashboard-url'] === 'string' &&
+    parsed['dashboard-url'].trim() !== ''
+      ? parsed['dashboard-url'].trim()
+      : typeof env.RESEND_DASHBOARD_URL === 'string' &&
+          env.RESEND_DASHBOARD_URL.trim()
+        ? env.RESEND_DASHBOARD_URL.trim()
+        : undefined;
+  return raw ? raw.replace(/\/$/, '') : undefined;
+}
+
 function parsePort(parsed: ParsedArgs, env: NodeJS.ProcessEnv): number {
   const fromArg =
     typeof parsed.port === 'string' && parsed.port.trim() !== ''
@@ -66,6 +104,8 @@ export function resolveConfig(
     senderEmailAddress: senderEmailAddress ?? '',
     replierEmailAddresses: parseReplierAddresses(parsed, env),
     port,
+    apiUrl: resolveApiUrl(parsed, env),
+    dashboardUrl: resolveDashboardUrl(parsed, env),
   };
 
   return {
