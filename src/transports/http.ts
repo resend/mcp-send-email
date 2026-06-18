@@ -78,69 +78,74 @@ export async function runHttp(
     res.end(JSON.stringify({ status: 'ok' }));
   });
 
-  app.all(
-    '/mcp',
-    async (req: IncomingMessage & { body?: unknown }, res: ServerResponse) => {
-      const sessionId = req.headers['mcp-session-id'] as string | undefined;
-      let transport: StreamableHTTPServerTransport | undefined;
+  // Serve the Streamable HTTP transport at both `/mcp` and the root `/` so
+  // clients and proxies that target the server's root URL work identically.
+  const handleMcp = async (
+    req: IncomingMessage & { body?: unknown },
+    res: ServerResponse,
+  ) => {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+    let transport: StreamableHTTPServerTransport | undefined;
 
-      if (sessionId && sessions[sessionId]) {
-        transport = sessions[sessionId];
-      } else if (
-        !sessionId &&
-        req.method === 'POST' &&
-        isInitializeRequest(req.body)
-      ) {
-        // New session: require a Bearer token so we can create a per-session
-        // Resend client scoped to this user's API key.
-        const apiKey = extractBearerToken(req);
-        if (!apiKey) {
-          sendJsonRpcError(
-            res,
-            401,
-            'Unauthorized: provide a Resend API key via Authorization: Bearer <key>',
-          );
-          return;
-        }
-
-        const resend = new Resend(apiKey);
-
-        transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => randomUUID(),
-          onsessioninitialized: (sid) => {
-            sessions[sid] = transport!;
-          },
-        });
-        transport.onclose = () => {
-          const sid = transport!.sessionId;
-          if (sid && sessions[sid]) delete sessions[sid];
-        };
-        const server = createMcpServer(resend, options, apiKey);
-        await server.connect(transport);
-      } else if (sessionId && !sessions[sessionId]) {
-        res.statusCode = 404;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(
-          JSON.stringify({
-            jsonrpc: '2.0',
-            error: { code: -32001, message: 'Session not found' },
-            id: null,
-          }),
+    if (sessionId && sessions[sessionId]) {
+      transport = sessions[sessionId];
+    } else if (
+      !sessionId &&
+      req.method === 'POST' &&
+      isInitializeRequest(req.body)
+    ) {
+      // New session: require a Bearer token so we can create a per-session
+      // Resend client scoped to this user's API key.
+      const apiKey = extractBearerToken(req);
+      if (!apiKey) {
+        sendJsonRpcError(
+          res,
+          401,
+          'Unauthorized: provide a Resend API key via Authorization: Bearer <key>',
         );
-        return;
-      } else {
-        sendJsonRpcError(res, 400, 'Bad Request: No valid session ID provided');
         return;
       }
 
-      await transport.handleRequest(req, res, req.body);
-    },
-  );
+      const resend = new Resend(apiKey);
+
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (sid) => {
+          sessions[sid] = transport!;
+        },
+      });
+      transport.onclose = () => {
+        const sid = transport!.sessionId;
+        if (sid && sessions[sid]) delete sessions[sid];
+      };
+      const server = createMcpServer(resend, options, apiKey);
+      await server.connect(transport);
+    } else if (sessionId && !sessions[sessionId]) {
+      res.statusCode = 404;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          error: { code: -32001, message: 'Session not found' },
+          id: null,
+        }),
+      );
+      return;
+    } else {
+      sendJsonRpcError(res, 400, 'Bad Request: No valid session ID provided');
+      return;
+    }
+
+    await transport.handleRequest(req, res, req.body);
+  };
+
+  app.all('/mcp', handleMcp);
+  app.all('/', handleMcp);
 
   return new Promise((resolve, reject) => {
     const server = app.listen(port, () => {
       console.error(`Resend MCP server listening on http://127.0.0.1:${port}`);
-      console.error('  Streamable HTTP: POST/GET/DELETE /mcp');
+      console.error('  Streamable HTTP: POST/GET/DELETE / and /mcp');
       resolve(server);
     });
     server.once('error', reject);
