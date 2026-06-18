@@ -9,9 +9,6 @@ import { runStdio } from './transports/stdio.js';
 const parsed = parseArgs(process.argv.slice(2));
 const config = resolveConfigOrExit(parsed, process.env);
 
-// The Resend SDK and the editor/dashboard clients each read their base-URL env
-// var (RESEND_BASE_URL / RESEND_DASHBOARD_URL) on their own, so there is no URL
-// to thread through here.
 const serverOptions = {
   senderEmailAddress: config.senderEmailAddress,
   replierEmailAddresses: config.replierEmailAddresses,
