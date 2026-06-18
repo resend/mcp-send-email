@@ -169,8 +169,6 @@ Environment variables:
 - `MCP_PORT`: HTTP port when using `--http` (optional)
 - `MCP_HOST`: Host for DNS-rebinding protection when using `--http` (optional)
 - `MCP_ALLOWED_HOSTS`: Comma-separated `Host` allow-list when using `--http` (optional)
-- `RESEND_BASE_URL`: Override the Resend API base URL (optional; default `https://api.resend.com`). Read by the Resend SDK and the editor client.
-- `RESEND_DASHBOARD_URL`: Override the dashboard origin used by the editor/TipTap tooling (optional; default `https://resend.com`)
 
 > [!NOTE]
 > If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.
