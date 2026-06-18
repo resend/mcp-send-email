@@ -9,15 +9,12 @@ import { runStdio } from './transports/stdio.js';
 const parsed = parseArgs(process.argv.slice(2));
 const config = resolveConfigOrExit(parsed, process.env);
 
-// Note: the Resend SDK reads RESEND_BASE_URL from the environment on its own
-// (dotenv is loaded above, before the SDK import), so we don't set it here.
-// config.apiUrl is passed through only for the editor client, which is a
-// separate fetch-based client that doesn't go through the SDK.
+// The Resend SDK and the editor/dashboard clients each read their base-URL env
+// var (RESEND_BASE_URL / RESEND_DASHBOARD_URL) on their own, so there is no URL
+// to thread through here.
 const serverOptions = {
   senderEmailAddress: config.senderEmailAddress,
   replierEmailAddresses: config.replierEmailAddresses,
-  apiUrl: config.apiUrl,
-  dashboardUrl: config.dashboardUrl,
 };
 
 function onFatal(err: unknown): void {

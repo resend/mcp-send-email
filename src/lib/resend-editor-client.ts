@@ -6,7 +6,13 @@ export class ResendEditorClient {
 
   constructor(apiKey: string, options?: { apiUrl?: string }) {
     this.apiKey = apiKey;
-    this.apiUrl = (options?.apiUrl || DEFAULT_API_URL).replace(/\/$/, '');
+    // Defaults from RESEND_BASE_URL (the same env var the Resend SDK reads) so
+    // editor calls follow the SDK to a non-production stack when set.
+    this.apiUrl = (
+      options?.apiUrl ||
+      process.env.RESEND_BASE_URL ||
+      DEFAULT_API_URL
+    ).replace(/\/$/, '');
   }
 
   private async apiRequest<T>(

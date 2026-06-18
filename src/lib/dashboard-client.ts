@@ -4,7 +4,12 @@ export class DashboardClient {
   private dashboardUrl: string;
 
   constructor(options?: { dashboardUrl?: string }) {
-    this.dashboardUrl = options?.dashboardUrl || DEFAULT_DASHBOARD_URL;
+    // Defaults from RESEND_DASHBOARD_URL so editor/TipTap tooling can follow a
+    // non-production dashboard when set.
+    this.dashboardUrl =
+      options?.dashboardUrl ||
+      process.env.RESEND_DASHBOARD_URL ||
+      DEFAULT_DASHBOARD_URL;
   }
 
   async getTiptapSchema() {

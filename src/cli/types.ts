@@ -7,17 +7,6 @@ interface BaseConfig {
   senderEmailAddress: string;
   replierEmailAddresses: string[];
   port: number;
-  /**
-   * Override for the Resend API base URL from RESEND_BASE_URL (default
-   * https://api.resend.com). Passed to the editor client; the Resend SDK reads
-   * the same env var on its own. Undefined keeps the production default.
-   */
-  apiUrl?: string;
-  /**
-   * Override for the dashboard origin (default https://resend.com) used by the
-   * editor/TipTap tooling. Undefined keeps the production default.
-   */
-  dashboardUrl?: string;
 }
 
 /**

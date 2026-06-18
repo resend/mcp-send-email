@@ -14,33 +14,6 @@ function resolveHost(
   return undefined;
 }
 
-/**
- * Resolve the Resend API base URL from RESEND_BASE_URL. Used for the editor
- * client; the Resend SDK reads the same env var on its own. Returns undefined
- * when unset so the production default applies. A trailing slash is stripped
- * because the client concatenates `${baseUrl}${path}` with no normalization.
- */
-function resolveApiUrl(env: NodeJS.ProcessEnv): string | undefined {
-  const raw =
-    typeof env.RESEND_BASE_URL === 'string' && env.RESEND_BASE_URL.trim()
-      ? env.RESEND_BASE_URL.trim()
-      : undefined;
-  return raw ? raw.replace(/\/$/, '') : undefined;
-}
-
-/**
- * Resolve the dashboard origin used by editor/TipTap tooling from
- * RESEND_DASHBOARD_URL. Trailing slash stripped for the same reason.
- */
-function resolveDashboardUrl(env: NodeJS.ProcessEnv): string | undefined {
-  const raw =
-    typeof env.RESEND_DASHBOARD_URL === 'string' &&
-    env.RESEND_DASHBOARD_URL.trim()
-      ? env.RESEND_DASHBOARD_URL.trim()
-      : undefined;
-  return raw ? raw.replace(/\/$/, '') : undefined;
-}
-
 function parsePort(parsed: ParsedArgs, env: NodeJS.ProcessEnv): number {
   const fromArg =
     typeof parsed.port === 'string' && parsed.port.trim() !== ''
@@ -93,8 +66,6 @@ export function resolveConfig(
     senderEmailAddress: senderEmailAddress ?? '',
     replierEmailAddresses: parseReplierAddresses(parsed, env),
     port,
-    apiUrl: resolveApiUrl(env),
-    dashboardUrl: resolveDashboardUrl(env),
   };
 
   return {
