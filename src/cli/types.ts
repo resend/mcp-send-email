@@ -8,9 +8,9 @@ interface BaseConfig {
   replierEmailAddresses: string[];
   port: number;
   /**
-   * Override for the Resend API base URL (default https://api.resend.com).
-   * Applies to the Resend SDK (via RESEND_BASE_URL) and the editor client.
-   * Undefined keeps the production default.
+   * Override for the Resend API base URL from RESEND_BASE_URL (default
+   * https://api.resend.com). Passed to the editor client; the Resend SDK reads
+   * the same env var on its own. Undefined keeps the production default.
    */
   apiUrl?: string;
   /**

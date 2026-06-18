@@ -195,51 +195,26 @@ describe('resolveConfig', () => {
     }
   });
 
-  it('--api-url overrides RESEND_BASE_URL', () => {
-    const result = resolveConfig(
-      parseArgs(['--key', 're_x', '--api-url', 'http://localhost:8787']),
-      { RESEND_API_KEY: 're_x', RESEND_BASE_URL: 'https://api.example.com' },
-    );
+  it('resolves dashboardUrl from RESEND_DASHBOARD_URL', () => {
+    const result = resolveConfig(parseArgs(['--key', 're_x']), {
+      RESEND_API_KEY: 're_x',
+      RESEND_DASHBOARD_URL: 'https://app.example.com',
+    });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.config.apiUrl).toBe('http://localhost:8787');
+      expect(result.config.dashboardUrl).toBe('https://app.example.com');
     }
   });
 
   it('strips a trailing slash from apiUrl and dashboardUrl', () => {
-    const result = resolveConfig(
-      parseArgs([
-        '--key',
-        're_x',
-        '--api-url',
-        'http://localhost:8787/',
-        '--dashboard-url',
-        'http://localhost:3001/',
-      ]),
-      { RESEND_API_KEY: 're_x' },
-    );
+    const result = resolveConfig(parseArgs(['--key', 're_x']), {
+      RESEND_API_KEY: 're_x',
+      RESEND_BASE_URL: 'https://api.example.com/',
+      RESEND_DASHBOARD_URL: 'https://app.example.com/',
+    });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.config.apiUrl).toBe('http://localhost:8787');
-      expect(result.config.dashboardUrl).toBe('http://localhost:3001');
-    }
-  });
-
-  it('resolves dashboardUrl from --dashboard-url over RESEND_DASHBOARD_URL', () => {
-    const result = resolveConfig(
-      parseArgs([
-        '--key',
-        're_x',
-        '--dashboard-url',
-        'https://app.example.com',
-      ]),
-      {
-        RESEND_API_KEY: 're_x',
-        RESEND_DASHBOARD_URL: 'https://dash.example.com',
-      },
-    );
-    expect(result.ok).toBe(true);
-    if (result.ok) {
+      expect(result.config.apiUrl).toBe('https://api.example.com');
       expect(result.config.dashboardUrl).toBe('https://app.example.com');
     }
   });

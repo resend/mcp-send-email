@@ -15,40 +15,29 @@ function resolveHost(
 }
 
 /**
- * Resolve the Resend API base URL. argv wins over env, env over default.
- * Returns undefined when neither is set so the SDK's default applies. A
- * trailing slash is stripped because the SDK concatenates `${baseUrl}${path}`
- * with no normalization, so a trailing `/` would produce a double slash.
+ * Resolve the Resend API base URL from RESEND_BASE_URL. Used for the editor
+ * client; the Resend SDK reads the same env var on its own. Returns undefined
+ * when unset so the production default applies. A trailing slash is stripped
+ * because the client concatenates `${baseUrl}${path}` with no normalization.
  */
-function resolveApiUrl(
-  parsed: ParsedArgs,
-  env: NodeJS.ProcessEnv,
-): string | undefined {
+function resolveApiUrl(env: NodeJS.ProcessEnv): string | undefined {
   const raw =
-    typeof parsed['api-url'] === 'string' && parsed['api-url'].trim() !== ''
-      ? parsed['api-url'].trim()
-      : typeof env.RESEND_BASE_URL === 'string' && env.RESEND_BASE_URL.trim()
-        ? env.RESEND_BASE_URL.trim()
-        : undefined;
+    typeof env.RESEND_BASE_URL === 'string' && env.RESEND_BASE_URL.trim()
+      ? env.RESEND_BASE_URL.trim()
+      : undefined;
   return raw ? raw.replace(/\/$/, '') : undefined;
 }
 
 /**
- * Resolve the dashboard origin used by editor/TipTap tooling. argv wins over
- * env. Trailing slash stripped for the same reason as resolveApiUrl.
+ * Resolve the dashboard origin used by editor/TipTap tooling from
+ * RESEND_DASHBOARD_URL. Trailing slash stripped for the same reason.
  */
-function resolveDashboardUrl(
-  parsed: ParsedArgs,
-  env: NodeJS.ProcessEnv,
-): string | undefined {
+function resolveDashboardUrl(env: NodeJS.ProcessEnv): string | undefined {
   const raw =
-    typeof parsed['dashboard-url'] === 'string' &&
-    parsed['dashboard-url'].trim() !== ''
-      ? parsed['dashboard-url'].trim()
-      : typeof env.RESEND_DASHBOARD_URL === 'string' &&
-          env.RESEND_DASHBOARD_URL.trim()
-        ? env.RESEND_DASHBOARD_URL.trim()
-        : undefined;
+    typeof env.RESEND_DASHBOARD_URL === 'string' &&
+    env.RESEND_DASHBOARD_URL.trim()
+      ? env.RESEND_DASHBOARD_URL.trim()
+      : undefined;
   return raw ? raw.replace(/\/$/, '') : undefined;
 }
 
@@ -104,8 +93,8 @@ export function resolveConfig(
     senderEmailAddress: senderEmailAddress ?? '',
     replierEmailAddresses: parseReplierAddresses(parsed, env),
     port,
-    apiUrl: resolveApiUrl(parsed, env),
-    dashboardUrl: resolveDashboardUrl(parsed, env),
+    apiUrl: resolveApiUrl(env),
+    dashboardUrl: resolveDashboardUrl(env),
   };
 
   return {

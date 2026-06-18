@@ -1,22 +1,18 @@
 #!/usr/bin/env node
 import './user-agent.js';
 import 'dotenv/config';
+import { Resend } from 'resend';
 import { parseArgs, resolveConfigOrExit } from './cli/index.js';
+import { runHttp } from './transports/http.js';
+import { runStdio } from './transports/stdio.js';
 
 const parsed = parseArgs(process.argv.slice(2));
 const config = resolveConfigOrExit(parsed, process.env);
 
-// The Resend SDK reads RESEND_BASE_URL once at module-load time (no constructor
-// option exists), so the override must be in the environment BEFORE any module
-// that imports `resend` is evaluated. That's why the resend-dependent modules
-// below are imported dynamically, after this assignment. Mirrors the
-// pre-import env setup in ./user-agent.js.
-if (config.apiUrl) process.env.RESEND_BASE_URL = config.apiUrl;
-
-const { Resend } = await import('resend');
-const { runHttp } = await import('./transports/http.js');
-const { runStdio } = await import('./transports/stdio.js');
-
+// Note: the Resend SDK reads RESEND_BASE_URL from the environment on its own
+// (dotenv is loaded above, before the SDK import), so we don't set it here.
+// config.apiUrl is passed through only for the editor client, which is a
+// separate fetch-based client that doesn't go through the SDK.
 const serverOptions = {
   senderEmailAddress: config.senderEmailAddress,
   replierEmailAddresses: config.replierEmailAddresses,
