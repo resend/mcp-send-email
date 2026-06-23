@@ -7,6 +7,7 @@ import {
   addApiKeyTools,
   addAutomationTools,
   addBroadcastTools,
+  addContactImportTools,
   addContactPropertyTools,
   addContactTools,
   addDomainTools,
@@ -45,6 +46,7 @@ export function createMcpServer(
     replierEmailAddresses,
     withEditorSession,
   });
+  addContactImportTools(server, resend);
   addContactPropertyTools(server, resend);
   addContactTools(server, resend);
   addDomainTools(server, resend);
