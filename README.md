@@ -3,30 +3,122 @@
 [![smithery badge](https://smithery.ai/badge/@resend/resend-mcp)](https://smithery.ai/server/@resend/resend-mcp)
 [![npm version](https://img.shields.io/npm/v/resend-mcp)](https://www.npmjs.com/package/resend-mcp)
 
-An MCP server for the [Resend](https://resend.com/) platform. Send and receive emails, manage contacts, broadcasts, domains, and more — directly from any MCP client like Claude Desktop, Cursor, or Claude Code.
+Connect your AI agent to the [Resend](https://resend.com/) platform. Send and receive emails, manage contacts, broadcasts, domains, and more, directly from any MCP client like Claude, Cursor, or Claude Code.
 
-## Features
+We offer both a [remote MCP server](#remote-mcp-server) hosted by Resend and a [local MCP server](#local-mcp-server) (this package).
 
-- **Emails** — Send, list, get, cancel, update, and batch send emails. Supports HTML, plain text, attachments (local file, URL, or base64), CC/BCC, reply-to, scheduling, tags, and topic-based sending.
-- **Received Emails** — List and read inbound emails. List and download received email attachments.
-- **Contacts** — Create, list, get, update, and remove contacts. Manage segment memberships and topic subscriptions. Supports custom contact properties.
-- **Broadcasts** — Create, send, list, get, update, and remove broadcast campaigns. Supports scheduling, personalization placeholders, and preview text.
-- **Templates** — Create, list, get, update, publish, duplicate, and remove reusable email templates.
-- **Visual Editor** — Compose broadcast and template content that renders live in the Resend dashboard. Agents appear as a named avatar in the editor while working.
-- **Domains** — Create, list, get, update, remove, and verify sender domains. Configure tracking, TLS, and sending/receiving capabilities.
-- **Segments** — Create, list, get, and remove audience segments.
-- **Topics** — Create, list, get, update, and remove subscription topics.
-- **Contact Properties** — Create, list, get, update, and remove custom contact attributes.
-- **API Keys** — Create, list, and remove API keys.
-- **Webhooks** — Create, list, get, update, and remove webhooks for event notifications.
+## Remote MCP Server
 
-## Setup
+Resend hosts the MCP server at:
 
-Create a free Resend account and [create an API key](https://resend.com/api-keys). To send to addresses outside of your own, you'll need to [verify your domain](https://resend.com/domains).
+```
+https://mcp.resend.com
+```
 
-## Usage
+Connect any MCP client that supports remote servers (Streamable HTTP). There's nothing to install and no local process to run, which makes it the best option for web-based clients like Claude and hosted agent platforms.
 
-The server supports two transport modes: **stdio** (default) and **HTTP**.
+When you connect, your client opens a browser window to log in to Resend and approve access using OAuth.
+
+### Claude Code
+
+```bash
+claude mcp add --transport http resend https://mcp.resend.com
+```
+
+Then run `/mcp` in Claude Code and select **resend** to complete the OAuth login.
+
+### Claude
+
+In Claude (web or desktop), open **Settings** > **Connectors** > **Add custom connector** and enter:
+
+```
+https://mcp.resend.com
+```
+
+### Cursor
+
+Open the command palette and choose "Cursor Settings" > "MCP" > "Add new global MCP server".
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "url": "https://mcp.resend.com"
+    }
+  }
+}
+```
+
+### Codex
+
+```bash
+codex mcp add resend --url https://mcp.resend.com
+```
+
+### Copilot
+
+To use GitHub Copilot in VS Code, add the following to your `settings.json`:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "resend": {
+        "type": "http",
+        "url": "https://mcp.resend.com"
+      }
+    }
+  }
+}
+```
+
+### Windsurf
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "serverUrl": "https://mcp.resend.com"
+    }
+  }
+}
+```
+
+### Authenticating with an API key
+
+If your client runs somewhere a browser login isn't possible (a server, CI, or a headless agent), pass a [Resend API key](https://resend.com/api-keys) as a Bearer token instead of using OAuth.
+
+**Claude Code:**
+
+```bash
+claude mcp add --transport http resend https://mcp.resend.com --header "Authorization: Bearer re_xxxxxxxxx"
+```
+
+**JSON config** (Cursor, Windsurf, and others), add an `Authorization` header:
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "url": "https://mcp.resend.com",
+      "headers": {
+        "Authorization": "Bearer re_xxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+## Local MCP Server
+
+The hosted server runs the same open-source code that's available on NPM as [`resend-mcp`](https://www.npmjs.com/package/resend-mcp). If you prefer to run the server yourself, you can integrate it into any supported MCP client using `npx`. You'll need to:
+
+- [Create an API key](https://resend.com/api-keys)
+- [Verify your domain](https://resend.com/domains)
+
+The local server supports two transport modes: **stdio** (default) and **HTTP**.
+
+Choose your preferred mode and client below to get started. Remember to replace `re_xxxxxxxxx` with your actual API key.
 
 ### Stdio Transport (Default)
 
@@ -42,6 +134,14 @@ npx add-mcp resend-mcp --name resend --env "RESEND_API_KEY=re_xxxxxxxxx"
 
 ```bash
 claude mcp add resend -e RESEND_API_KEY=re_xxxxxxxxx -- npx -y resend-mcp
+```
+
+#### Codex
+
+```bash
+codex mcp add resend \
+  --env RESEND_API_KEY=re_xxxxxxxxx \
+  -- npx -y resend-mcp
 ```
 
 #### Cursor
@@ -80,9 +180,100 @@ Open Claude Desktop settings > "Developer" tab > "Edit Config".
 }
 ```
 
+#### Copilot
+
+To use GitHub Copilot in VS Code, add the following to your `settings.json`:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "resend": {
+        "command": "npx",
+        "args": ["-y", "resend-mcp"],
+        "env": {
+          "RESEND_API_KEY": "re_xxxxxxxxx"
+        }
+      }
+    }
+  }
+}
+```
+
+#### Gemini CLI
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "command": "npx",
+      "args": ["-y", "resend-mcp"],
+      "env": {
+        "RESEND_API_KEY": "re_xxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+#### OpenCode
+
+Add to your `opencode.json` config:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "resend": {
+      "type": "local",
+      "command": ["npx", "-y", "resend-mcp"],
+      "enabled": true,
+      "environment": {
+        "RESEND_API_KEY": "re_xxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+#### Windsurf
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "command": "npx",
+      "args": ["-y", "resend-mcp"],
+      "env": {
+        "RESEND_API_KEY": "re_xxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+#### Devin
+
+In Devin, open **Settings** > **Connections** > **MCP Servers** and click **Add a custom MCP**. See the [Devin guide](https://resend.com/docs/guides/devin) for the full step-by-step.
+
+```json
+{
+  "mcpServers": {
+    "resend": {
+      "command": "npx",
+      "args": ["-y", "resend-mcp"],
+      "env": {
+        "RESEND_API_KEY": "re_xxxxxxxxx",
+        "SENDER_EMAIL_ADDRESS": "onboarding@resend.dev"
+      }
+    }
+  }
+}
+```
+
 ### HTTP Transport
 
-Run the server over HTTP for remote or web-based integrations. In HTTP mode, each client authenticates by passing their Resend API key as a Bearer token in the `Authorization` header.
+Run the server over HTTP for remote or web-based integrations, for example behind your own tunnel or reverse proxy, instead of using Resend's [hosted remote MCP server](#remote-mcp-server). In HTTP mode, each client authenticates by passing their Resend API key as a Bearer token in the `Authorization` header.
 
 Start the server:
 
@@ -135,8 +326,8 @@ const server = await runHttp({}, 3000);
 ```
 
 By default the server applies localhost-only `Host` validation (DNS-rebinding
-protection). When deploying behind a reverse proxy or load balancer — where the
-server is protected by the per-request Bearer API key — set `host` to `0.0.0.0`
+protection). When deploying behind a reverse proxy or load balancer, where the
+server is protected by the per-request Bearer API key, set `host` to `0.0.0.0`
 so the proxy's forwarded `Host` and load-balancer health checks aren't rejected
 with `403 Invalid Host`:
 
@@ -151,9 +342,9 @@ Via the CLI this maps to `--host` / `--allowed-hosts` (or `MCP_HOST` /
 
 ### Options
 
-You can pass additional arguments to configure the server:
+You can pass additional arguments to configure the local server:
 
-- `--key`: Your Resend API key (stdio mode only; HTTP mode uses the Bearer token from the client)
+- `--key`: Your Resend API key (stdio mode only, since HTTP mode uses the Bearer token from the client)
 - `--sender`: Default sender email address from a verified domain
 - `--reply-to`: Default reply-to email address (can be specified multiple times)
 - `--http`: Use HTTP transport instead of stdio (default: stdio)
@@ -161,7 +352,7 @@ You can pass additional arguments to configure the server:
 - `--host`: Host for DNS-rebinding protection when using `--http` (default: `127.0.0.1`, or `MCP_HOST`). Set to `0.0.0.0` to disable `Host` validation behind a proxy/load balancer.
 - `--allowed-hosts`: Comma-separated `Host` allow-list when using `--http` (or `MCP_ALLOWED_HOSTS`)
 
-Environment variables:
+**Environment variables:**
 
 - `RESEND_API_KEY`: Your Resend API key (required for stdio, optional for HTTP since clients pass it via Bearer token)
 - `SENDER_EMAIL_ADDRESS`: Default sender email address from a verified domain (optional)
@@ -172,6 +363,26 @@ Environment variables:
 
 > [!NOTE]
 > If you don't provide a sender email address, the MCP server will ask you to provide one each time you call the tool.
+
+## MCP Server Tools
+
+Resend's MCP server gives your AI agent native access to the full Resend platform through a single integration. You can manage all aspects of your email infrastructure using natural language.
+
+- **Emails**: Send, list, get, cancel, update, and batch send emails. Supports HTML, plain text, attachments (local file, URL, or base64), CC/BCC, reply-to, scheduling, tags, and topic-based sending.
+- **Received Emails**: List and read inbound emails. List and download received email attachments.
+- **Templates**: Create, list, get, update, publish, duplicate, and remove email templates. Supports composing template content and `{{{VARIABLE}}}` placeholders.
+- **Contacts**: Create, list, get, update, and remove contacts. Manage segment memberships, topic subscriptions, and CSV contact imports. Supports custom contact properties.
+- **Broadcasts**: Create, send, list, get, update, and remove broadcast campaigns. Supports scheduling, personalization placeholders, and preview text.
+- **Automations**: Create, list, get, update, and remove automations. Review the runs of an automation.
+- **Events**: Send events to trigger automations for a contact. Create, update, and remove event definitions.
+- **Domains**: Create, list, get, update, remove, and verify sender domains. Configure tracking, TLS, and sending/receiving capabilities. Create and verify domain claims.
+- **Segments**: Create, list, get, and remove audience segments.
+- **Topics**: Create, list, get, update, and remove subscription topics.
+- **Contact Properties**: Create, list, get, update, and remove custom contact attributes.
+- **API Keys**: Create, list, and remove API keys.
+- **Webhooks**: Create, list, get, update, and remove webhooks for event notifications.
+- **Logs**: List and inspect API request logs, including full request and response bodies.
+- **Editor**: Connect to (and disconnect from) the visual editor in the Resend dashboard, and read a draft's content while collaborating on broadcasts and templates.
 
 ## Local Development
 
