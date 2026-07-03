@@ -15,6 +15,7 @@ import {
   addEmailTools,
   addEventTools,
   addLogTools,
+  addOAuthGrantTools,
   addSegmentTools,
   addTemplateTools,
   addTopicTools,
@@ -53,6 +54,7 @@ export function createMcpServer(
   addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
   addEventTools(server, resend);
   addLogTools(server, resend);
+  addOAuthGrantTools(server, resend);
   addSegmentTools(server, resend);
   addTemplateTools(server, resend, apiClient, { withEditorSession });
   addTopicTools(server, resend);

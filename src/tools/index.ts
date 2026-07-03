@@ -9,6 +9,7 @@ export * from './editor.js';
 export * from './emails.js';
 export * from './events.js';
 export * from './logs.js';
+export * from './oauthGrants.js';
 export * from './segments.js';
 export * from './templates.js';
 export * from './topics.js';
