@@ -36,7 +36,6 @@ const grant = {
   id: 'grant_1',
   client_id: 'client_1',
   scopes: ['emails:send'],
-  resource: null,
   created_at: '2026-01-01T00:00:00.000Z',
   revoked_at: null,
   revoked_reason: null,
