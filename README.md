@@ -12,7 +12,7 @@ We offer both a [remote MCP server](#remote-mcp-server) hosted by Resend and a [
 Resend hosts the MCP server at:
 
 ```
-https://mcp.resend.com
+https://mcp.resend.com/mcp
 ```
 
 Connect any MCP client that supports remote servers (Streamable HTTP). There's nothing to install and no local process to run, which makes it the best option for web-based clients like Claude and hosted agent platforms.
@@ -22,7 +22,7 @@ When you connect, your client opens a browser window to log in to Resend and app
 ### Claude Code
 
 ```bash
-claude mcp add --transport http resend https://mcp.resend.com
+claude mcp add --transport http resend https://mcp.resend.com/mcp
 ```
 
 Then run `/mcp` in Claude Code and select **resend** to complete the OAuth login.
@@ -32,7 +32,7 @@ Then run `/mcp` in Claude Code and select **resend** to complete the OAuth login
 In Claude (web or desktop), open **Settings** > **Connectors** > **Add custom connector** and enter:
 
 ```
-https://mcp.resend.com
+https://mcp.resend.com/mcp
 ```
 
 ### Cursor
@@ -43,7 +43,7 @@ Open the command palette and choose "Cursor Settings" > "MCP" > "Add new global 
 {
   "mcpServers": {
     "resend": {
-      "url": "https://mcp.resend.com"
+      "url": "https://mcp.resend.com/mcp"
     }
   }
 }
@@ -52,7 +52,7 @@ Open the command palette and choose "Cursor Settings" > "MCP" > "Add new global 
 ### Codex
 
 ```bash
-codex mcp add resend --url https://mcp.resend.com
+codex mcp add resend --url https://mcp.resend.com/mcp
 ```
 
 ### Copilot
@@ -65,7 +65,7 @@ To use GitHub Copilot in VS Code, add the following to your `settings.json`:
     "servers": {
       "resend": {
         "type": "http",
-        "url": "https://mcp.resend.com"
+        "url": "https://mcp.resend.com/mcp"
       }
     }
   }
@@ -78,7 +78,7 @@ To use GitHub Copilot in VS Code, add the following to your `settings.json`:
 {
   "mcpServers": {
     "resend": {
-      "serverUrl": "https://mcp.resend.com"
+      "serverUrl": "https://mcp.resend.com/mcp"
     }
   }
 }
@@ -91,7 +91,7 @@ If your client runs somewhere a browser login isn't possible (a server, CI, or a
 **Claude Code:**
 
 ```bash
-claude mcp add --transport http resend https://mcp.resend.com --header "Authorization: Bearer re_xxxxxxxxx"
+claude mcp add --transport http resend https://mcp.resend.com/mcp --header "Authorization: Bearer re_xxxxxxxxx"
 ```
 
 **JSON config** (Cursor, Windsurf, and others), add an `Authorization` header:
@@ -100,7 +100,7 @@ claude mcp add --transport http resend https://mcp.resend.com --header "Authoriz
 {
   "mcpServers": {
     "resend": {
-      "url": "https://mcp.resend.com",
+      "url": "https://mcp.resend.com/mcp",
       "headers": {
         "Authorization": "Bearer re_xxxxxxxxx"
       }
