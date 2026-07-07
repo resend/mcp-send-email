@@ -84,6 +84,18 @@ To use GitHub Copilot in VS Code, add the following to your `settings.json`:
 }
 ```
 
+### Warp
+
+In Warp's Settings, navigate to **Agents** > **MCP servers**, and click **+Add** to add a new server.
+
+```json
+{
+  "resend": {
+    "serverUrl": "https://mcp.resend.com/mcp"
+  }
+}
+```
+
 ### Authenticating with an API key
 
 If your client runs somewhere a browser login isn't possible (a server, CI, or a headless agent), pass a [Resend API key](https://resend.com/api-keys) as a Bearer token instead of using OAuth.
