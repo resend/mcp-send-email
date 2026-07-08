@@ -23,8 +23,6 @@ import {
 } from './tools/index.js';
 import type { ServerOptions } from './types.js';
 
-export type * from './types/emails.js';
-export type * from './types/webhook-events.js';
 export type { ServerOptions } from './types.js';
 
 export function createMcpServer(
