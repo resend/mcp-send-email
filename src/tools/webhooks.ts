@@ -28,7 +28,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
     {
       title: 'Create Webhook',
       description:
-        'Create a new webhook in Resend. A webhook allows you to receive notifications at a specified URL when certain events occur (e.g. email.sent, email.delivered, email.bounced).',
+        'Create a new webhook in Resend. A webhook allows you to receive notifications at a specified URL when certain events occur (e.g. email.sent, email.delivered, email.bounced). Email webhook payloads include a `message_id` field in `data` — the RFC 5322 Message-ID header value (e.g. `<abc@mail.example.com>`), useful for correlating sent and received emails.',
       inputSchema: {
         endpoint: z.url().describe('The URL where webhook events will be sent'),
         events: webhookEventSchema
@@ -68,7 +68,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
     {
       title: 'List Webhooks',
       description:
-        'List all webhooks from Resend. Use to get webhook IDs and see which endpoints and events are configured. Not for listing emails, segments, or broadcasts.',
+        'List all webhooks from Resend. Use to get webhook IDs and see which endpoints and events are configured. Email webhook payloads include `data.message_id` for all email event types.',
       inputSchema: {},
     },
     async () => {
@@ -100,7 +100,8 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
     'get-webhook',
     {
       title: 'Get Webhook',
-      description: 'Get a webhook by ID from Resend.',
+      description:
+        'Get a webhook by ID from Resend. Email webhook payloads include `data.message_id` for all email event types.',
       inputSchema: {
         webhookId: z.string().nonempty().describe('Webhook ID'),
       },

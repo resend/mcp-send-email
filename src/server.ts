@@ -24,6 +24,8 @@ import {
 import type { ServerOptions } from './types.js';
 
 export type { ServerOptions } from './types.js';
+export type * from './types/emails.js';
+export type * from './types/webhook-events.js';
 
 export function createMcpServer(
   resend: Resend,

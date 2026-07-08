@@ -292,7 +292,7 @@ export function addEmailTools(
 
 **NOT for:** Listing broadcast campaigns (use list-broadcasts). Not for composing or sending.
 
-**Returns:** Paginated list with to, subject, status, created_at, and ID per email.
+**Returns:** Paginated list with to, subject, status, created_at, message_id, and ID per email.
 
 **When to use:**
 - User asks "what emails were sent?", "show recent emails", "did my email go out?"
@@ -367,7 +367,7 @@ export function addEmailTools(
           const scheduledInfo = email.scheduled_at
             ? ` (Scheduled: ${email.scheduled_at})`
             : '';
-          return `- To: ${to} | Subject: "${email.subject}" | Status: ${email.last_event} | Sent: ${email.created_at}${scheduledInfo} | ID: ${email.id}`;
+          return `- To: ${to} | Subject: "${email.subject}" | Status: ${email.last_event} | Sent: ${email.created_at}${scheduledInfo} | Message ID: ${email.message_id} | ID: ${email.id}`;
         })
         .join('\n');
 
@@ -387,7 +387,7 @@ export function addEmailTools(
     {
       title: 'Get Email',
       description:
-        'Retrieve full details of a specific sent transactional email by ID, including HTML and plain text content.',
+        'Retrieve full details of a specific sent transactional email by ID, including message_id, HTML and plain text content.',
       inputSchema: {
         id: z.string().describe('The email ID to retrieve'),
       },
@@ -426,6 +426,7 @@ export function addEmailTools(
 
       let details = `Email Details:\n`;
       details += `- ID: ${email.id}\n`;
+      details += `- Message ID: ${email.message_id}\n`;
       details += `- From: ${email.from}\n`;
       details += `- To: ${to}\n`;
       if (cc) details += `- CC: ${cc}\n`;
@@ -459,7 +460,7 @@ export function addEmailTools(
 
 **NOT for:** Listing emails you sent (use list-emails). Not for listing broadcasts (use list-broadcasts).
 
-**Returns:** Paginated metadata: from, to, subject, received time. Use get-received-email with an ID for full content.`,
+**Returns:** Paginated metadata: from, to, subject, message_id, received time. Use get-received-email with an ID for full content.`,
       inputSchema: {
         limit: z
           .number()
@@ -526,7 +527,7 @@ export function addEmailTools(
           const attachmentCount = email.attachments?.length ?? 0;
           const attachmentInfo =
             attachmentCount > 0 ? ` | Attachments: ${attachmentCount}` : '';
-          return `- From: ${email.from} | To: ${to} | Subject: "${email.subject}" | Received: ${email.created_at}${attachmentInfo} | ID: ${email.id}`;
+          return `- From: ${email.from} | To: ${to} | Subject: "${email.subject}" | Message ID: ${email.message_id} | Received: ${email.created_at}${attachmentInfo} | ID: ${email.id}`;
         })
         .join('\n');
 
