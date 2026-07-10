@@ -1,6 +1,9 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import type { Resend } from 'resend';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { addEmailTools } from '../../src/tools/emails.js';
@@ -193,5 +196,61 @@ describe('send-batch-emails idempotency key', () => {
     });
 
     expect(batchSend).toHaveBeenCalledWith(expect.any(Array), undefined);
+  });
+});
+
+describe('send-batch-emails optional fields', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    batchSend.mockResolvedValue({
+      data: { data: [{ id: 'email_1' }] },
+      error: null,
+    });
+  });
+
+  it('passes scheduledAt, tags, and attachments to the SDK', async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'resend-mcp-'));
+    const filePath = path.join(tmpDir, 'invoice.pdf');
+    await fs.writeFile(filePath, 'pdf-content');
+
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'send-batch-emails',
+      arguments: {
+        emails: [
+          {
+            from: 'onboarding@resend.dev',
+            to: ['foo@example.com'],
+            subject: 'Receipt',
+            text: 'Thanks for your purchase',
+            scheduledAt: 'tomorrow at 10am',
+            tags: [{ name: 'category', value: 'receipt' }],
+            attachments: [
+              {
+                filename: 'invoice.pdf',
+                filePath,
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(batchSend).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          scheduledAt: 'tomorrow at 10am',
+          tags: [{ name: 'category', value: 'receipt' }],
+          attachments: [
+            expect.objectContaining({
+              filename: 'invoice.pdf',
+              content: Buffer.from('pdf-content'),
+            }),
+          ],
+        }),
+      ],
+      undefined,
+    );
   });
 });
