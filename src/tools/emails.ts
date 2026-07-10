@@ -122,6 +122,13 @@ export function addEmailTools(
           .describe(
             'Topic ID for subscription-based sending. When set, the email respects contact subscription preferences for this topic.',
           ),
+        idempotencyKey: z
+          .string()
+          .max(256)
+          .optional()
+          .describe(
+            'Optional unique key that prevents duplicate sends on retries (sent as the Idempotency-Key header). Use the same key when retrying the same logical email; use a new key for a different email. Max 256 characters.',
+          ),
         // If sender email address is not provided, the tool requires it as an argument
         ...(!senderEmailAddress
           ? {
@@ -158,6 +165,7 @@ export function addEmailTools(
       attachments,
       tags,
       topicId,
+      idempotencyKey,
     }) => {
       const fromEmailAddress = from ?? senderEmailAddress;
       const replyToEmailAddresses = replyTo ?? replierEmailAddresses;
@@ -265,7 +273,10 @@ export function addEmailTools(
         emailRequest.topicId = topicId;
       }
 
-      const response = await resend.emails.send(emailRequest);
+      const response = await resend.emails.send(
+        emailRequest,
+        idempotencyKey ? { idempotencyKey } : undefined,
+      );
 
       if (response.error) {
         throw new Error(
@@ -1014,9 +1025,16 @@ export function addEmailTools(
           .min(1)
           .max(100)
           .describe('Array of email objects to send (1-100 emails)'),
+        idempotencyKey: z
+          .string()
+          .max(256)
+          .optional()
+          .describe(
+            'Optional unique key for the whole batch that prevents duplicate batch sends on retries (sent as the Idempotency-Key header). Use the same key when retrying the same batch; use a new key for a different batch. Max 256 characters.',
+          ),
       },
     },
-    async ({ emails }) => {
+    async ({ emails, idempotencyKey }) => {
       const emailRequests = emails.map((email) => {
         const fromAddress = email.from ?? senderEmailAddress;
         const replyToAddresses = email.replyTo ?? replierEmailAddresses;
@@ -1047,6 +1065,7 @@ export function addEmailTools(
 
       const response = await resend.batch.send(
         emailRequests as unknown as Parameters<typeof resend.batch.send>[0],
+        idempotencyKey ? { idempotencyKey } : undefined,
       );
 
       if (response.error) {

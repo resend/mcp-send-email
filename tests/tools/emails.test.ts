@@ -6,9 +6,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { addEmailTools } from '../../src/tools/emails.js';
 
 const send = vi.fn();
+const batchSend = vi.fn();
 
 const resend = {
   emails: { send },
+  batch: { send: batchSend },
 } as unknown as Resend;
 
 async function makeClient() {
@@ -59,6 +61,7 @@ describe('send-email from address format', () => {
       expect.objectContaining({
         from: 'onboarding@resend.dev',
       }),
+      undefined,
     );
     expect(textOf(result)).toContain('Email sent successfully');
   });
@@ -80,7 +83,115 @@ describe('send-email from address format', () => {
       expect.objectContaining({
         from: 'Acme <onboarding@resend.dev>',
       }),
+      undefined,
     );
     expect(textOf(result)).toContain('Email sent successfully');
+  });
+});
+
+describe('send-email idempotency key', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    send.mockResolvedValue({
+      data: { id: 'email_1' },
+      error: null,
+    });
+  });
+
+  it('passes idempotencyKey as the SDK options argument', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'send-email',
+      arguments: {
+        from: 'Acme <onboarding@resend.dev>',
+        to: ['delivered@resend.dev'],
+        subject: 'hello',
+        text: 'world',
+        idempotencyKey: 'welcome-user/123456789',
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: 'Acme <onboarding@resend.dev>',
+        to: ['delivered@resend.dev'],
+      }),
+      { idempotencyKey: 'welcome-user/123456789' },
+    );
+  });
+
+  it('omits SDK options when idempotencyKey is not provided', async () => {
+    const client = await makeClient();
+    await client.callTool({
+      name: 'send-email',
+      arguments: {
+        from: 'onboarding@resend.dev',
+        to: ['delivered@resend.dev'],
+        subject: 'hello',
+        text: 'world',
+      },
+    });
+
+    expect(send).toHaveBeenCalledWith(expect.any(Object), undefined);
+  });
+});
+
+describe('send-batch-emails idempotency key', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    batchSend.mockResolvedValue({
+      data: { data: [{ id: 'email_1' }, { id: 'email_2' }] },
+      error: null,
+    });
+  });
+
+  it('passes idempotencyKey as the SDK options argument', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'send-batch-emails',
+      arguments: {
+        emails: [
+          {
+            from: 'Acme <onboarding@resend.dev>',
+            to: ['foo@example.com'],
+            subject: 'hello',
+            text: 'one',
+          },
+          {
+            from: 'Acme <onboarding@resend.dev>',
+            to: ['bar@example.com'],
+            subject: 'hello',
+            text: 'two',
+          },
+        ],
+        idempotencyKey: 'team-quota/123456789',
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(batchSend).toHaveBeenCalledWith(expect.any(Array), {
+      idempotencyKey: 'team-quota/123456789',
+    });
+    expect(textOf(result)).toContain('Batch sent successfully');
+  });
+
+  it('omits SDK options when idempotencyKey is not provided', async () => {
+    const client = await makeClient();
+    await client.callTool({
+      name: 'send-batch-emails',
+      arguments: {
+        emails: [
+          {
+            from: 'onboarding@resend.dev',
+            to: ['foo@example.com'],
+            subject: 'hello',
+            text: 'one',
+          },
+        ],
+      },
+    });
+
+    expect(batchSend).toHaveBeenCalledWith(expect.any(Array), undefined);
   });
 });
