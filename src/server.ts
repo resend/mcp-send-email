@@ -7,6 +7,7 @@ import {
   addApiKeyTools,
   addAutomationTools,
   addBroadcastTools,
+  addContactImportTools,
   addContactPropertyTools,
   addContactTools,
   addDomainTools,
@@ -14,6 +15,7 @@ import {
   addEmailTools,
   addEventTools,
   addLogTools,
+  addOAuthGrantTools,
   addSegmentTools,
   addTemplateTools,
   addTopicTools,
@@ -28,7 +30,7 @@ export function createMcpServer(
   options: ServerOptions,
   apiKey: string,
 ): McpServer {
-  const { senderEmailAddress, replierEmailAddresses } = options;
+  const { senderEmailAddress, replierEmailAddresses = [] } = options;
   const server = new McpServer({
     name: 'resend',
     version: packageJson.version,
@@ -45,12 +47,14 @@ export function createMcpServer(
     replierEmailAddresses,
     withEditorSession,
   });
+  addContactImportTools(server, resend);
   addContactPropertyTools(server, resend);
   addContactTools(server, resend);
   addDomainTools(server, resend);
   addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
   addEventTools(server, resend);
   addLogTools(server, resend);
+  addOAuthGrantTools(server, resend);
   addSegmentTools(server, resend);
   addTemplateTools(server, resend, apiClient, { withEditorSession });
   addTopicTools(server, resend);

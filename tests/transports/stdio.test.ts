@@ -11,6 +11,7 @@ vi.mock('../../src/server.js', () => ({
 }));
 
 vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
+  // biome-ignore lint/complexity/useArrowFunction: arrow functions cannot be used as constructors
   StdioServerTransport: vi.fn(function () {
     return {};
   }),

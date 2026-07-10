@@ -5,6 +5,7 @@
     "moduleResolution": "nodenext",
     "resolveJsonModule": true,
     "jsx": "react-jsx",
+    "declaration": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,

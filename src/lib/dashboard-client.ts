@@ -3,8 +3,13 @@ const DEFAULT_DASHBOARD_URL = 'https://resend.com';
 export class DashboardClient {
   private dashboardUrl: string;
 
-  constructor() {
-    this.dashboardUrl = DEFAULT_DASHBOARD_URL;
+  constructor(options?: { dashboardUrl?: string }) {
+    // Defaults from RESEND_DASHBOARD_URL so editor/TipTap tooling can follow a
+    // non-production dashboard when set.
+    this.dashboardUrl =
+      options?.dashboardUrl ||
+      process.env.RESEND_DASHBOARD_URL ||
+      DEFAULT_DASHBOARD_URL;
   }
 
   async getTiptapSchema() {

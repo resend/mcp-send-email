@@ -1,7 +1,18 @@
 import type { ParsedArgs } from 'minimist';
 import { DEFAULT_HTTP_PORT } from './constants.js';
-import { parseReplierAddresses } from './parse.js';
+import { parseAllowedHosts, parseReplierAddresses } from './parse.js';
 import type { ResolveResult } from './types.js';
+
+function resolveHost(
+  parsed: ParsedArgs,
+  env: NodeJS.ProcessEnv,
+): string | undefined {
+  if (typeof parsed.host === 'string' && parsed.host.trim() !== '')
+    return parsed.host.trim();
+  if (typeof env.MCP_HOST === 'string' && env.MCP_HOST.trim() !== '')
+    return env.MCP_HOST.trim();
+  return undefined;
+}
 
 function parsePort(parsed: ParsedArgs, env: NodeJS.ProcessEnv): number {
   const fromArg =
@@ -60,7 +71,13 @@ export function resolveConfig(
   return {
     ok: true,
     config: http
-      ? { ...base, transport: 'http' as const, apiKey: apiKey?.trim() }
+      ? {
+          ...base,
+          transport: 'http' as const,
+          apiKey: apiKey?.trim(),
+          host: resolveHost(parsed, env),
+          allowedHosts: parseAllowedHosts(parsed, env),
+        }
       : { ...base, transport: 'stdio' as const, apiKey: apiKey!.trim() },
   };
 }
