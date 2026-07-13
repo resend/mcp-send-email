@@ -967,9 +967,9 @@ export function addEmailTools(
     'send-batch-emails',
     {
       title: 'Send Batch Emails',
-      description: `**Purpose:** Send up to 100 transactional emails in one API call. Each item has the same fields as send-email (to, subject, text, from, etc.).
+      description: `**Purpose:** Send up to 100 transactional emails in one API call.
 
-**NOT for:** Sending one email (use send-email) or the same content to a segment (use create-broadcast + send-broadcast).
+**NOT for:** Sending one email (use send-email), scheduling emails, attaching files, or sending the same content to a segment (use create-broadcast + send-broadcast). Batch emails support tags but not attachments or scheduledAt.
 
 **When to use:** User wants to send many individual emails in bulk (e.g. 50 password resets, 100 receipts). Not for one-to-many broadcasts.`,
       inputSchema: {
@@ -1001,52 +1001,6 @@ export function addEmailTools(
                 .array(z.email())
                 .optional()
                 .describe('BCC email addresses'),
-              scheduledAt: z
-                .string()
-                .optional()
-                .describe(
-                  "Optional schedule time. Uses natural language (e.g., 'tomorrow at 10am') or ISO 8601.",
-                ),
-              attachments: z
-                .array(
-                  z.object({
-                    filename: z
-                      .string()
-                      .describe(
-                        'Name of the file with extension (e.g., "report.pdf")',
-                      ),
-                    filePath: z
-                      .string()
-                      .optional()
-                      .describe('Local file path to read and attach'),
-                    url: z
-                      .string()
-                      .optional()
-                      .describe(
-                        'URL where the file is hosted (Resend will fetch it)',
-                      ),
-                    content: z
-                      .string()
-                      .optional()
-                      .describe('Base64-encoded file content'),
-                    contentType: z
-                      .string()
-                      .optional()
-                      .describe(
-                        'MIME type (e.g., "application/pdf"). Auto-derived from filename if not set',
-                      ),
-                    contentId: z
-                      .string()
-                      .optional()
-                      .describe(
-                        'Content ID for inline images. Reference in HTML with cid:<contentId>',
-                      ),
-                  }),
-                )
-                .optional()
-                .describe(
-                  'Array of file attachments. Each needs filename plus one of: filePath, url, or content. Max 40MB total.',
-                ),
               tags: z
                 .array(
                   z.object({
@@ -1077,63 +1031,32 @@ export function addEmailTools(
       },
     },
     async ({ emails, idempotencyKey }) => {
-      const emailRequests = await Promise.all(
-        emails.map(async (email) => {
-          const fromAddress = email.from ?? senderEmailAddress;
-          const replyToAddresses = email.replyTo ?? replierEmailAddresses;
+      const emailRequests = emails.map((email) => {
+        const fromAddress = email.from ?? senderEmailAddress;
+        const replyToAddresses = email.replyTo ?? replierEmailAddresses;
 
-          if (typeof fromAddress !== 'string') {
-            throw new Error(
-              `from address must be provided for email to ${email.to.join(', ')}`,
-            );
-          }
+        if (typeof fromAddress !== 'string') {
+          throw new Error(
+            `from address must be provided for email to ${email.to.join(', ')}`,
+          );
+        }
 
-          const request: Record<string, unknown> = {
-            to: email.to,
-            subject: email.subject,
-            text: email.text,
-            from: fromAddress,
-            replyTo: replyToAddresses,
-          };
+        const request: Record<string, unknown> = {
+          to: email.to,
+          subject: email.subject,
+          text: email.text,
+          from: fromAddress,
+          replyTo: replyToAddresses,
+        };
 
-          if (email.html) request.html = email.html;
-          if (email.cc) request.cc = email.cc;
-          if (email.bcc) request.bcc = email.bcc;
-          if (email.scheduledAt) request.scheduledAt = email.scheduledAt;
-          if (email.tags && email.tags.length > 0) request.tags = email.tags;
-          if (email.topicId) request.topicId = email.topicId;
+        if (email.html) request.html = email.html;
+        if (email.cc) request.cc = email.cc;
+        if (email.bcc) request.bcc = email.bcc;
+        if (email.tags && email.tags.length > 0) request.tags = email.tags;
+        if (email.topicId) request.topicId = email.topicId;
 
-          if (email.attachments && email.attachments.length > 0) {
-            request.attachments = await Promise.all(
-              email.attachments.map(async (att) => {
-                const result: {
-                  filename?: string;
-                  content?: Buffer;
-                  path?: string;
-                  contentType?: string;
-                  contentId?: string;
-                } = {};
-
-                if (att.filename) result.filename = att.filename;
-                if (att.contentType) result.contentType = att.contentType;
-                if (att.contentId) result.contentId = att.contentId;
-
-                if (att.filePath) {
-                  result.content = await fs.readFile(att.filePath);
-                } else if (att.url) {
-                  result.path = att.url;
-                } else if (att.content) {
-                  result.content = Buffer.from(att.content, 'base64');
-                }
-
-                return result;
-              }),
-            );
-          }
-
-          return request;
-        }),
-      );
+        return request;
+      });
 
       const response = await resend.batch.send(
         emailRequests as unknown as Parameters<typeof resend.batch.send>[0],

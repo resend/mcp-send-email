@@ -1,6 +1,3 @@
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -199,7 +196,7 @@ describe('send-batch-emails idempotency key', () => {
   });
 });
 
-describe('send-batch-emails optional fields', () => {
+describe('send-batch-emails tags', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     batchSend.mockResolvedValue({
@@ -208,11 +205,7 @@ describe('send-batch-emails optional fields', () => {
     });
   });
 
-  it('passes scheduledAt, tags, and attachments to the SDK', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'resend-mcp-'));
-    const filePath = path.join(tmpDir, 'invoice.pdf');
-    await fs.writeFile(filePath, 'pdf-content');
-
+  it('passes tags to the SDK', async () => {
     const client = await makeClient();
     const result = await client.callTool({
       name: 'send-batch-emails',
@@ -223,14 +216,7 @@ describe('send-batch-emails optional fields', () => {
             to: ['foo@example.com'],
             subject: 'Receipt',
             text: 'Thanks for your purchase',
-            scheduledAt: 'tomorrow at 10am',
             tags: [{ name: 'category', value: 'receipt' }],
-            attachments: [
-              {
-                filename: 'invoice.pdf',
-                filePath,
-              },
-            ],
           },
         ],
       },
@@ -240,14 +226,7 @@ describe('send-batch-emails optional fields', () => {
     expect(batchSend).toHaveBeenCalledWith(
       [
         expect.objectContaining({
-          scheduledAt: 'tomorrow at 10am',
           tags: [{ name: 'category', value: 'receipt' }],
-          attachments: [
-            expect.objectContaining({
-              filename: 'invoice.pdf',
-              content: Buffer.from('pdf-content'),
-            }),
-          ],
         }),
       ],
       undefined,
