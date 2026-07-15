@@ -969,7 +969,7 @@ export function addEmailTools(
       title: 'Send Batch Emails',
       description: `**Purpose:** Send up to 100 transactional emails in one API call.
 
-**NOT for:** Sending one email (use send-email), scheduling emails, attaching files, or sending the same content to a segment (use create-broadcast + send-broadcast). Batch emails support tags but not attachments or scheduledAt.
+**NOT for:** Sending one email (use send-email), scheduling emails, or sending the same content to a segment (use create-broadcast + send-broadcast). Batch emails support tags only as an extra per-email field.
 
 **When to use:** User wants to send many individual emails in bulk (e.g. 50 password resets, 100 receipts). Not for one-to-many broadcasts.`,
       inputSchema: {
