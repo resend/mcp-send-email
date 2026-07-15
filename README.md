@@ -389,6 +389,7 @@ Resend's MCP server gives your AI agent native access to the full Resend platfor
 - **Events**: Send events to trigger automations for a contact. Create, update, and remove event definitions.
 - **Domains**: Create, list, get, update, remove, and verify sender domains. Configure tracking, TLS, and sending/receiving capabilities. Create and verify domain claims.
 - **Segments**: Create, list, get, and remove audience segments.
+- **Suppressions**: Create, list, get, and remove suppressed email addresses, individually or in batch. Filter by origin (bounce, complaint, or manual).
 - **Topics**: Create, list, get, update, and remove subscription topics.
 - **Contact Properties**: Create, list, get, update, and remove custom contact attributes.
 - **API Keys**: Create, list, and remove API keys.
