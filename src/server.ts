@@ -17,6 +17,7 @@ import {
   addLogTools,
   addOAuthGrantTools,
   addSegmentTools,
+  addSuppressionTools,
   addTemplateTools,
   addTopicTools,
   addWebhookTools,
@@ -56,6 +57,7 @@ export function createMcpServer(
   addLogTools(server, resend);
   addOAuthGrantTools(server, resend);
   addSegmentTools(server, resend);
+  addSuppressionTools(server, resend);
   addTemplateTools(server, resend, apiClient, { withEditorSession });
   addTopicTools(server, resend);
   addWebhookTools(server, resend);
