@@ -1,5 +1,7 @@
 # Resend MCP Server
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Fresend%2Fmcp-send-email.svg)](https://mcptoplist.com/server/glama%2Fresend%2Fmcp-send-email)
+
 [![smithery badge](https://smithery.ai/badge/@resend/resend-mcp)](https://smithery.ai/server/@resend/resend-mcp)
 [![npm version](https://img.shields.io/npm/v/resend-mcp)](https://www.npmjs.com/package/resend-mcp)
 
