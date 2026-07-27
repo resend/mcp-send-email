@@ -199,6 +199,23 @@ describe('send-email idempotency key', () => {
 
     expect(send).toHaveBeenCalledWith(expect.any(Object), undefined);
   });
+
+  it('rejects an empty idempotencyKey before calling the SDK', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'send-email',
+      arguments: {
+        from: 'onboarding@resend.dev',
+        to: ['delivered@resend.dev'],
+        subject: 'hello',
+        text: 'world',
+        idempotencyKey: '',
+      },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(send).not.toHaveBeenCalled();
+  });
 });
 
 describe('send-batch-emails idempotency key', () => {
@@ -257,6 +274,27 @@ describe('send-batch-emails idempotency key', () => {
     });
 
     expect(batchSend).toHaveBeenCalledWith(expect.any(Array), undefined);
+  });
+
+  it('rejects an empty idempotencyKey before calling the SDK', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'send-batch-emails',
+      arguments: {
+        emails: [
+          {
+            from: 'onboarding@resend.dev',
+            to: ['foo@example.com'],
+            subject: 'hello',
+            text: 'one',
+          },
+        ],
+        idempotencyKey: '',
+      },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(batchSend).not.toHaveBeenCalled();
   });
 });
 
