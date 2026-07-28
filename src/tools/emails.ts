@@ -130,10 +130,11 @@ export function addEmailTools(
           ),
         idempotencyKey: z
           .string()
+          .min(1)
           .max(256)
           .optional()
           .describe(
-            'Optional unique key that prevents duplicate sends on retries (sent as the Idempotency-Key header). Use the same key when retrying the same logical email; use a new key for a different email. Max 256 characters.',
+            'Optional unique key that prevents duplicate sends on retries (sent as the Idempotency-Key header). Use the same key when retrying the same logical email; use a new key for a different email. Must be 1-256 characters.',
           ),
         // If sender email address is not provided, the tool requires it as an argument
         ...(!senderEmailAddress
@@ -1047,10 +1048,11 @@ export function addEmailTools(
           .describe('Array of email objects to send (1-100 emails)'),
         idempotencyKey: z
           .string()
+          .min(1)
           .max(256)
           .optional()
           .describe(
-            'Optional unique key for the whole batch that prevents duplicate batch sends on retries (sent as the Idempotency-Key header). Use the same key when retrying the same batch; use a new key for a different batch. Max 256 characters.',
+            'Optional unique key for the whole batch that prevents duplicate batch sends on retries (sent as the Idempotency-Key header). Use the same key when retrying the same batch; use a new key for a different batch. Must be 1-256 characters.',
           ),
       },
     },
