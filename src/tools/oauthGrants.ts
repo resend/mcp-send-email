@@ -7,6 +7,7 @@ export function addOAuthGrantTools(server: McpServer, resend: Resend) {
     'list-oauth-grants',
     {
       title: 'List OAuth Grants',
+      annotations: { readOnlyHint: true },
       description:
         "List OAuth grants for the team — the apps authorized to act on the team's behalf. Returns every grant, active and revoked; a grant with a non-null revoked_at is no longer active. Each grant includes the client (app) name, scopes, and creation date. Don't bother telling the user the IDs unless they ask for them.",
       inputSchema: {

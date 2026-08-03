@@ -215,6 +215,7 @@ export function addBroadcastTools(
     'list-broadcasts',
     {
       title: 'List Broadcasts',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** List all broadcast campaigns (newsletters/bulk emails to audiences) with ID, name, audience, status, timestamps.
 
 **NOT for:** Listing transactional emails (use list-emails). Not for listing segments or contacts (use list-segments, list-contacts).
@@ -273,6 +274,7 @@ export function addBroadcastTools(
     'get-broadcast',
     {
       title: 'Get Broadcast',
+      annotations: { readOnlyHint: true },
       description:
         'Retrieve full details of a specific broadcast by ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>), including HTML and plain text content.',
       inputSchema: {

@@ -168,6 +168,7 @@ export function addContactImportTools(server: McpServer, resend: Resend) {
     'get-contact-import',
     {
       title: 'Get Contact Import',
+      annotations: { readOnlyHint: true },
       description:
         'Get the status and counts of a contact import by ID. Use after create-contact-import to track progress (queued, in_progress, completed, failed).',
       inputSchema: {
@@ -212,6 +213,7 @@ export function addContactImportTools(server: McpServer, resend: Resend) {
     'list-contact-imports',
     {
       title: 'List Contact Imports',
+      annotations: { readOnlyHint: true },
       description:
         'List contact imports from Resend. Optionally filter by status. Use to discover import IDs or review past imports.',
       inputSchema: {

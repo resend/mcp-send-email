@@ -45,6 +45,7 @@ export function addSuppressionTools(server: McpServer, resend: Resend) {
     'list-suppressions',
     {
       title: 'List Suppressions',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** List email addresses on the suppression list. Suppressed addresses never receive emails from the account. Optionally filter by origin: "bounce" (added automatically after a hard bounce), "complaint" (added automatically after a spam complaint), or "manual" (added via the API or dashboard).
 
 **NOT for:** Checking a single address (use get-suppression). Not for listing contacts (use list-contacts).
@@ -145,6 +146,7 @@ export function addSuppressionTools(server: McpServer, resend: Resend) {
     'get-suppression',
     {
       title: 'Get Suppression',
+      annotations: { readOnlyHint: true },
       description:
         'Get a suppression list entry by ID or email address from Resend. Use this to check whether a specific address is suppressed and why (origin: bounce, complaint, or manual).',
       inputSchema: {

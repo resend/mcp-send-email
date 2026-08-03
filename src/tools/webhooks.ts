@@ -67,6 +67,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
     'list-webhooks',
     {
       title: 'List Webhooks',
+      annotations: { readOnlyHint: true },
       description:
         'List all webhooks from Resend. Use to get webhook IDs and see which endpoints and events are configured. Not for listing emails, segments, or broadcasts.',
       inputSchema: {},
@@ -100,6 +101,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
     'get-webhook',
     {
       title: 'Get Webhook',
+      annotations: { readOnlyHint: true },
       description: 'Get a webhook by ID from Resend.',
       inputSchema: {
         webhookId: z.string().nonempty().describe('Webhook ID'),

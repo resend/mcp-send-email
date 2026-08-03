@@ -63,6 +63,7 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
     'list-api-keys',
     {
       title: 'List API Keys',
+      annotations: { readOnlyHint: true },
       description:
         "List all API keys from Resend. Returns API key names, IDs, and creation dates. Don't bother telling the user the IDs or creation dates unless they ask for them.",
       inputSchema: {

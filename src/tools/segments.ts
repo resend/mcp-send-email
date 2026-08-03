@@ -36,6 +36,7 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
     'list-segments',
     {
       title: 'List Segments',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** List all segments in the account. Use to get segment IDs required by create-contact, create-broadcast, list-contacts.
 
 **NOT for:** Listing contacts inside a segment (use list-contacts with segmentId). Not for listing broadcasts (use list-broadcasts).
@@ -125,6 +126,7 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
     'get-segment',
     {
       title: 'Get Segment',
+      annotations: { readOnlyHint: true },
       description: 'Get a segment by ID from Resend.',
       inputSchema: {
         id: z.string().nonempty().describe('Segment ID'),

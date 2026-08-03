@@ -132,6 +132,7 @@ export function addTemplateTools(
     'list-templates',
     {
       title: 'List Templates',
+      annotations: { readOnlyHint: true },
       description:
         "List all email templates from Resend. Returns template names, statuses, and aliases. Don't bother telling the user the IDs unless they ask for them.",
       inputSchema: {
@@ -216,6 +217,7 @@ export function addTemplateTools(
     'get-template',
     {
       title: 'Get Template',
+      annotations: { readOnlyHint: true },
       description:
         'Get an email template by ID, alias, or Resend dashboard URL (e.g. https://resend.com/templates/<id>) from Resend. Returns full template details including HTML content, variables, and publish status.',
       inputSchema: {

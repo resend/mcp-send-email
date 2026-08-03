@@ -7,6 +7,7 @@ export function addLogTools(server: McpServer, resend: Resend) {
     'list-logs',
     {
       title: 'List Logs',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** List API request logs for the account. Use to review recent API activity, debug issues, or audit API usage.
 
 **Returns:** For each log: id, created_at, endpoint, method, response_status, user_agent. Use pagination (limit, after/before) for large lists.
@@ -106,6 +107,7 @@ export function addLogTools(server: McpServer, resend: Resend) {
     'get-log',
     {
       title: 'Get Log',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** Get detailed information about a specific API request log, including the full request and response bodies.
 
 **Returns:** Log details: id, created_at, endpoint, method, response_status, user_agent, request_body, response_body.
