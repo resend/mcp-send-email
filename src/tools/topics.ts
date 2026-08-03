@@ -54,6 +54,7 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     'list-topics',
     {
       title: 'List Topics',
+      annotations: { readOnlyHint: true },
       description:
         'List all topics from Resend. This tool is useful for getting topic IDs to use with other tools like send-email.',
       inputSchema: {},
@@ -94,6 +95,7 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     'get-topic',
     {
       title: 'Get Topic',
+      annotations: { readOnlyHint: true },
       description: 'Get a topic by ID from Resend.',
       inputSchema: {
         id: z.string().nonempty().describe('Topic ID'),

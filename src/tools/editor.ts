@@ -66,6 +66,7 @@ export function addEditorTools(
     'get-tiptap-json-content',
     {
       title: 'Get TipTap JSON Content',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** Retrieve the existing TipTap JSON content of a broadcast or template, optionally bundled with the TipTap schema reference. Also connects the agent to the editor so the avatar is visible while content is being generated.
 
 **When to use:**

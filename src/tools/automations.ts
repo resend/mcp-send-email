@@ -280,6 +280,7 @@ ${WORKFLOW_GUIDANCE}`,
     'get-automation',
     {
       title: 'Get Automation',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** Get details of a specific automation (with its workflow) or list all automations.
 
 **Modes:**
@@ -447,6 +448,7 @@ ${WORKFLOW_GUIDANCE}`,
     'get-automation-runs',
     {
       title: 'Get Automation Runs',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** List runs for an automation, or get details of a specific run.
 
 **Modes:**

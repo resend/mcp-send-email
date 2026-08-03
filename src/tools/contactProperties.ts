@@ -57,6 +57,7 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
     'list-contact-properties',
     {
       title: 'List Contact Properties',
+      annotations: { readOnlyHint: true },
       description:
         "List all contact properties from Resend. This tool is useful for getting property IDs and seeing which custom attributes are configured. If you need a contact property ID, you MUST use this tool to get all available properties and then ask the user to select the one they want. Don't bother telling the user the IDs or creation dates unless they ask for them.",
       inputSchema: {
@@ -141,6 +142,7 @@ export function addContactPropertyTools(server: McpServer, resend: Resend) {
     'get-contact-property',
     {
       title: 'Get Contact Property',
+      annotations: { readOnlyHint: true },
       description: 'Get a contact property by ID from Resend.',
       inputSchema: {
         contactPropertyId: z

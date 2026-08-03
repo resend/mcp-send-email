@@ -84,6 +84,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
     'list-contacts',
     {
       title: 'List Contacts',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** List contacts from Resend. Optionally filter by segment. Use to discover contact IDs or emails.
 
 **NOT for:** Listing segments (use list-segments). Not for listing sent emails (use list-emails) or broadcasts (use list-broadcasts).
@@ -198,6 +199,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
     'get-contact',
     {
       title: 'Get Contact',
+      annotations: { readOnlyHint: true },
       description: 'Get a contact by ID or email from Resend.',
       inputSchema: {
         id: z.string().optional().describe('Contact ID'),
@@ -447,6 +449,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
     'list-contact-segments',
     {
       title: 'List Contact Segments',
+      annotations: { readOnlyHint: true },
       description:
         "List all segments a contact belongs to in Resend (by contact ID or email). Don't bother telling the user the IDs or creation dates unless they ask for them.",
       inputSchema: {
@@ -544,6 +547,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
     'list-contact-topics',
     {
       title: 'List Contact Topics',
+      annotations: { readOnlyHint: true },
       description:
         "List all topic subscriptions for a contact in Resend (by contact ID or email). Don't bother telling the user the IDs unless they ask for them.",
       inputSchema: {

@@ -141,6 +141,7 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     'list-domains',
     {
       title: 'List Domains',
+      annotations: { readOnlyHint: true },
       description:
         "List all domains from Resend. Returns domain names, statuses, regions, and capabilities. Don't bother telling the user the IDs unless they ask for them.",
       inputSchema: {
@@ -225,6 +226,7 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     'get-domain',
     {
       title: 'Get Domain',
+      annotations: { readOnlyHint: true },
       description:
         'Get a domain by ID from Resend. Returns full domain details including DNS records needed for verification.',
       inputSchema: {
@@ -475,6 +477,7 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     'get-domain-claim',
     {
       title: 'Get Domain Claim',
+      annotations: { readOnlyHint: true },
       description:
         'Retrieve the latest claim for a domain by its placeholder Domain ID (the domain_id from create-domain-claim). Returns claim status and the TXT record needed to prove ownership. Poll until status is "completed".',
       inputSchema: {

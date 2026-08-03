@@ -312,6 +312,7 @@ export function addEmailTools(
     'list-emails',
     {
       title: 'List Emails',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** List recently sent emails (transactional emails sent via send-email) with metadata: recipient, subject, status, timestamps.
 
 **NOT for:** Listing broadcast campaigns (use list-broadcasts). Not for composing or sending.
@@ -410,6 +411,7 @@ export function addEmailTools(
     'get-email',
     {
       title: 'Get Email',
+      annotations: { readOnlyHint: true },
       description:
         'Retrieve full details of a specific sent transactional email by ID, including message_id, HTML and plain text content.',
       inputSchema: {
@@ -480,6 +482,7 @@ export function addEmailTools(
     'list-received-emails',
     {
       title: 'List Received Emails',
+      annotations: { readOnlyHint: true },
       description: `**Purpose:** List emails received (inbox) by your Resend receiving address. Use for "show my inbox", "what emails did I get?", "list incoming mail".
 
 **NOT for:** Listing emails you sent (use list-emails). Not for listing broadcasts (use list-broadcasts).
@@ -570,6 +573,7 @@ export function addEmailTools(
     'get-received-email',
     {
       title: 'Get Received Email',
+      annotations: { readOnlyHint: true },
       description:
         'Retrieve full details of a specific received email by ID, including HTML and plain text content, headers, and raw email download URL.',
       inputSchema: {
@@ -644,6 +648,7 @@ export function addEmailTools(
     'list-received-email-attachments',
     {
       title: 'List Received Email Attachments',
+      annotations: { readOnlyHint: true },
       description:
         'List all attachments from a specific received (inbox) email. Returns attachment metadata including filename, size, content type, and a time-limited download URL. Use for emails listed by list-received-emails.',
       inputSchema: {
@@ -728,6 +733,7 @@ export function addEmailTools(
     'get-received-email-attachment',
     {
       title: 'Get Received Email Attachment',
+      annotations: { readOnlyHint: true },
       description:
         'Retrieve details of a specific attachment from a received email, including a time-limited download URL.',
       inputSchema: {
@@ -845,6 +851,7 @@ export function addEmailTools(
     'list-sent-email-attachments',
     {
       title: 'List Sent Email Attachments',
+      annotations: { readOnlyHint: true },
       description:
         'List all attachments from a specific sent email (from send-email or list-emails). Returns attachment metadata including filename, size, content type, and a time-limited download URL.',
       inputSchema: {
@@ -928,6 +935,7 @@ export function addEmailTools(
     'get-sent-email-attachment',
     {
       title: 'Get Sent Email Attachment',
+      annotations: { readOnlyHint: true },
       description:
         'Retrieve details of a specific attachment from a sent email, including a time-limited download URL.',
       inputSchema: {
