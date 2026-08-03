@@ -79,7 +79,7 @@ export function addTemplateTools(
           .string()
           .optional()
           .describe(
-            'Plain text version of the message. If not provided, HTML will be used to generate it.',
+            'Plain text version of the message. If omitted, HTML will be used to generate it. Pass an empty string to disable automatic text generation.',
           ),
         alias: z
           .string()
@@ -100,7 +100,7 @@ export function addTemplateTools(
         ...(subject && { subject }),
         ...(from && { from }),
         ...(replyTo && { replyTo }),
-        ...(text && { text }),
+        ...(text !== undefined && { text }),
         ...(alias && { alias }),
         ...(variables && { variables }),
       } as CreateTemplateOptions);
@@ -465,7 +465,9 @@ export function addTemplateTools(
         text: z
           .string()
           .optional()
-          .describe('New plain text version of the message.'),
+          .describe(
+            'New plain text version of the message. Pass an empty string to disable automatic text generation.',
+          ),
         alias: z.string().optional().describe('New alias for the template.'),
         variables: z
           .array(templateVariableSchema)
@@ -493,7 +495,7 @@ export function addTemplateTools(
         ...(subject && { subject }),
         ...(from && { from }),
         ...(replyTo && { replyTo }),
-        ...(text && { text }),
+        ...(text !== undefined && { text }),
         ...(alias && { alias }),
         ...(variables && { variables }),
       } as UpdateTemplateOptions);

@@ -1,5 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { Resend } from 'resend';
+import type { CreateBroadcastOptions, Resend } from 'resend';
 import { z } from 'zod';
 import { EMAIL_HTML_RULES } from '../lib/email-html-rules.js';
 import type { ResendEditorClient } from '../lib/resend-editor-client.js';
@@ -55,9 +55,9 @@ export function addBroadcastTools(
         subject: z.string().nonempty().describe('Email subject'),
         text: z
           .string()
-          .nonempty()
+          .optional()
           .describe(
-            'Plain text version of the email content. The following placeholders may be used to personalize the email content: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}',
+            'Plain text version of the email content. The following placeholders may be used to personalize the email content: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}. If omitted, HTML will be used to generate it. Pass an empty string to disable automatic text generation.',
           ),
         html: z
           .string()
@@ -116,16 +116,36 @@ export function addBroadcastTools(
         throw new Error('replyTo argument must be provided.');
       }
 
-      const response = await resend.broadcasts.create({
-        name,
-        segmentId,
-        subject,
-        text,
-        html,
-        previewText,
-        from: fromEmailAddress,
-        replyTo: replyToEmailAddresses,
-      });
+      var options: CreateBroadcastOptions;
+
+      if (html) {
+        options = {
+          name,
+          segmentId,
+          subject,
+          html,
+          ...(text !== undefined && { text }),
+          previewText,
+          from: fromEmailAddress,
+          replyTo: replyToEmailAddresses,
+        };
+      } else if (text !== undefined) {
+        options = {
+          name,
+          segmentId,
+          subject,
+          text,
+          previewText,
+          from: fromEmailAddress,
+          replyTo: replyToEmailAddresses,
+        };
+      } else {
+        throw new Error(
+          'either the html argument or the text argument must be provided.',
+        );
+      }
+
+      const response = await resend.broadcasts.create(options);
 
       if (response.error) {
         throw new Error(
