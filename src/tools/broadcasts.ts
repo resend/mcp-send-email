@@ -71,21 +71,21 @@ export function addBroadcastTools(
           .describe('Preview text for the email'),
         ...(!senderEmailAddress
           ? {
-            from: z
-              .string()
-              .nonempty()
-              .describe(
-                'From email address (e.g. "onboarding@resend.com" or "Resend <onboarding@resend.com>")',
-              ),
-          }
+              from: z
+                .string()
+                .nonempty()
+                .describe(
+                  'From email address (e.g. "onboarding@resend.com" or "Resend <onboarding@resend.com>")',
+                ),
+            }
           : {}),
         ...(replierEmailAddresses.length === 0
           ? {
-            replyTo: z
-              .array(z.string())
-              .optional()
-              .describe('Reply-to email address(es)'),
-          }
+              replyTo: z
+                .array(z.string())
+                .optional()
+                .describe('Reply-to email address(es)'),
+            }
           : {}),
       },
     },
@@ -140,7 +140,9 @@ export function addBroadcastTools(
           replyTo: replyToEmailAddresses,
         };
       } else {
-        throw new Error('either the html argument or the text argument must be provided.');
+        throw new Error(
+          'either the html argument or the text argument must be provided.',
+        );
       }
 
       const response = await resend.broadcasts.create(options);
