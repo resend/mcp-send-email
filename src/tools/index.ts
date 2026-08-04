@@ -6,6 +6,7 @@ export * from './contactProperties.js';
 export * from './contacts.js';
 export * from './domains.js';
 export * from './editor.js';
+export * from './emailApproval.js';
 export * from './emails.js';
 export * from './events.js';
 export * from './logs.js';

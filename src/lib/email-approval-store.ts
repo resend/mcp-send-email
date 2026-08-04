@@ -89,14 +89,15 @@ export class EmailApprovalStore {
     if (this.drafts.size >= 3) {
       throw new Error('A session can have at most three pending drafts.');
     }
-    const attachments = this.createAttachments(input.attachments ?? []);
-    this.assertAttachmentLimit(attachments);
+    const attachmentInputs = input.attachments ?? [];
+    this.assertInputAttachmentLimit(attachmentInputs);
+    const attachments = this.createAttachments(attachmentInputs);
     const summary: EmailApprovalDraftSummary = {
       draftId: randomUUID(),
       revisionId: randomUUID(),
       expiresAt: new Date(this.now() + 15 * 60 * 1000).toISOString(),
-      attachments: attachments.map(({ content: _content, ...attachment }) =>
-        attachment,
+      attachments: attachments.map(
+        ({ content: _content, ...attachment }) => attachment,
       ),
     };
     const { attachments: _attachments, ...message } = input;
@@ -126,18 +127,25 @@ export class EmailApprovalStore {
         (candidate) => candidate.id === attachmentId,
       );
       if (!attachment) {
-        throw new Error(`Attachment ${attachmentId} was not found in this draft.`);
+        throw new Error(
+          `Attachment ${attachmentId} was not found in this draft.`,
+        );
       }
       return attachment;
     });
+    this.assertInputAttachmentLimit(
+      newAttachments,
+      draftId,
+      retainedAttachments,
+    );
     const addedAttachments = this.createAttachments(newAttachments);
     const attachments = [...retainedAttachments, ...addedAttachments];
     this.assertAttachmentLimit(attachments, draftId);
     const summary: EmailApprovalDraftSummary = {
       ...draft.summary,
       revisionId: randomUUID(),
-      attachments: attachments.map(({ content: _content, ...attachment }) =>
-        attachment,
+      attachments: attachments.map(
+        ({ content: _content, ...attachment }) => attachment,
       ),
     };
     this.drafts.set(draftId, { summary, input: message, attachments });
@@ -193,20 +201,49 @@ export class EmailApprovalStore {
     });
   }
 
+  private assertInputAttachmentLimit(
+    attachmentInputs: EmailApprovalAttachmentInput[],
+    replacingDraftId?: string,
+    retainedAttachments: StoredAttachment[] = [],
+  ): void {
+    const storedBytes = this.storedAttachmentBytes(replacingDraftId);
+    const retainedBytes = retainedAttachments.reduce(
+      (total, attachment) => total + attachment.size,
+      0,
+    );
+    const inputBytes = attachmentInputs.reduce((total, attachment) => {
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(attachment.content)) {
+        throw new Error('Attachment content must be valid Base64.');
+      }
+      return total + Buffer.byteLength(attachment.content, 'base64');
+    }, 0);
+    if (storedBytes + retainedBytes + inputBytes > this.maxAttachmentBytes) {
+      throw new Error(
+        'Pending drafts exceed the attachment limit for this session.',
+      );
+    }
+  }
+
   private assertAttachmentLimit(
     candidateAttachments: StoredAttachment[],
     replacingDraftId?: string,
   ): void {
-    const storedBytes = [...this.drafts.entries()]
-      .filter(([draftId]) => draftId !== replacingDraftId)
-      .flatMap(([, draft]) => draft.attachments)
-      .reduce((total, attachment) => total + attachment.size, 0);
+    const storedBytes = this.storedAttachmentBytes(replacingDraftId);
     const candidateBytes = candidateAttachments.reduce(
       (total, attachment) => total + attachment.size,
       0,
     );
     if (storedBytes + candidateBytes > this.maxAttachmentBytes) {
-      throw new Error('Pending drafts exceed the attachment limit for this session.');
+      throw new Error(
+        'Pending drafts exceed the attachment limit for this session.',
+      );
     }
+  }
+
+  private storedAttachmentBytes(excludingDraftId?: string): number {
+    return [...this.drafts.entries()]
+      .filter(([draftId]) => draftId !== excludingDraftId)
+      .flatMap(([, draft]) => draft.attachments)
+      .reduce((total, attachment) => total + attachment.size, 0);
   }
 }

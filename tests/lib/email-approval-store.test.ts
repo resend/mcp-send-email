@@ -142,7 +142,10 @@ describe('EmailApprovalStore', () => {
       subject: 'Hello',
       text: 'Hi Ada',
       attachments: [
-        { filename: 'one.txt', content: Buffer.from('test').toString('base64') },
+        {
+          filename: 'one.txt',
+          content: Buffer.from('test').toString('base64'),
+        },
       ],
     });
 
