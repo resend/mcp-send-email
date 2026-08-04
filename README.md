@@ -381,6 +381,7 @@ You can pass additional arguments to configure the local server:
 Resend's MCP server gives your AI agent native access to the full Resend platform through a single integration. You can manage all aspects of your email infrastructure using natural language.
 
 - **Emails**: Send, list, get, cancel, update, and batch send emails. Supports HTML, plain text, attachments (local file, URL, or base64), CC/BCC, reply-to, scheduling, tags, custom headers, topic-based sending, and idempotency keys.
+- **Email Studio**: Prepare a transactional email for a human to edit, review, and approve in an MCP Apps-capable client. Email Studio drafts are session-only, expire after 15 minutes, send once on approval, and accept Base64 attachments only. Clients without MCP Apps support receive a review-only preview; use `send-email` when direct delivery is intentional.
 - **Received Emails**: List and read inbound emails. List and download received email attachments.
 - **Templates**: Create, list, get, update, publish, duplicate, and remove email templates. Supports composing template content and `{{{VARIABLE}}}` placeholders.
 - **Contacts**: Create, list, get, update, and remove contacts. Manage segment memberships, topic subscriptions, and CSV contact imports. Supports custom contact properties.
