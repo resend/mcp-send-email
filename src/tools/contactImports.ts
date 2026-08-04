@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
@@ -9,25 +8,19 @@ export function addContactImportTools(server: McpServer, resend: Resend) {
     {
       title: 'Create Contact Import',
       description:
-        'Bulk-import contacts from a CSV file into Resend. The import is processed asynchronously: this returns an import ID immediately, then use get-contact-import to poll its status and counts. Provide the CSV via exactly one of `filePath`, `content`, or `url`. Max file size 100MB.',
+        'Bulk-import contacts from CSV content or a URL into Resend. The import is processed asynchronously: this returns an import ID immediately, then use get-contact-import to poll its status and counts. Provide exactly one of `content` or `url`. Max file size 100MB.',
       inputSchema: {
-        filePath: z
-          .string()
-          .optional()
-          .describe(
-            'Local path to a CSV file to read and upload. Use one of filePath, content, or url.',
-          ),
         content: z
           .string()
           .optional()
           .describe(
-            'Raw CSV text to upload (e.g. "email,first_name\\na@b.com,Ada"). Use one of filePath, content, or url.',
+            'Raw CSV text to upload (e.g. "email,first_name\\na@b.com,Ada"). Use one of content or url.',
           ),
         url: z
           .string()
           .optional()
           .describe(
-            'URL of a CSV file to fetch and upload. Use one of filePath, content, or url.',
+            'URL of a CSV file to fetch and upload. Use one of content or url.',
           ),
         filename: z
           .string()
@@ -99,7 +92,6 @@ export function addContactImportTools(server: McpServer, resend: Resend) {
       },
     },
     async ({
-      filePath,
       content,
       url,
       filename,
@@ -108,19 +100,15 @@ export function addContactImportTools(server: McpServer, resend: Resend) {
       segmentIds,
       topics,
     }) => {
-      const sources = [filePath, content, url].filter(
-        (s) => s !== undefined,
-      ).length;
+      const sources = [content, url].filter((s) => s !== undefined).length;
       if (sources !== 1) {
         throw new Error(
-          'Provide exactly one of "filePath", "content", or "url" for the CSV file.',
+          'Provide exactly one of "content" or "url" for the CSV file.',
         );
       }
 
       let fileData: BlobPart;
-      if (filePath !== undefined) {
-        fileData = await readFile(filePath);
-      } else if (url !== undefined) {
+      if (url !== undefined) {
         const res = await fetch(url);
         if (!res.ok) {
           throw new Error(

@@ -105,6 +105,26 @@ describe('create-contact-import', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it('does not accept a local file path as an import source', async () => {
+    const client = await makeClient();
+    const { tools } = await client.listTools();
+    const tool = tools.find(
+      (candidate) => candidate.name === 'create-contact-import',
+    );
+    expect(tool?.inputSchema.properties).not.toHaveProperty('filePath');
+
+    const result = await client.callTool({
+      name: 'create-contact-import',
+      arguments: { filePath: '/etc/passwd' },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result as never)).toContain(
+      'Provide exactly one of "content" or "url"',
+    );
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it('errors when multiple file sources are provided', async () => {
     const client = await makeClient();
     const result = await client.callTool({
