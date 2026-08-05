@@ -94,6 +94,7 @@ function renderStatus(message = '', isError = false): void {
 
 function attachmentRow(
   attachment: EmailApprovalAttachmentSummary,
+  onRemove: () => void,
 ): HTMLElement {
   const item = document.createElement('li');
   const details = document.createElement('span');
@@ -101,16 +102,14 @@ function attachmentRow(
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.textContent = 'Remove';
-  remove.addEventListener('click', () => {
-    retainedAttachmentIds.delete(attachment.id);
-    render();
-  });
+  remove.addEventListener('click', onRemove);
   item.append(details, remove);
   return item;
 }
 
 function newAttachmentRow(
   attachment: EmailApprovalAttachmentInput,
+  onRemove: () => void,
 ): HTMLElement {
   const item = document.createElement('li');
   const details = document.createElement('span');
@@ -118,12 +117,7 @@ function newAttachmentRow(
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.textContent = 'Remove';
-  remove.addEventListener('click', () => {
-    newAttachments = newAttachments.filter(
-      (candidate) => candidate !== attachment,
-    );
-    render();
-  });
+  remove.addEventListener('click', onRemove);
   item.append(details, remove);
   return item;
 }
@@ -132,6 +126,30 @@ function renderPreview(html: string): void {
   const preview = document.querySelector<HTMLIFrameElement>('#html-preview');
   if (!preview) return;
   preview.srcdoc = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><body>${html}</body>`;
+}
+
+function renderAttachmentList(list: HTMLUListElement): void {
+  if (!draft) return;
+  list.replaceChildren();
+  for (const attachment of draft.attachments) {
+    if (!retainedAttachmentIds.has(attachment.id)) continue;
+    list.append(
+      attachmentRow(attachment, () => {
+        retainedAttachmentIds.delete(attachment.id);
+        renderAttachmentList(list);
+      }),
+    );
+  }
+  for (const attachment of newAttachments) {
+    list.append(
+      newAttachmentRow(attachment, () => {
+        newAttachments = newAttachments.filter(
+          (candidate) => candidate !== attachment,
+        );
+        renderAttachmentList(list);
+      }),
+    );
+  }
 }
 
 function render(): void {
@@ -161,7 +179,7 @@ function render(): void {
       <label>Reply-to<input name="replyTo" required></label>
     </fieldset>
     <fieldset><legend>Message</legend>
-      <label>Subject<input name="subject" value="${message.subject}" required></label>
+      <label>Subject<input name="subject" required></label>
       <label>Plain text<textarea name="text" required></textarea></label>
       <label>HTML (optional)<textarea name="html"></textarea></label>
       <label>Rendered HTML preview<iframe id="html-preview" sandbox=""></iframe></label>
@@ -196,6 +214,8 @@ function render(): void {
     ? message.replyTo.join(', ')
     : message.replyTo;
   replyTo.readOnly = draft.lockedFields?.replyTo ?? false;
+  (form.elements.namedItem('subject') as HTMLInputElement).value =
+    message.subject;
   (form.elements.namedItem('scheduledAt') as HTMLInputElement).value =
     message.scheduledAt ?? '';
   (form.elements.namedItem('topicId') as HTMLInputElement).value =
@@ -217,12 +237,7 @@ function render(): void {
   html.addEventListener('input', () => renderPreview(html.value));
 
   const attachments = form.querySelector<HTMLUListElement>('#attachments');
-  for (const attachment of draft.attachments) {
-    if (retainedAttachmentIds.has(attachment.id))
-      attachments?.append(attachmentRow(attachment));
-  }
-  for (const attachment of newAttachments)
-    attachments?.append(newAttachmentRow(attachment));
+  if (attachments) renderAttachmentList(attachments);
 
   form
     .querySelector<HTMLInputElement>('#files')
@@ -240,17 +255,18 @@ function render(): void {
           })),
         )),
       ];
-      render();
+      if (attachments) renderAttachmentList(attachments);
     });
 
   form
     .querySelector<HTMLButtonElement>('#cancel')
     ?.addEventListener('click', async () => {
       try {
-        await app.callServerTool({
+        const result = await app.callServerTool({
           name: 'cancel-email-approval',
           arguments: { draftId: draft?.draftId },
         });
+        if (result.isError) throw new Error(describeToolError(result));
         root.textContent = 'Email Studio draft cancelled.';
       } catch (error) {
         renderStatus(
@@ -296,7 +312,7 @@ function render(): void {
         arguments: { draftId: draft.draftId, revisionId: draft.revisionId },
       });
       root.textContent = sent.isError
-        ? 'The draft was consumed but Resend could not send it. Prepare a new draft to retry.'
+        ? `The draft was consumed but Resend could not send it: ${describeToolError(sent)} Prepare a new draft to retry.`
         : 'Email sent successfully.';
     } catch (error) {
       renderStatus(
