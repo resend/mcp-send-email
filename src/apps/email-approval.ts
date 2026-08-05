@@ -6,6 +6,7 @@ import type {
 } from '../lib/email-approval-store.js';
 import {
   buildUpdateArguments,
+  describeToolError,
   type EditableApprovalDraft,
 } from './email-approval-model.js';
 
@@ -275,7 +276,7 @@ function render(): void {
         arguments: { ...update },
       });
       if (result.isError) {
-        throw new Error('Email Studio could not save your changes.');
+        throw new Error(describeToolError(result));
       }
       const summary = result.structuredContent as
         | { revisionId?: unknown }

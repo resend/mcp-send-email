@@ -9,10 +9,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 import {
+  type ConsumedEmailApprovalDraft,
   type EmailApprovalAttachmentInput,
   type EmailApprovalDraftInput,
+  type EmailApprovalDraftSummary,
   EmailApprovalStore,
+  type UpdateEmailApprovalDraftInput,
 } from '../lib/email-approval-store.js';
+import { createSharedEmailApprovalStore } from '../lib/shared-email-approval-store.js';
 
 const EMAIL_APPROVAL_RESOURCE = 'ui://resend/email-approval';
 
@@ -72,18 +76,42 @@ function uiMetadata(visibility: Array<'model' | 'app'>) {
   };
 }
 
+type ApprovalStore = {
+  create(
+    input: EmailApprovalDraftInput,
+  ): EmailApprovalDraftSummary | Promise<EmailApprovalDraftSummary>;
+  update(
+    input: UpdateEmailApprovalDraftInput,
+  ): EmailApprovalDraftSummary | Promise<EmailApprovalDraftSummary>;
+  consume(
+    draftId: string,
+    revisionId: string,
+  ): ConsumedEmailApprovalDraft | Promise<ConsumedEmailApprovalDraft>;
+  cancel(draftId: string): boolean | Promise<boolean>;
+};
+
 export function addEmailApprovalTools(
   server: McpServer,
   resend: Resend,
   {
     senderEmailAddress,
     replierEmailAddresses = [],
+    sharedStoreKey,
   }: {
     senderEmailAddress?: string;
     replierEmailAddresses?: string[];
+    sharedStoreKey?: string;
   },
 ): void {
-  const store = new EmailApprovalStore();
+  let storePromise: Promise<ApprovalStore> | undefined;
+  const getStore = (): Promise<ApprovalStore> => {
+    if (!storePromise) {
+      storePromise = sharedStoreKey
+        ? createSharedEmailApprovalStore(sharedStoreKey)
+        : Promise.resolve(new EmailApprovalStore());
+    }
+    return storePromise;
+  };
 
   registerAppResource(
     server,
@@ -157,7 +185,8 @@ export function addEmailApprovalTools(
         return { content: [{ type: 'text', text: reviewPreview(message) }] };
       }
 
-      const summary = store.create(message);
+      const summary = await getStore().then((store) => store.create(message));
+      const { attachments: _attachments, ...editableMessage } = message;
       return {
         content: [
           {
@@ -167,7 +196,7 @@ export function addEmailApprovalTools(
         ],
         structuredContent: {
           ...summary,
-          message,
+          message: editableMessage,
           lockedFields: {
             from: Boolean(senderEmailAddress),
             replyTo: replierEmailAddresses.length > 0,
@@ -211,13 +240,15 @@ export function addEmailApprovalTools(
             ? replierEmailAddresses
             : inputMessage.replyTo,
       };
-      const summary = store.update({
-        draftId,
-        revisionId,
-        message,
-        retainAttachmentIds,
-        newAttachments: newAttachments as EmailApprovalAttachmentInput[],
-      });
+      const summary = await getStore().then((store) =>
+        store.update({
+          draftId,
+          revisionId,
+          message,
+          retainAttachmentIds,
+          newAttachments: newAttachments as EmailApprovalAttachmentInput[],
+        }),
+      );
       return {
         content: [{ type: 'text', text: 'Email Studio draft updated.' }],
         structuredContent: { ...summary },
@@ -241,7 +272,9 @@ export function addEmailApprovalTools(
       if (!supportsUi(server)) {
         throw new Error('Email Studio requires an MCP Apps-capable client.');
       }
-      const draft = store.consume(draftId, revisionId);
+      const draft = await getStore().then((store) =>
+        store.consume(draftId, revisionId),
+      );
       const response = await resend.emails.send(
         {
           ...draft.message,
@@ -281,7 +314,7 @@ export function addEmailApprovalTools(
       if (!supportsUi(server)) {
         throw new Error('Email Studio requires an MCP Apps-capable client.');
       }
-      if (!store.cancel(draftId)) {
+      if (!(await getStore().then((store) => store.cancel(draftId)))) {
         throw new Error('Email approval draft was not found.');
       }
       return {

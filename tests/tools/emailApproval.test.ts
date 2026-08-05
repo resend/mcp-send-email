@@ -117,6 +117,25 @@ describe('Email Studio approval tools', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it('does not return attachment Base64 content to the Email Studio app', async () => {
+    const client = await makeClient(true);
+    const result = await client.callTool({
+      name: 'prepare-email-approval',
+      arguments: {
+        ...prepareArguments,
+        attachments: [
+          {
+            filename: 'private.txt',
+            content: Buffer.from('private attachment').toString('base64'),
+          },
+        ],
+      },
+    });
+
+    const draft = result.structuredContent as { message: object };
+    expect(draft.message).not.toHaveProperty('attachments');
+  });
+
   it('sends the latest approved revision once', async () => {
     const client = await makeClient(true);
     const prepared = await client.callTool({

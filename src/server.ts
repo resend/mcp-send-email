@@ -56,6 +56,7 @@ export function createMcpServer(
   addEmailApprovalTools(server, resend, {
     senderEmailAddress,
     replierEmailAddresses,
+    sharedStoreKey: apiKey,
   });
   addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
   addEventTools(server, resend);

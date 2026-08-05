@@ -18,6 +18,18 @@ export interface EmailApprovalDraftUpdate {
   newAttachments: EmailApprovalAttachmentInput[];
 }
 
+/** Returns a safe, human-readable diagnostic from an MCP tool error result. */
+export function describeToolError(result: {
+  content?: Array<{ type?: unknown; text?: unknown }>;
+}): string {
+  const message = result.content?.find(
+    (content): content is { type: 'text'; text: string } =>
+      content.type === 'text' && typeof content.text === 'string',
+  )?.text;
+
+  return message || 'Email Studio could not save your changes.';
+}
+
 export function buildUpdateArguments(
   draft: EditableApprovalDraft,
   update: EmailApprovalDraftUpdate,

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildUpdateArguments } from '../../src/apps/email-approval-model.js';
+import {
+  buildUpdateArguments,
+  describeToolError,
+} from '../../src/apps/email-approval-model.js';
 
 describe('buildUpdateArguments', () => {
   it('keeps selected attachment IDs and includes newly selected attachment content', () => {
@@ -55,5 +58,21 @@ describe('buildUpdateArguments', () => {
       ],
     });
     expect(result.message.subject).toBe('Updated');
+  });
+});
+
+describe('describeToolError', () => {
+  it('shows the host error text instead of a generic update failure', () => {
+    expect(
+      describeToolError({
+        isError: true,
+        content: [
+          {
+            type: 'text',
+            text: 'Tool update-email-approval is not available to this app.',
+          },
+        ],
+      }),
+    ).toBe('Tool update-email-approval is not available to this app.');
   });
 });
