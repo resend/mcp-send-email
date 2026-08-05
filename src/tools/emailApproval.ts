@@ -39,6 +39,21 @@ const messageSchema = z.object({
   idempotencyKey: z.string().min(1).max(256).optional(),
 });
 
+const attachmentSummarySchema = z.object({
+  id: z.string().uuid(),
+  filename: z.string(),
+  contentType: z.string().optional(),
+  size: z.number().nonnegative(),
+  sha256: z.string(),
+});
+
+const draftSummarySchema = z.object({
+  draftId: z.string().uuid(),
+  revisionId: z.string().uuid(),
+  expiresAt: z.string(),
+  attachments: z.array(attachmentSummarySchema),
+});
+
 function supportsUi(server: McpServer): boolean {
   const capability = getUiCapability(server.server.getClientCapabilities());
   return capability?.mimeTypes?.includes(RESOURCE_MIME_TYPE) ?? false;
@@ -175,6 +190,7 @@ export function addEmailApprovalTools(
         retainAttachmentIds: z.array(z.string().uuid()),
         newAttachments: z.array(attachmentSchema),
       }),
+      outputSchema: draftSummarySchema,
       _meta: uiMetadata(['app']),
     },
     async ({

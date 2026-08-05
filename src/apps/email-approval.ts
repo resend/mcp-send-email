@@ -274,7 +274,17 @@ function render(): void {
         name: 'update-email-approval',
         arguments: { ...update },
       });
-      const summary = result.structuredContent as { revisionId: string };
+      if (result.isError) {
+        throw new Error('Email Studio could not save your changes.');
+      }
+      const summary = result.structuredContent as
+        | { revisionId?: unknown }
+        | undefined;
+      if (typeof summary?.revisionId !== 'string') {
+        throw new Error(
+          'Email Studio did not receive a saved revision. Please try again.',
+        );
+      }
       draft = {
         ...draft,
         revisionId: summary.revisionId,

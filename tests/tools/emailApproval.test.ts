@@ -65,12 +65,19 @@ describe('Email Studio approval tools', () => {
     const approve = tools.find(
       (tool) => tool.name === 'approve-email-approval',
     );
+    const update = tools.find((tool) => tool.name === 'update-email-approval');
 
     expect(prepare?._meta).toMatchObject({
       ui: { resourceUri: 'ui://resend/email-approval' },
     });
     expect(approve?._meta).toMatchObject({
       ui: { visibility: ['app'] },
+    });
+    expect(update?.outputSchema).toMatchObject({
+      properties: {
+        draftId: expect.any(Object),
+        revisionId: expect.any(Object),
+      },
     });
 
     const resource = await client.readResource({
