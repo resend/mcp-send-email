@@ -1,4 +1,4 @@
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import type { Resend } from 'resend';
 import { createMcpServer } from '../server.js';
 import type { ServerOptions } from '../types.js';
@@ -8,8 +8,9 @@ export async function runStdio(
   options: ServerOptions,
   apiKey: string,
 ): Promise<void> {
-  const server = createMcpServer(resend, options, apiKey);
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  serveStdio(() => createMcpServer(resend, options, apiKey), {
+    legacy: 'serve',
+    onerror: (error) => console.error('stdio connection error:', error),
+  });
   console.error('Resend MCP Server running on stdio');
 }

@@ -1,4 +1,4 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import packageJson from '../package.json' with { type: 'json' };
 import { DashboardClient } from './lib/dashboard-client.js';
