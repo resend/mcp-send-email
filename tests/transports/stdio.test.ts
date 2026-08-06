@@ -74,7 +74,6 @@ describe('runStdio', () => {
     );
   });
 
-  // serveStdio reports errors via onerror, not a rejected connect() promise.
   it('wires connection errors to onerror instead of a rejected promise', async () => {
     const resend = {} as Resend;
     await runStdio(resend, { replierEmailAddresses: [] }, 're_test_key');

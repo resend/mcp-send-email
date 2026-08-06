@@ -18,7 +18,6 @@ export function addEditorTools(
 ) {
   let activeConnection: EditorConnection | null = null;
 
-  /** Client identity for editor-presence: modern per-request envelope, else the legacy getClientVersion() fallback. */
   function getAgentName(ctx?: ServerContext): string | undefined {
     const envelope = ctx?.mcpReq.envelope as
       | Record<typeof CLIENT_INFO_META_KEY, { name?: string } | undefined>

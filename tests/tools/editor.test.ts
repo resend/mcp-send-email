@@ -10,7 +10,6 @@ type ToolHandler = (
   ctx: ServerContext,
 ) => Promise<unknown>;
 
-/** Minimal fake `McpServer`; lets a test control `getClientVersion()` (the legacy path). */
 function createFakeServer(clientInfo?: { name: string; version: string }) {
   const tools = new Map<string, ToolHandler>();
   const server = {
@@ -24,7 +23,6 @@ function createFakeServer(clientInfo?: { name: string; version: string }) {
   return { server: server as unknown as McpServer, tools };
 }
 
-/** Fake `ServerContext`: omitted -> legacy (no envelope), object -> modern (envelope clientInfo). */
 function fakeCtx(clientInfo?: { name: string; version: string }) {
   return {
     mcpReq: {

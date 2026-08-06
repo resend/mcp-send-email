@@ -164,8 +164,6 @@ describe('runHttp', () => {
   });
 });
 
-// The module-level mock's duck-typed {connect} stand-in isn't enough for the
-// modern path, which introspects the server instance itself — use a real one.
 describe('dual-era protocol support', () => {
   let runHttpWithPingTool: typeof runHttp;
 

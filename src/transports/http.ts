@@ -44,7 +44,6 @@ function extractBearerToken(req: IncomingMessage): string | null {
   return token || null;
 }
 
-/** Same as `extractBearerToken`, for the modern leg's Web-standard `Request`. */
 function extractBearerTokenFromWebRequest(req: Request): string | null {
   const header = req.headers.get('authorization');
   if (!header || !header.startsWith('Bearer ')) return null;
@@ -80,10 +79,6 @@ export interface HttpTransportOptions {
  * from the Bearer token provided by the connecting client. This allows
  * remote deployment where each user authenticates with their own API key
  * instead of a single server-side key.
- *
- * Legacy clients keep the sessionful path below unchanged; modern
- * (2026-07-28) clients are stateless by protocol design, so they're routed
- * to a separate, additive `createMcpHandler` leg via `isLegacyRequest`.
  */
 export async function runHttp(
   options: ServerOptions,
@@ -98,8 +93,7 @@ export async function runHttp(
     res.end(JSON.stringify({ status: 'ok' }));
   });
 
-  // Auth is checked in handleMcp before dispatching here, so a missing key
-  // gets the same 401 as the legacy leg's (a factory throw becomes a 500).
+  // Checked in handleMcp before dispatching here — a factory throw becomes a 500, not this 401.
   const modernHandler = createMcpHandler(
     (ctx) => {
       const apiKey = ctx.requestInfo
