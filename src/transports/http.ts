@@ -116,9 +116,9 @@ export async function runHttp(
     req: IncomingMessage & { body?: unknown },
     res: ServerResponse,
   ) => {
-    const probe = await toWebRequest(req, req.body);
-    if (!(await isLegacyRequest(probe, req.body))) {
-      const apiKey = extractBearerTokenFromWebRequest(probe);
+    const webRequest = await toWebRequest(req, req.body);
+    if (!(await isLegacyRequest(webRequest, req.body))) {
+      const apiKey = extractBearerTokenFromWebRequest(webRequest);
       if (!apiKey) {
         sendJsonRpcError(
           res,
