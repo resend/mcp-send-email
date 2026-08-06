@@ -10,7 +10,7 @@ type ToolHandler = (
   ctx: ServerContext,
 ) => Promise<unknown>;
 
-/** Minimal fake `McpServer` that records registered tool handlers and lets a test control `server.server.getClientVersion()` (the legacy path). */
+/** Minimal fake `McpServer`; lets a test control `getClientVersion()` (the legacy path). */
 function createFakeServer(clientInfo?: { name: string; version: string }) {
   const tools = new Map<string, ToolHandler>();
   const server = {
@@ -24,10 +24,7 @@ function createFakeServer(clientInfo?: { name: string; version: string }) {
   return { server: server as unknown as McpServer, tools };
 }
 
-/**
- * Fake `ServerContext`: omitted -> legacy (no envelope), an object -> a
- * modern request that supplies `clientInfo` via the per-request envelope.
- */
+/** Fake `ServerContext`: omitted -> legacy (no envelope), object -> modern (envelope clientInfo). */
 function fakeCtx(clientInfo?: { name: string; version: string }) {
   return {
     mcpReq: {

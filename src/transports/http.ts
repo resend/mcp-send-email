@@ -44,7 +44,7 @@ function extractBearerToken(req: IncomingMessage): string | null {
   return token || null;
 }
 
-/** Same as `extractBearerToken`, for the Web-standard `Request` the modern leg deals in. */
+/** Same as `extractBearerToken`, for the modern leg's Web-standard `Request`. */
 function extractBearerTokenFromWebRequest(req: Request): string | null {
   const header = req.headers.get('authorization');
   if (!header || !header.startsWith('Bearer ')) return null;
@@ -81,11 +81,9 @@ export interface HttpTransportOptions {
  * remote deployment where each user authenticates with their own API key
  * instead of a single server-side key.
  *
- * Legacy (pre-2026-07-28, `initialize`-handshake) clients are served exactly
- * as before, via the sessionful `sessions` map below. Modern (2026-07-28)
- * clients are stateless by protocol design — no `initialize`, no session ID
- * — so they're served by a separate, additive `createMcpHandler` leg,
- * dispatched per request via `isLegacyRequest`.
+ * Legacy clients keep the sessionful path below unchanged; modern
+ * (2026-07-28) clients are stateless by protocol design, so they're routed
+ * to a separate, additive `createMcpHandler` leg via `isLegacyRequest`.
  */
 export async function runHttp(
   options: ServerOptions,
@@ -100,12 +98,8 @@ export async function runHttp(
     res.end(JSON.stringify({ status: 'ok' }));
   });
 
-  // The auth check happens here, before dispatching into modernHandler, so a
-  // missing key gets the same 401 shape as the legacy leg's — a factory
-  // `throw` is converted by createMcpHandler into a generic 500 instead.
-  // `legacy: 'reject'` keeps exactly one source of truth for legacy serving
-  // (the sessions map below); the built-in stateless legacy fallback is
-  // never invoked.
+  // Auth is checked in handleMcp before dispatching here, so a missing key
+  // gets the same 401 as the legacy leg's (a factory throw becomes a 500).
   const modernHandler = createMcpHandler(
     (ctx) => {
       const apiKey = ctx.requestInfo

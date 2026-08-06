@@ -9,13 +9,13 @@ importers:
   .:
     dependencies:
       '@modelcontextprotocol/express':
-        specifier: ^2.0.0
+        specifier: 2.0.0
         version: 2.0.0(@modelcontextprotocol/server@2.0.0)(express@5.2.1)
       '@modelcontextprotocol/node':
-        specifier: ^2.0.0
+        specifier: 2.0.0
         version: 2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.12.5)
       '@modelcontextprotocol/server':
-        specifier: ^2.0.0
+        specifier: 2.0.0
         version: 2.0.0
       dotenv:
         specifier: 17.4.2
@@ -37,7 +37,7 @@ importers:
         specifier: 2.4.10
         version: 2.4.10
       '@modelcontextprotocol/client':
-        specifier: ^2.0.0
+        specifier: 2.0.0
         version: 2.0.0
       '@types/minimist':
         specifier: 1.2.5

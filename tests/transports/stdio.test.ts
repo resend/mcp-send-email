@@ -74,8 +74,7 @@ describe('runStdio', () => {
     );
   });
 
-  // serveStdio is synchronous and reports connection errors via `onerror`
-  // rather than a rejected connect() promise (unlike the v1 SDK's transport).
+  // serveStdio reports errors via onerror, not a rejected connect() promise.
   it('wires connection errors to onerror instead of a rejected promise', async () => {
     const resend = {} as Resend;
     await runStdio(resend, { replierEmailAddresses: [] }, 're_test_key');

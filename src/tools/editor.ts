@@ -18,13 +18,7 @@ export function addEditorTools(
 ) {
   let activeConnection: EditorConnection | null = null;
 
-  /**
-   * MCP client name (e.g. "claude-code", "cursor") used as the agent_name for
-   * editor presence. A modern (2026-07-28) request carries its own per-request
-   * `clientInfo` in `ctx.mcpReq.envelope`; `getClientVersion()` is only
-   * populated from a persistent connection's `initialize` handshake, which a
-   * stateless modern stdio/HTTP exchange never sends.
-   */
+  /** Client identity for editor-presence: modern per-request envelope, else the legacy getClientVersion() fallback. */
   function getAgentName(ctx?: ServerContext): string | undefined {
     const envelope = ctx?.mcpReq.envelope as
       | Record<typeof CLIENT_INFO_META_KEY, { name?: string } | undefined>
