@@ -18,6 +18,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgrade Resend SDK to v6.1.0
 - Improve `list-audiences` response formatting
 
+## [3.0.0] - 2026-08-06
+
+### Added
+
+- Support for MCP protocol revision 2026-07-28 (stateless, per-request
+  clients) on both stdio and HTTP, alongside full backward compatibility
+  for existing (`initialize`-handshake) clients on both transports.
+
+### Changed
+
+- Migrated from MCP TypeScript SDK v1 (`@modelcontextprotocol/sdk`) to v2
+  (`@modelcontextprotocol/server`/`/node`/`/express`).
+
+### Breaking
+
+- The `McpServer` type returned by `createMcpServer` (exported from
+  `resend-mcp` and used internally by `resend-mcp/http`) now comes from
+  `@modelcontextprotocol/server` instead of `@modelcontextprotocol/sdk` —
+  a breaking type change for anyone importing this package as a library
+  and type-checking against it directly. `npx`/CLI usage is unaffected.
+
 ## [1.1.0] - 2025-07-08
 
 ### Added

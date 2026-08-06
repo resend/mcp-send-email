@@ -123,7 +123,7 @@ claude mcp add --transport http resend https://mcp.resend.com/mcp --header "Auth
 
 ## Local MCP Server
 
-The hosted server runs the same open-source code that's available on NPM as [`resend-mcp`](https://www.npmjs.com/package/resend-mcp). If you prefer to run the server yourself, you can integrate it into any supported MCP client using `npx`. You'll need to:
+The hosted server and this open-source package both implement the Model Context Protocol, including the same MCP spec 2026-07-28 support alongside legacy clients, but are maintained as separate implementations. If you prefer to run the server yourself, you can integrate it into any supported MCP client using `npx`. You'll need to:
 
 - [Create an API key](https://resend.com/api-keys)
 - [Verify your domain](https://resend.com/domains)

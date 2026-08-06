@@ -1,13 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
-import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import { createMcpExpressApp } from '@modelcontextprotocol/express';
+import {
+  NodeStreamableHTTPServerTransport,
+  toNodeHandler,
+  toWebRequest,
+} from '@modelcontextprotocol/node';
+import {
+  createMcpHandler,
+  isInitializeRequest,
+  isLegacyRequest,
+} from '@modelcontextprotocol/server';
 import { Resend } from 'resend';
 import { createMcpServer } from '../server.js';
 import type { ServerOptions } from '../types.js';
 
-const sessions: Record<string, StreamableHTTPServerTransport> = {};
+const sessions: Record<string, NodeStreamableHTTPServerTransport> = {};
 
 function sendJsonRpcError(
   res: ServerResponse,
@@ -31,6 +39,14 @@ function sendJsonRpcError(
  */
 function extractBearerToken(req: IncomingMessage): string | null {
   const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) return null;
+  const token = header.slice('Bearer '.length).trim();
+  return token || null;
+}
+
+/** Same as `extractBearerToken`, for the Web-standard `Request` the modern leg deals in. */
+function extractBearerTokenFromWebRequest(req: Request): string | null {
+  const header = req.headers.get('authorization');
   if (!header || !header.startsWith('Bearer ')) return null;
   const token = header.slice('Bearer '.length).trim();
   return token || null;
@@ -64,6 +80,12 @@ export interface HttpTransportOptions {
  * from the Bearer token provided by the connecting client. This allows
  * remote deployment where each user authenticates with their own API key
  * instead of a single server-side key.
+ *
+ * Legacy (pre-2026-07-28, `initialize`-handshake) clients are served exactly
+ * as before, via the sessionful `sessions` map below. Modern (2026-07-28)
+ * clients are stateless by protocol design — no `initialize`, no session ID
+ * — so they're served by a separate, additive `createMcpHandler` leg,
+ * dispatched per request via `isLegacyRequest`.
  */
 export async function runHttp(
   options: ServerOptions,
@@ -78,14 +100,51 @@ export async function runHttp(
     res.end(JSON.stringify({ status: 'ok' }));
   });
 
+  // The auth check happens here, before dispatching into modernHandler, so a
+  // missing key gets the same 401 shape as the legacy leg's — a factory
+  // `throw` is converted by createMcpHandler into a generic 500 instead.
+  // `legacy: 'reject'` keeps exactly one source of truth for legacy serving
+  // (the sessions map below); the built-in stateless legacy fallback is
+  // never invoked.
+  const modernHandler = createMcpHandler(
+    (ctx) => {
+      const apiKey = ctx.requestInfo
+        ? extractBearerTokenFromWebRequest(ctx.requestInfo)
+        : null;
+      if (!apiKey) {
+        throw new Error(
+          'Unauthorized: provide a Resend API key via Authorization: Bearer <key>',
+        );
+      }
+      return createMcpServer(new Resend(apiKey), options, apiKey);
+    },
+    { legacy: 'reject' },
+  );
+  const modernNodeHandler = toNodeHandler(modernHandler);
+
   // Serve the Streamable HTTP transport at both `/mcp` and the root `/` so
   // clients and proxies that target the server's root URL work identically.
   const handleMcp = async (
     req: IncomingMessage & { body?: unknown },
     res: ServerResponse,
   ) => {
+    const probe = await toWebRequest(req, req.body);
+    if (!(await isLegacyRequest(probe, req.body))) {
+      const apiKey = extractBearerTokenFromWebRequest(probe);
+      if (!apiKey) {
+        sendJsonRpcError(
+          res,
+          401,
+          'Unauthorized: provide a Resend API key via Authorization: Bearer <key>',
+        );
+        return;
+      }
+      await modernNodeHandler(req, res, req.body);
+      return;
+    }
+
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
-    let transport: StreamableHTTPServerTransport | undefined;
+    let transport: NodeStreamableHTTPServerTransport | undefined;
 
     if (sessionId && sessions[sessionId]) {
       transport = sessions[sessionId];
@@ -108,7 +167,7 @@ export async function runHttp(
 
       const resend = new Resend(apiKey);
 
-      transport = new StreamableHTTPServerTransport({
+      transport = new NodeStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (sid) => {
           sessions[sid] = transport!;
@@ -159,6 +218,7 @@ export async function runHttp(
         }
         delete sessions[sid];
       }
+      await modernHandler.close().catch(() => {});
       server.close();
       process.exit(0);
     };

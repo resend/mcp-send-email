@@ -1,6 +1,20 @@
 import { request } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  Client,
+  StreamableHTTPClientTransport,
+} from '@modelcontextprotocol/client';
+import { McpServer } from '@modelcontextprotocol/server';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { runHttp } from '../../src/transports/http.js';
 
 /**
@@ -145,6 +159,144 @@ describe('runHttp', () => {
 
     const denied = await getWithHost(port, '/health', 'other.example.com');
     expect(denied.status).toBe(403);
+
+    server.close();
+  });
+});
+
+// Uses a real (but tool-less, except for one fake tool) `McpServer` — the
+// module-level mock above is a plain duck-typed `{connect}` stand-in that
+// isn't enough for the modern (2026-07-28) path, which introspects the
+// server instance itself (e.g. to install its `server/discover` handler).
+describe('dual-era protocol support', () => {
+  let runHttpWithPingTool: typeof runHttp;
+
+  beforeAll(async () => {
+    vi.doMock('../../src/server.js', () => ({
+      createMcpServer: vi.fn(() => {
+        const server = new McpServer({ name: 'test', version: '0.0.0' });
+        server.registerTool('ping', { description: 'test tool' }, async () => ({
+          content: [{ type: 'text', text: 'pong' }],
+        }));
+        return server;
+      }),
+    }));
+    vi.resetModules();
+    ({ runHttp: runHttpWithPingTool } = await import(
+      '../../src/transports/http.js'
+    ));
+  });
+
+  afterAll(() => {
+    vi.doUnmock('../../src/server.js');
+    vi.resetModules();
+  });
+
+  async function connectedClient(
+    port: number,
+    era: 'legacy' | 'modern',
+  ): Promise<Client> {
+    const client = new Client(
+      { name: `test-client-${era}`, version: '0.0.0' },
+      era === 'modern'
+        ? { versionNegotiation: { mode: { pin: '2026-07-28' } } }
+        : {},
+    );
+    const transport = new StreamableHTTPClientTransport(
+      new URL(`http://127.0.0.1:${port}/mcp`),
+      { requestInit: { headers: { Authorization: 'Bearer re_test_key' } } },
+    );
+    await client.connect(transport);
+    return client;
+  }
+
+  it('a legacy client can list and call tools via the sessionful path', async () => {
+    const server = await runHttpWithPingTool({ replierEmailAddresses: [] }, 0);
+    const { port } = server.address() as AddressInfo;
+    const client = await connectedClient(port, 'legacy');
+
+    expect(client.getProtocolEra()).toBe('legacy');
+    const { tools } = await client.listTools();
+    expect(tools.map((t) => t.name)).toContain('ping');
+    const result = await client.callTool({ name: 'ping', arguments: {} });
+    expect(result.content).toEqual([{ type: 'text', text: 'pong' }]);
+
+    await client.close();
+    server.close();
+  });
+
+  it('a modern (2026-07-28) client can list and call tools via the stateless path', async () => {
+    const server = await runHttpWithPingTool({ replierEmailAddresses: [] }, 0);
+    const { port } = server.address() as AddressInfo;
+    const client = await connectedClient(port, 'modern');
+
+    expect(client.getProtocolEra()).toBe('modern');
+    const { tools } = await client.listTools();
+    expect(tools.map((t) => t.name)).toContain('ping');
+    const result = await client.callTool({ name: 'ping', arguments: {} });
+    expect(result.content).toEqual([{ type: 'text', text: 'pong' }]);
+
+    await client.close();
+    server.close();
+  });
+
+  it('a modern request issues no mcp-session-id (stateless)', async () => {
+    const server = await runHttpWithPingTool({ replierEmailAddresses: [] }, 0);
+    const { port } = server.address() as AddressInfo;
+
+    const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream',
+        'MCP-Protocol-Version': '2026-07-28',
+        'Mcp-Method': 'tools/list',
+        Authorization: 'Bearer re_test_key',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list',
+        params: {
+          _meta: {
+            'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+            'io.modelcontextprotocol/clientCapabilities': {},
+          },
+        },
+      }),
+    });
+
+    expect(res.headers.get('mcp-session-id')).toBeNull();
+
+    server.close();
+  });
+
+  it('a modern request without a Bearer token returns 401', async () => {
+    const server = await runHttpWithPingTool({ replierEmailAddresses: [] }, 0);
+    const { port } = server.address() as AddressInfo;
+
+    const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream',
+        'MCP-Protocol-Version': '2026-07-28',
+        'Mcp-Method': 'tools/list',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list',
+        params: {
+          _meta: {
+            'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+            'io.modelcontextprotocol/clientCapabilities': {},
+          },
+        },
+      }),
+    });
+
+    expect(res.status).toBe(401);
 
     server.close();
   });
