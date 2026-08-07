@@ -6,7 +6,10 @@ import {
 } from '@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
-import express from 'express';
+import express, {
+  type ErrorRequestHandler,
+  type RequestHandler,
+} from 'express';
 import { Resend } from 'resend';
 import { MAX_EMAIL_ATTACHMENT_ENCODED_BYTES } from '../lib/email-approval-store.js';
 import { createMcpServer } from '../server.js';
@@ -41,6 +44,65 @@ function extractBearerToken(req: IncomingMessage): string | null {
   const token = header.slice('Bearer '.length).trim();
   return token || null;
 }
+
+function isMcpEndpoint(req: IncomingMessage): boolean {
+  const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
+  return pathname === '/' || pathname === '/mcp';
+}
+
+const requireMcpAdmission: RequestHandler = (req, res, next) => {
+  if (req.method !== 'POST' || !isMcpEndpoint(req)) {
+    next();
+    return;
+  }
+
+  const sessionId = req.headers['mcp-session-id'] as string | undefined;
+  if (sessionId) {
+    if (sessions[sessionId]) {
+      next();
+      return;
+    }
+
+    sendJsonRpcError(res, 404, 'Session not found');
+    return;
+  }
+
+  if (!extractBearerToken(req)) {
+    sendJsonRpcError(
+      res,
+      401,
+      'Unauthorized: provide a Resend API key via Authorization: Bearer <key>',
+    );
+    return;
+  }
+
+  next();
+};
+
+function parserErrorType(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('type' in error)) {
+    return undefined;
+  }
+
+  const { type } = error;
+  return typeof type === 'string' ? type : undefined;
+}
+
+const safeJsonErrorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
+  if (res.headersSent) return;
+
+  if (parserErrorType(error) === 'entity.too.large') {
+    sendJsonRpcError(res, 413, 'Request body too large');
+    return;
+  }
+
+  if (parserErrorType(error) === 'entity.parse.failed') {
+    sendJsonRpcError(res, 400, 'Malformed JSON request');
+    return;
+  }
+
+  sendJsonRpcError(res, 500, 'Internal server error');
+};
 
 export interface HttpTransportOptions {
   /**
@@ -78,7 +140,6 @@ export async function runHttp(
 ): Promise<Server> {
   const { host = '127.0.0.1', allowedHosts } = httpOptions;
   const app = express();
-  app.use(express.json({ limit: MAX_MCP_REQUEST_BYTES }));
 
   if (allowedHosts) {
     app.use(hostHeaderValidation(allowedHosts));
@@ -91,6 +152,11 @@ export async function runHttp(
         'or use authentication to protect your server.',
     );
   }
+
+  // Reject unauthenticated and unknown-session MCP requests before the JSON
+  // parser allocates memory for an Email Studio-sized request body.
+  app.use(requireMcpAdmission);
+  app.use(express.json({ limit: MAX_MCP_REQUEST_BYTES }));
 
   app.get('/health', (_req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -160,6 +226,7 @@ export async function runHttp(
 
   app.all('/mcp', handleMcp);
   app.all('/', handleMcp);
+  app.use(safeJsonErrorHandler);
 
   return new Promise((resolve, reject) => {
     const server = app.listen(port, () => {

@@ -133,6 +133,51 @@ describe('runHttp', () => {
     server.close();
   });
 
+  it('rejects malformed unauthenticated MCP requests before parsing their JSON', async () => {
+    const server = await runHttp({ replierEmailAddresses: [] }, 0);
+    const { port } = server.address() as AddressInfo;
+
+    const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{',
+    });
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get('content-type')).toContain('application/json');
+    await expect(res.json()).resolves.toMatchObject({
+      error: { message: expect.stringContaining('Unauthorized') },
+    });
+
+    server.close();
+  });
+
+  it('returns a safe JSON error for malformed authenticated MCP requests', async () => {
+    const server = await runHttp({ replierEmailAddresses: [] }, 0);
+    const { port } = server.address() as AddressInfo;
+
+    const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer re_test_key',
+        'Content-Type': 'application/json',
+      },
+      body: '{',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.headers.get('content-type')).toContain('application/json');
+    const body = await res.json();
+    expect(body).toEqual({
+      jsonrpc: '2.0',
+      error: { code: -32000, message: 'Malformed JSON request' },
+      id: null,
+    });
+    expect(JSON.stringify(body)).not.toContain('SyntaxError');
+
+    server.close();
+  });
+
   it('rejects a non-localhost Host header by default (localhost protection on)', async () => {
     const server = await runHttp({ replierEmailAddresses: [] }, 0);
     const { port } = server.address() as AddressInfo;
