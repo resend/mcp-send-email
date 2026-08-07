@@ -33,15 +33,20 @@ interface WireConsumedDraft {
 }
 
 export interface SharedEmailApprovalStore {
-  create(input: EmailApprovalDraftInput): Promise<EmailApprovalDraftSummary>;
+  create(
+    input: EmailApprovalDraftInput,
+    ownerToken?: string,
+  ): Promise<EmailApprovalDraftSummary>;
   update(
     input: UpdateEmailApprovalDraftInput,
+    ownerToken?: string,
   ): Promise<EmailApprovalDraftSummary>;
   consume(
     draftId: string,
     revisionId: string,
+    ownerToken?: string,
   ): Promise<ConsumedEmailApprovalDraft>;
-  cancel(draftId: string): Promise<boolean>;
+  cancel(draftId: string, ownerToken?: string): Promise<boolean>;
 }
 
 const ownedServers = new Map<string, Server>();
@@ -49,7 +54,9 @@ export const MAX_BROKER_REQUEST_BYTES =
   MAX_EMAIL_ATTACHMENT_ENCODED_BYTES + 1024 * 1024;
 
 function brokerPaths(sharedKey: string) {
-  const key = createHash('sha256').update(sharedKey).digest('hex');
+  const key = createHash('sha256')
+    .update(`email-approval-store-v2:${sharedKey}`)
+    .digest('hex');
   // macOS resolves its temporary directory to a path too long for Unix sockets.
   const directory = '/tmp/resend-mcp-email-approval';
   return {
@@ -118,19 +125,35 @@ async function handleRequest(
   switch (request.method) {
     case 'ping':
       return 'ok';
-    case 'create':
-      return store.create(request.params as EmailApprovalDraftInput);
-    case 'update':
-      return store.update(request.params as UpdateEmailApprovalDraftInput);
+    case 'create': {
+      const { input, ownerToken } = request.params as {
+        input: EmailApprovalDraftInput;
+        ownerToken?: string;
+      };
+      return store.create(input, ownerToken);
+    }
+    case 'update': {
+      const { input, ownerToken } = request.params as {
+        input: UpdateEmailApprovalDraftInput;
+        ownerToken?: string;
+      };
+      return store.update(input, ownerToken);
+    }
     case 'consume': {
-      const { draftId, revisionId } = request.params as {
+      const { draftId, revisionId, ownerToken } = request.params as {
         draftId: string;
         revisionId: string;
+        ownerToken?: string;
       };
-      return wireConsumedDraft(store.consume(draftId, revisionId));
+      return wireConsumedDraft(store.consume(draftId, revisionId, ownerToken));
     }
-    case 'cancel':
-      return store.cancel((request.params as { draftId: string }).draftId);
+    case 'cancel': {
+      const { draftId, ownerToken } = request.params as {
+        draftId: string;
+        ownerToken?: string;
+      };
+      return store.cancel(draftId, ownerToken);
+    }
   }
 }
 
@@ -260,29 +283,29 @@ export async function createSharedEmailApprovalStore(
   await ensureBroker(socket, auth, maxRequestBytes);
 
   return {
-    create: (input) =>
-      requestBroker(
-        socket,
-        auth,
-        'create',
+    create: (input, ownerToken) =>
+      requestBroker(socket, auth, 'create', {
         input,
-      ) as Promise<EmailApprovalDraftSummary>,
-    update: (input) =>
-      requestBroker(
-        socket,
-        auth,
-        'update',
+        ownerToken,
+      }) as Promise<EmailApprovalDraftSummary>,
+    update: (input, ownerToken) =>
+      requestBroker(socket, auth, 'update', {
         input,
-      ) as Promise<EmailApprovalDraftSummary>,
-    consume: async (draftId, revisionId) =>
+        ownerToken,
+      }) as Promise<EmailApprovalDraftSummary>,
+    consume: async (draftId, revisionId, ownerToken) =>
       fromWireConsumedDraft(
         (await requestBroker(socket, auth, 'consume', {
           draftId,
           revisionId,
+          ownerToken,
         })) as WireConsumedDraft,
       ),
-    cancel: (draftId) =>
-      requestBroker(socket, auth, 'cancel', { draftId }) as Promise<boolean>,
+    cancel: (draftId, ownerToken) =>
+      requestBroker(socket, auth, 'cancel', {
+        draftId,
+        ownerToken,
+      }) as Promise<boolean>,
   };
 }
 

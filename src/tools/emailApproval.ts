@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import {
   getUiCapability,
@@ -19,6 +20,7 @@ import {
 import { createSharedEmailApprovalStore } from '../lib/shared-email-approval-store.js';
 
 const EMAIL_APPROVAL_RESOURCE = 'ui://resend/email-approval';
+const APPROVAL_TOKEN_META_KEY = 'io.resend/email-approval-token';
 
 const attachmentSchema = z
   .object({
@@ -105,15 +107,18 @@ function uiMetadata(visibility: Array<'model' | 'app'>) {
 type ApprovalStore = {
   create(
     input: EmailApprovalDraftInput,
+    ownerToken?: string,
   ): EmailApprovalDraftSummary | Promise<EmailApprovalDraftSummary>;
   update(
     input: UpdateEmailApprovalDraftInput,
+    ownerToken?: string,
   ): EmailApprovalDraftSummary | Promise<EmailApprovalDraftSummary>;
   consume(
     draftId: string,
     revisionId: string,
+    ownerToken?: string,
   ): ConsumedEmailApprovalDraft | Promise<ConsumedEmailApprovalDraft>;
-  cancel(draftId: string): boolean | Promise<boolean>;
+  cancel(draftId: string, ownerToken?: string): boolean | Promise<boolean>;
 };
 
 export function addEmailApprovalTools(
@@ -144,7 +149,8 @@ export function addEmailApprovalTools(
     'Email Studio approval composer',
     EMAIL_APPROVAL_RESOURCE,
     {
-      description: 'A human approval composer for transactional emails.',
+      description:
+        'A transactional email approval composer for trusted MCP Apps hosts.',
       _meta: {
         ui: {
           csp: { connectDomains: [], resourceDomains: [] },
@@ -186,7 +192,7 @@ export function addEmailApprovalTools(
     {
       title: 'Prepare Email for Human Approval',
       description:
-        'Prepare a transactional email for review in Email Studio. It sends only after a person approves the exact reviewed revision.',
+        'Prepare a transactional email for review in Email Studio. A trusted MCP Apps host can send only the exact saved revision after its approval action.',
       inputSchema: prepareSchema,
       _meta: uiMetadata(['model', 'app']),
     },
@@ -211,7 +217,10 @@ export function addEmailApprovalTools(
         return { content: [{ type: 'text', text: reviewPreview(message) }] };
       }
 
-      const summary = await getStore().then((store) => store.create(message));
+      const approvalToken = randomUUID();
+      const summary = await getStore().then((store) =>
+        store.create(message, approvalToken),
+      );
       const { attachments: _attachments, ...editableMessage } = message;
       return {
         content: [
@@ -228,6 +237,7 @@ export function addEmailApprovalTools(
             replyTo: replierEmailAddresses.length > 0,
           },
         },
+        _meta: { [APPROVAL_TOKEN_META_KEY]: approvalToken },
       };
     },
   );
@@ -241,6 +251,7 @@ export function addEmailApprovalTools(
       inputSchema: z.object({
         draftId: z.string().uuid(),
         revisionId: z.string().uuid(),
+        approvalToken: z.string().uuid(),
         message: messageSchema,
         retainAttachmentIds: z.array(z.string().uuid()),
         newAttachments: z.array(attachmentSchema),
@@ -251,6 +262,7 @@ export function addEmailApprovalTools(
     async ({
       draftId,
       revisionId,
+      approvalToken,
       message: inputMessage,
       retainAttachmentIds,
       newAttachments,
@@ -267,13 +279,16 @@ export function addEmailApprovalTools(
             : inputMessage.replyTo,
       };
       const summary = await getStore().then((store) =>
-        store.update({
-          draftId,
-          revisionId,
-          message,
-          retainAttachmentIds,
-          newAttachments: newAttachments as EmailApprovalAttachmentInput[],
-        }),
+        store.update(
+          {
+            draftId,
+            revisionId,
+            message,
+            retainAttachmentIds,
+            newAttachments: newAttachments as EmailApprovalAttachmentInput[],
+          },
+          approvalToken,
+        ),
       );
       return {
         content: [{ type: 'text', text: 'Email Studio draft updated.' }],
@@ -291,15 +306,16 @@ export function addEmailApprovalTools(
       inputSchema: z.object({
         draftId: z.string().uuid(),
         revisionId: z.string().uuid(),
+        approvalToken: z.string().uuid(),
       }),
       _meta: uiMetadata(['app']),
     },
-    async ({ draftId, revisionId }) => {
+    async ({ draftId, revisionId, approvalToken }) => {
       if (!supportsUi(server)) {
         throw new Error('Email Studio requires an MCP Apps-capable client.');
       }
       const draft = await getStore().then((store) =>
-        store.consume(draftId, revisionId),
+        store.consume(draftId, revisionId, approvalToken),
       );
       const response = await resend.emails.send(
         {
@@ -333,14 +349,21 @@ export function addEmailApprovalTools(
     {
       title: 'Cancel Email Approval Draft',
       description: 'Discard a pending Email Studio draft without sending it.',
-      inputSchema: z.object({ draftId: z.string().uuid() }),
+      inputSchema: z.object({
+        draftId: z.string().uuid(),
+        approvalToken: z.string().uuid(),
+      }),
       _meta: uiMetadata(['app']),
     },
-    async ({ draftId }) => {
+    async ({ draftId, approvalToken }) => {
       if (!supportsUi(server)) {
         throw new Error('Email Studio requires an MCP Apps-capable client.');
       }
-      if (!(await getStore().then((store) => store.cancel(draftId)))) {
+      if (
+        !(await getStore().then((store) =>
+          store.cancel(draftId, approvalToken),
+        ))
+      ) {
         throw new Error('Email approval draft was not found.');
       }
       return {

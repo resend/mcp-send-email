@@ -18,8 +18,10 @@ const app = new App({ name: 'Resend Email Studio', version: '1.0.0' }, {});
 const root = document.querySelector<HTMLElement>('#app');
 const MAX_FILE_SNAPSHOT_BYTES = 30_000_000;
 const MAX_EMAIL_ATTACHMENT_ENCODED_BYTES = 40_000_000;
+const APPROVAL_TOKEN_META_KEY = 'io.resend/email-approval-token';
 
 let draft: DraftResult | undefined;
+let approvalToken: string | undefined;
 let retainedAttachmentIds = new Set<string>();
 let newAttachments: EmailApprovalAttachmentInput[] = [];
 let attachmentReadsInFlight = 0;
@@ -126,6 +128,12 @@ function renderStatus(message = '', isError = false): void {
   if (!status) return;
   status.textContent = message;
   status.dataset.error = String(isError);
+}
+
+function approvalTokenFromMeta(meta: unknown): string | undefined {
+  if (typeof meta !== 'object' || meta === null) return undefined;
+  const token = (meta as Record<string, unknown>)[APPROVAL_TOKEN_META_KEY];
+  return typeof token === 'string' ? token : undefined;
 }
 
 function attachmentRow(
@@ -339,10 +347,17 @@ function render(): void {
   form
     .querySelector<HTMLButtonElement>('#cancel')
     ?.addEventListener('click', async () => {
+      if (!draft || !approvalToken) {
+        renderStatus(
+          'Email Studio could not establish a secure draft session. Please prepare the email again.',
+          true,
+        );
+        return;
+      }
       try {
         const result = await app.callServerTool({
           name: 'cancel-email-approval',
-          arguments: { draftId: draft?.draftId },
+          arguments: { draftId: draft.draftId, approvalToken },
         });
         if (result.isError) throw new Error(describeToolError(result));
         root.textContent = 'Email Studio draft cancelled.';
@@ -356,7 +371,13 @@ function render(): void {
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (!draft) return;
+    if (!draft || !approvalToken) {
+      renderStatus(
+        'Email Studio could not establish a secure draft session. Please prepare the email again.',
+        true,
+      );
+      return;
+    }
     if (attachmentReadsInFlight > 0) {
       renderStatus('Wait for selected attachments to finish loading.', true);
       updateApproveState(form);
@@ -372,7 +393,7 @@ function render(): void {
       });
       const result = await app.callServerTool({
         name: 'update-email-approval',
-        arguments: { ...update },
+        arguments: { ...update, approvalToken },
       });
       if (result.isError) {
         throw new Error(describeToolError(result));
@@ -392,7 +413,11 @@ function render(): void {
       };
       const sent = await app.callServerTool({
         name: 'approve-email-approval',
-        arguments: { draftId: draft.draftId, revisionId: draft.revisionId },
+        arguments: {
+          draftId: draft.draftId,
+          revisionId: draft.revisionId,
+          approvalToken,
+        },
       });
       root.textContent = sent.isError
         ? `The draft was consumed but Resend could not send it: ${describeToolError(sent)} Prepare a new draft to retry.`
@@ -413,7 +438,16 @@ function render(): void {
 app.ontoolresult = (params) => {
   const result = params.structuredContent as DraftResult | undefined;
   if (!result?.draftId || !result.revisionId || !result.message) return;
+  const nextApprovalToken = approvalTokenFromMeta(params._meta);
+  if (!nextApprovalToken) {
+    if (root) {
+      root.textContent =
+        'Email Studio could not establish a secure draft session. Please prepare the email again.';
+    }
+    return;
+  }
   draft = result;
+  approvalToken = nextApprovalToken;
   retainedAttachmentIds = new Set(
     result.attachments.map((attachment) => attachment.id),
   );

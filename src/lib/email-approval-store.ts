@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 
 const BASE64_PATTERN =
   /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
@@ -60,6 +60,7 @@ interface StoredDraft {
   summary: EmailApprovalDraftSummary;
   input: Omit<EmailApprovalDraftInput, 'attachments'>;
   attachments: StoredAttachment[];
+  ownerToken?: string;
 }
 
 export interface ConsumedEmailApprovalDraft {
@@ -100,13 +101,21 @@ export class EmailApprovalStore {
     this.maxEncodedAttachmentBytes = maxEncodedAttachmentBytes;
   }
 
-  create(input: EmailApprovalDraftInput): EmailApprovalDraftSummary {
+  create(
+    input: EmailApprovalDraftInput,
+    ownerToken?: string,
+  ): EmailApprovalDraftSummary {
     this.purgeExpired();
-    if (this.drafts.size >= 3) {
+    if (this.pendingDraftCount(ownerToken) >= 3) {
       throw new Error('A session can have at most three pending drafts.');
     }
     const attachmentInputs = input.attachments ?? [];
-    this.assertInputAttachmentLimit(attachmentInputs);
+    this.assertInputAttachmentLimit(
+      attachmentInputs,
+      undefined,
+      [],
+      ownerToken,
+    );
     this.assertDeliveryAttachmentLimit([], attachmentInputs);
     const attachments = this.createAttachments(attachmentInputs);
     const summary: EmailApprovalDraftSummary = {
@@ -122,20 +131,28 @@ export class EmailApprovalStore {
       summary,
       input: message,
       attachments,
+      ownerToken,
     });
     return summary;
   }
 
-  update({
-    draftId,
-    revisionId,
-    message,
-    retainAttachmentIds,
-    newAttachments,
-  }: UpdateEmailApprovalDraftInput): EmailApprovalDraftSummary {
+  update(
+    {
+      draftId,
+      revisionId,
+      message,
+      retainAttachmentIds,
+      newAttachments,
+    }: UpdateEmailApprovalDraftInput,
+    ownerToken?: string,
+  ): EmailApprovalDraftSummary {
     this.purgeExpired();
     const draft = this.drafts.get(draftId);
-    if (!draft || draft.summary.revisionId !== revisionId) {
+    if (
+      !draft ||
+      !this.isOwnedBy(draft, ownerToken) ||
+      draft.summary.revisionId !== revisionId
+    ) {
       throw new Error('Email approval draft or revision was not found.');
     }
     if (new Set(retainAttachmentIds).size !== retainAttachmentIds.length) {
@@ -157,11 +174,12 @@ export class EmailApprovalStore {
       newAttachments,
       draftId,
       retainedAttachments,
+      ownerToken,
     );
     this.assertDeliveryAttachmentLimit(retainedAttachments, newAttachments);
     const addedAttachments = this.createAttachments(newAttachments);
     const attachments = [...retainedAttachments, ...addedAttachments];
-    this.assertAttachmentLimit(attachments, draftId);
+    this.assertAttachmentLimit(attachments, draftId, ownerToken);
     const summary: EmailApprovalDraftSummary = {
       ...draft.summary,
       revisionId: randomUUID(),
@@ -169,14 +187,27 @@ export class EmailApprovalStore {
         ({ content: _content, ...attachment }) => attachment,
       ),
     };
-    this.drafts.set(draftId, { summary, input: message, attachments });
+    this.drafts.set(draftId, {
+      summary,
+      input: message,
+      attachments,
+      ownerToken: draft.ownerToken,
+    });
     return summary;
   }
 
-  consume(draftId: string, revisionId: string): ConsumedEmailApprovalDraft {
+  consume(
+    draftId: string,
+    revisionId: string,
+    ownerToken?: string,
+  ): ConsumedEmailApprovalDraft {
     this.purgeExpired();
     const draft = this.drafts.get(draftId);
-    if (!draft || draft.summary.revisionId !== revisionId) {
+    if (
+      !draft ||
+      !this.isOwnedBy(draft, ownerToken) ||
+      draft.summary.revisionId !== revisionId
+    ) {
       throw new Error('Email approval draft or revision was not found.');
     }
     this.drafts.delete(draftId);
@@ -191,8 +222,10 @@ export class EmailApprovalStore {
     };
   }
 
-  cancel(draftId: string): boolean {
+  cancel(draftId: string, ownerToken?: string): boolean {
     this.purgeExpired();
+    const draft = this.drafts.get(draftId);
+    if (!draft || !this.isOwnedBy(draft, ownerToken)) return false;
     return this.drafts.delete(draftId);
   }
 
@@ -226,8 +259,12 @@ export class EmailApprovalStore {
     attachmentInputs: EmailApprovalAttachmentInput[],
     replacingDraftId?: string,
     retainedAttachments: StoredAttachment[] = [],
+    ownerToken?: string,
   ): void {
-    const storedBytes = this.storedAttachmentBytes(replacingDraftId);
+    const storedBytes = this.storedAttachmentBytes(
+      replacingDraftId,
+      ownerToken,
+    );
     const retainedBytes = retainedAttachments.reduce(
       (total, attachment) => total + attachment.size,
       0,
@@ -245,8 +282,12 @@ export class EmailApprovalStore {
   private assertAttachmentLimit(
     candidateAttachments: StoredAttachment[],
     replacingDraftId?: string,
+    ownerToken?: string,
   ): void {
-    const storedBytes = this.storedAttachmentBytes(replacingDraftId);
+    const storedBytes = this.storedAttachmentBytes(
+      replacingDraftId,
+      ownerToken,
+    );
     const candidateBytes = candidateAttachments.reduce(
       (total, attachment) => total + attachment.size,
       0,
@@ -277,9 +318,31 @@ export class EmailApprovalStore {
     }
   }
 
-  private storedAttachmentBytes(excludingDraftId?: string): number {
+  private pendingDraftCount(ownerToken?: string): number {
+    return [...this.drafts.values()].filter(
+      (draft) => draft.ownerToken === ownerToken,
+    ).length;
+  }
+
+  private isOwnedBy(draft: StoredDraft, ownerToken?: string): boolean {
+    if (draft.ownerToken === undefined) return true;
+    if (ownerToken === undefined) return false;
+    const expected = Buffer.from(draft.ownerToken);
+    const supplied = Buffer.from(ownerToken);
+    return (
+      expected.length === supplied.length && timingSafeEqual(expected, supplied)
+    );
+  }
+
+  private storedAttachmentBytes(
+    excludingDraftId?: string,
+    ownerToken?: string,
+  ): number {
     return [...this.drafts.entries()]
-      .filter(([draftId]) => draftId !== excludingDraftId)
+      .filter(
+        ([draftId, draft]) =>
+          draftId !== excludingDraftId && draft.ownerToken === ownerToken,
+      )
       .flatMap(([, draft]) => draft.attachments)
       .reduce((total, attachment) => total + attachment.size, 0);
   }

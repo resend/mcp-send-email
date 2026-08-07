@@ -88,10 +88,15 @@ describe('createMcpServer', () => {
       draftId: string;
       revisionId: string;
     };
+    const otherSessionToken = '00000000-0000-4000-8000-000000000003';
 
     const result = await secondClient.callTool({
       name: 'approve-email-approval',
-      arguments: { draftId: draft.draftId, revisionId: draft.revisionId },
+      arguments: {
+        draftId: draft.draftId,
+        revisionId: draft.revisionId,
+        approvalToken: otherSessionToken,
+      },
     });
 
     expect(result.isError).toBe(true);

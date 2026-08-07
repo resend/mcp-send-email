@@ -12,29 +12,55 @@ afterEach(async () => {
 describe('shared EmailApprovalStore', () => {
   it('lets a second local MCP process update a draft created by the first', async () => {
     const sharedKey = randomUUID();
+    const approvalToken = randomUUID();
     const preparingProcess = await createSharedEmailApprovalStore(sharedKey);
     const approvalProcess = await createSharedEmailApprovalStore(sharedKey);
-    const created = await preparingProcess.create({
-      from: 'Acme <hello@acme.com>',
-      to: ['ada@example.com'],
-      replyTo: 'support@acme.com',
-      subject: 'Original',
-      text: 'Hi Ada',
-    });
-
-    const updated = await approvalProcess.update({
-      draftId: created.draftId,
-      revisionId: created.revisionId,
-      message: {
+    const created = await preparingProcess.create(
+      {
         from: 'Acme <hello@acme.com>',
         to: ['ada@example.com'],
         replyTo: 'support@acme.com',
-        subject: 'Edited in Email Studio',
+        subject: 'Original',
         text: 'Hi Ada',
       },
-      retainAttachmentIds: [],
-      newAttachments: [],
-    });
+      approvalToken,
+    );
+
+    await expect(
+      approvalProcess.update(
+        {
+          draftId: created.draftId,
+          revisionId: created.revisionId,
+          message: {
+            from: 'Acme <hello@acme.com>',
+            to: ['ada@example.com'],
+            replyTo: 'support@acme.com',
+            subject: 'Untrusted update',
+            text: 'Hi Ada',
+          },
+          retainAttachmentIds: [],
+          newAttachments: [],
+        },
+        randomUUID(),
+      ),
+    ).rejects.toThrow('not found');
+
+    const updated = await approvalProcess.update(
+      {
+        draftId: created.draftId,
+        revisionId: created.revisionId,
+        message: {
+          from: 'Acme <hello@acme.com>',
+          to: ['ada@example.com'],
+          replyTo: 'support@acme.com',
+          subject: 'Edited in Email Studio',
+          text: 'Hi Ada',
+        },
+        retainAttachmentIds: [],
+        newAttachments: [],
+      },
+      approvalToken,
+    );
 
     expect(updated.revisionId).not.toBe(created.revisionId);
   });

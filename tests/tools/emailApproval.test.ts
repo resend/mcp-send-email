@@ -207,11 +207,28 @@ describe('Email Studio approval tools', () => {
       revisionId: string;
       message: typeof prepareArguments;
     };
+    const approvalToken = (prepared._meta as Record<string, unknown>)[
+      'io.resend/email-approval-token'
+    ];
+    expect(approvalToken).toEqual(expect.any(String));
+
+    const denied = await client.callTool({
+      name: 'approve-email-approval',
+      arguments: {
+        draftId: draft.draftId,
+        revisionId: draft.revisionId,
+        approvalToken: '00000000-0000-4000-8000-000000000002',
+      },
+    });
+    expect(denied.isError).toBe(true);
+    expect(send).not.toHaveBeenCalled();
+
     const updated = await client.callTool({
       name: 'update-email-approval',
       arguments: {
         draftId: draft.draftId,
         revisionId: draft.revisionId,
+        approvalToken,
         message: { ...draft.message, subject: 'Updated subject' },
         retainAttachmentIds: [],
         newAttachments: [],
@@ -221,11 +238,19 @@ describe('Email Studio approval tools', () => {
 
     await client.callTool({
       name: 'approve-email-approval',
-      arguments: { draftId: draft.draftId, revisionId: revision.revisionId },
+      arguments: {
+        draftId: draft.draftId,
+        revisionId: revision.revisionId,
+        approvalToken,
+      },
     });
     const replay = await client.callTool({
       name: 'approve-email-approval',
-      arguments: { draftId: draft.draftId, revisionId: revision.revisionId },
+      arguments: {
+        draftId: draft.draftId,
+        revisionId: revision.revisionId,
+        approvalToken,
+      },
     });
 
     expect(send).toHaveBeenCalledWith(

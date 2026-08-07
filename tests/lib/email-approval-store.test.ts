@@ -168,6 +168,33 @@ describe('EmailApprovalStore', () => {
     expect(() => store.create(input)).toThrow('three pending drafts');
   });
 
+  it('isolates owner-scoped drafts and pending-draft capacity', () => {
+    const store = new EmailApprovalStore();
+    const input = {
+      from: 'Acme <hello@acme.com>',
+      to: ['ada@example.com'],
+      replyTo: 'support@acme.com',
+      subject: 'Hello',
+      text: 'Hi Ada',
+    };
+
+    const first = store.create(input, 'owner-a');
+    store.create(input, 'owner-a');
+    store.create(input, 'owner-a');
+    const otherOwnerDraft = store.create(input, 'owner-b');
+
+    expect(() =>
+      store.consume(first.draftId, first.revisionId, 'owner-b'),
+    ).toThrow('not found');
+    expect(() =>
+      store.consume(
+        otherOwnerDraft.draftId,
+        otherOwnerDraft.revisionId,
+        'owner-b',
+      ),
+    ).not.toThrow();
+  });
+
   it('rejects attachment snapshots beyond the session byte limit', () => {
     const store = new EmailApprovalStore({ maxAttachmentBytes: 4 });
 

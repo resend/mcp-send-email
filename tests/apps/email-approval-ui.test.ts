@@ -6,7 +6,7 @@ const app = vi.hoisted(() => ({
   callServerTool: vi.fn(),
   connect: vi.fn().mockResolvedValue(undefined),
   ontoolresult: undefined as
-    | ((params: { structuredContent: unknown }) => void)
+    | ((params: { structuredContent: unknown; _meta?: unknown }) => void)
     | undefined,
 }));
 
@@ -45,6 +45,7 @@ const draft = {
     },
   ],
 };
+const approvalToken = '00000000-0000-4000-8000-000000000001';
 
 describe('Email Studio composer', () => {
   beforeEach(async () => {
@@ -53,7 +54,10 @@ describe('Email Studio composer', () => {
     app.ontoolresult = undefined;
     app.callServerTool.mockReset();
     await import('../../src/apps/email-approval.js');
-    app.ontoolresult?.({ structuredContent: draft });
+    app.ontoolresult?.({
+      structuredContent: draft,
+      _meta: { 'io.resend/email-approval-token': approvalToken },
+    });
   });
 
   it('keeps unsaved field edits when an attachment is removed', () => {
@@ -302,6 +306,20 @@ describe('Email Studio composer', () => {
     await vi.waitFor(() => {
       expect(document.body.textContent).toContain('recipient is not permitted');
     });
+    expect(app.callServerTool).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        name: 'update-email-approval',
+        arguments: expect.objectContaining({ approvalToken }),
+      }),
+    );
+    expect(app.callServerTool).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        name: 'approve-email-approval',
+        arguments: expect.objectContaining({ approvalToken }),
+      }),
+    );
   });
 
   it('renders a subject as text instead of interpolating it as HTML', () => {
@@ -311,6 +329,7 @@ describe('Email Studio composer', () => {
         ...draft,
         message: { ...draft.message, subject },
       },
+      _meta: { 'io.resend/email-approval-token': approvalToken },
     });
 
     expect(document.querySelector('#injected')).toBeNull();
