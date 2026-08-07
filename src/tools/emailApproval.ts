@@ -34,8 +34,21 @@ const emailTagSchema = z.object({
   value: z.string().regex(/^[A-Za-z0-9_-]{1,256}$/),
 });
 
+const headerNameSchema = z
+  .string()
+  .min(1)
+  .max(256)
+  .regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/);
+
+const headerValueSchema = z
+  .string()
+  .max(2_000)
+  .refine((value) => !/[\r\n]/.test(value), {
+    message: 'Custom header values cannot contain line breaks.',
+  });
+
 const headersSchema = z
-  .record(z.string().min(1).max(256), z.string().max(2_000))
+  .record(headerNameSchema, headerValueSchema)
   .refine((headers) => Object.keys(headers).length <= 50, {
     message: 'At most 50 custom headers are allowed.',
   });

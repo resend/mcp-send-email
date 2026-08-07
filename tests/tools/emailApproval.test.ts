@@ -168,6 +168,34 @@ describe('Email Studio approval tools', () => {
     expect(result.isError).toBe(true);
   });
 
+  it('rejects custom headers with line breaks', async () => {
+    const client = await makeClient(true);
+    const result = await client.callTool({
+      name: 'prepare-email-approval',
+      arguments: {
+        ...prepareArguments,
+        headers: { 'X-Audit\r\nBcc': 'hidden@example.com' },
+      },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('rejects custom header values with line breaks', async () => {
+    const client = await makeClient(true);
+    const result = await client.callTool({
+      name: 'prepare-email-approval',
+      arguments: {
+        ...prepareArguments,
+        headers: { 'X-Audit': 'safe\r\nBcc: hidden@example.com' },
+      },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('sends the latest approved revision once', async () => {
     const client = await makeClient(true);
     const prepared = await client.callTool({
