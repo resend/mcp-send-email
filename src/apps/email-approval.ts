@@ -16,6 +16,7 @@ type DraftResult = EditableApprovalDraft & {
 
 const app = new App({ name: 'Resend Email Studio', version: '1.0.0' }, {});
 const root = document.querySelector<HTMLElement>('#app');
+const MAX_FILE_SNAPSHOT_BYTES = 30_000_000;
 
 let draft: DraftResult | undefined;
 let retainedAttachmentIds = new Set<string>();
@@ -245,6 +246,16 @@ function render(): void {
       const files = [
         ...((event.currentTarget as HTMLInputElement).files ?? []),
       ];
+      const tooLarge = files.find(
+        (file) => file.size > MAX_FILE_SNAPSHOT_BYTES,
+      );
+      if (tooLarge) {
+        renderStatus(
+          `${tooLarge.name} is too large to attach. Email Studio supports files up to 30 MB.`,
+          true,
+        );
+        return;
+      }
       newAttachments = [
         ...newAttachments,
         ...(await Promise.all(

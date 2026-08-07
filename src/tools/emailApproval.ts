@@ -20,12 +20,25 @@ import { createSharedEmailApprovalStore } from '../lib/shared-email-approval-sto
 
 const EMAIL_APPROVAL_RESOURCE = 'ui://resend/email-approval';
 
-const attachmentSchema = z.object({
-  filename: z.string().min(1),
-  content: z.string().min(1),
-  contentType: z.string().optional(),
-  contentId: z.string().optional(),
+const attachmentSchema = z
+  .object({
+    filename: z.string().min(1),
+    content: z.string().min(1),
+    contentType: z.string().optional(),
+    contentId: z.string().optional(),
+  })
+  .strict();
+
+const emailTagSchema = z.object({
+  name: z.string().regex(/^[A-Za-z0-9_-]{1,256}$/),
+  value: z.string().regex(/^[A-Za-z0-9_-]{1,256}$/),
 });
+
+const headersSchema = z
+  .record(z.string().min(1).max(256), z.string().max(2_000))
+  .refine((headers) => Object.keys(headers).length <= 50, {
+    message: 'At most 50 custom headers are allowed.',
+  });
 
 const messageSchema = z.object({
   from: z.string().min(1),
@@ -37,9 +50,9 @@ const messageSchema = z.object({
   cc: z.array(z.email()).optional(),
   bcc: z.array(z.email()).optional(),
   scheduledAt: z.string().optional(),
-  tags: z.array(z.object({ name: z.string(), value: z.string() })).optional(),
+  tags: z.array(emailTagSchema).max(75).optional(),
   topicId: z.string().optional(),
-  headers: z.record(z.string(), z.string()).optional(),
+  headers: headersSchema.optional(),
   idempotencyKey: z.string().min(1).max(256).optional(),
 });
 

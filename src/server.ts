@@ -31,6 +31,9 @@ export function createMcpServer(
   resend: Resend,
   options: ServerOptions,
   apiKey: string,
+  {
+    sharedEmailApprovalStore = false,
+  }: { sharedEmailApprovalStore?: boolean } = {},
 ): McpServer {
   const { senderEmailAddress, replierEmailAddresses = [] } = options;
   const server = new McpServer({
@@ -56,7 +59,7 @@ export function createMcpServer(
   addEmailApprovalTools(server, resend, {
     senderEmailAddress,
     replierEmailAddresses,
-    sharedStoreKey: apiKey,
+    sharedStoreKey: sharedEmailApprovalStore ? apiKey : undefined,
   });
   addEmailTools(server, resend, { senderEmailAddress, replierEmailAddresses });
   addEventTools(server, resend);

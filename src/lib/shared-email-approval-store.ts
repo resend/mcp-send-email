@@ -7,6 +7,7 @@ import {
   type EmailApprovalDraftInput,
   type EmailApprovalDraftSummary,
   EmailApprovalStore,
+  MAX_EMAIL_ATTACHMENT_ENCODED_BYTES,
   type UpdateEmailApprovalDraftInput,
 } from './email-approval-store.js';
 
@@ -44,6 +45,8 @@ export interface SharedEmailApprovalStore {
 }
 
 const ownedServers = new Map<string, Server>();
+export const MAX_BROKER_REQUEST_BYTES =
+  MAX_EMAIL_ATTACHMENT_ENCODED_BYTES + 1024 * 1024;
 
 function brokerPaths(sharedKey: string) {
   const key = createHash('sha256').update(sharedKey).digest('hex');
@@ -131,12 +134,26 @@ async function handleRequest(
   }
 }
 
-async function startBroker(socket: string, auth: string): Promise<Server> {
+async function startBroker(
+  socket: string,
+  auth: string,
+  maxRequestBytes: number,
+): Promise<Server> {
   const store = new EmailApprovalStore();
   const server = createServer((connection) => {
     connection.setEncoding('utf8');
     let input = '';
+    let inputBytes = 0;
     connection.on('data', (chunk: string) => {
+      inputBytes += Buffer.byteLength(chunk);
+      if (inputBytes > maxRequestBytes) {
+        connection.end(
+          `${JSON.stringify({
+            error: 'Email approval request is too large.',
+          } satisfies BrokerResponse)}\n`,
+        );
+        return;
+      }
       input += chunk;
       const lineEnd = input.indexOf('\n');
       if (lineEnd === -1) return;
@@ -205,7 +222,11 @@ function requestBroker(
   });
 }
 
-async function ensureBroker(socket: string, auth: string): Promise<void> {
+async function ensureBroker(
+  socket: string,
+  auth: string,
+  maxRequestBytes: number,
+): Promise<void> {
   try {
     await requestBroker(socket, auth, 'ping');
     return;
@@ -215,7 +236,7 @@ async function ensureBroker(socket: string, auth: string): Promise<void> {
 
   await removeStaleSocket(socket);
   try {
-    await startBroker(socket, auth);
+    await startBroker(socket, auth, maxRequestBytes);
   } catch (error) {
     if (
       !(error instanceof Error) ||
@@ -229,11 +250,14 @@ async function ensureBroker(socket: string, auth: string): Promise<void> {
 
 export async function createSharedEmailApprovalStore(
   sharedKey: string,
+  {
+    maxRequestBytes = MAX_BROKER_REQUEST_BYTES,
+  }: { maxRequestBytes?: number } = {},
 ): Promise<SharedEmailApprovalStore> {
   const { auth, directory, socket } = brokerPaths(sharedKey);
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await chmod(directory, 0o700);
-  await ensureBroker(socket, auth);
+  await ensureBroker(socket, auth, maxRequestBytes);
 
   return {
     create: (input) =>

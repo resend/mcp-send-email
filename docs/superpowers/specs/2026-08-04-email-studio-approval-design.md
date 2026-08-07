@@ -13,8 +13,8 @@ Clients without MCP Apps receive a review-only preview. No draft is created and 
 
 ## Safety rules
 
-- Drafts are scoped to one MCP server session, expire after 15 minutes, and are never persisted.
-- A session can keep at most three drafts and 40 MiB of decoded attachment bytes.
+- HTTP drafts are scoped to one MCP server session, expire after 15 minutes, and are never persisted. Local stdio uses a private, API-key-authenticated Unix socket only to bridge the host's separate MCP App process.
+- An HTTP session or local stdio broker can keep at most three drafts and 40 MiB of decoded attachment bytes. Each individual draft must also remain within Resend's 40 MB Base64-encoded attachment delivery limit.
 - Email Studio accepts Base64 attachments only. It rejects local paths and URLs because their bytes can change after review or expose server/network data.
 - The app receives attachment name, MIME type, size, and SHA-256 fingerprint, never stored attachment bytes.
 - Configured sender and reply-to addresses are shown but locked; the server enforces the configured values again on every update.

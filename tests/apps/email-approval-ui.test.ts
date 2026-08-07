@@ -113,6 +113,31 @@ describe('Email Studio composer', () => {
     );
   });
 
+  it('rejects an oversized file before reading it into the composer', async () => {
+    const form = document.querySelector('form')!;
+    const arrayBuffer = vi.fn();
+    const files = form.querySelector<HTMLInputElement>('#files')!;
+    Object.defineProperty(files, 'files', {
+      value: [
+        {
+          name: 'too-large.bin',
+          size: 30_000_001,
+          type: 'application/octet-stream',
+          arrayBuffer,
+        },
+      ],
+    });
+
+    files.dispatchEvent(new Event('change'));
+
+    await vi.waitFor(() => {
+      expect(document.querySelector('#status')?.textContent).toContain(
+        'too large',
+      );
+    });
+    expect(arrayBuffer).not.toHaveBeenCalled();
+  });
+
   it('keeps the composer open and shows a tool error when cancellation fails', async () => {
     app.callServerTool.mockResolvedValueOnce({
       isError: true,

@@ -106,6 +106,7 @@ describe('Email Studio approval tools', () => {
         attachments: [
           {
             filename: 'private.txt',
+            content: Buffer.from('private attachment').toString('base64'),
             filePath: '/etc/passwd',
             url: 'https://example.com/private.txt',
           },
@@ -134,6 +135,37 @@ describe('Email Studio approval tools', () => {
 
     const draft = result.structuredContent as { message: object };
     expect(draft.message).not.toHaveProperty('attachments');
+  });
+
+  it('rejects email metadata beyond Resend tag limits', async () => {
+    const client = await makeClient(true);
+    const result = await client.callTool({
+      name: 'prepare-email-approval',
+      arguments: {
+        ...prepareArguments,
+        tags: Array.from({ length: 76 }, (_, index) => ({
+          name: `tag_${index}`,
+          value: 'audit',
+        })),
+      },
+    });
+
+    expect(result.isError).toBe(true);
+  });
+
+  it('rejects an excessive number of custom headers', async () => {
+    const client = await makeClient(true);
+    const result = await client.callTool({
+      name: 'prepare-email-approval',
+      arguments: {
+        ...prepareArguments,
+        headers: Object.fromEntries(
+          Array.from({ length: 51 }, (_, index) => [`X-Audit-${index}`, '1']),
+        ),
+      },
+    });
+
+    expect(result.isError).toBe(true);
   });
 
   it('sends the latest approved revision once', async () => {

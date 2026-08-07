@@ -35,6 +35,7 @@ describe('runStdio', () => {
       resend,
       { senderEmailAddress: undefined, replierEmailAddresses: [] },
       're_test_key',
+      { sharedEmailApprovalStore: true },
     );
     expect(mockConnect).toHaveBeenCalledTimes(1);
   });
@@ -57,6 +58,7 @@ describe('runStdio', () => {
         replierEmailAddresses: ['a@x.com', 'b@x.com'],
       },
       're_test_key',
+      { sharedEmailApprovalStore: true },
     );
   });
 

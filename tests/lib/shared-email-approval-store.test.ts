@@ -38,4 +38,20 @@ describe('shared EmailApprovalStore', () => {
 
     expect(updated.revisionId).not.toBe(created.revisionId);
   });
+
+  it('rejects an oversized broker message before parsing it', async () => {
+    const store = await createSharedEmailApprovalStore(randomUUID(), {
+      maxRequestBytes: 100,
+    });
+
+    await expect(
+      store.create({
+        from: 'Acme <hello@acme.com>',
+        to: ['ada@example.com'],
+        replyTo: 'support@acme.com',
+        subject: 'Hello',
+        text: 'x'.repeat(200),
+      }),
+    ).rejects.toThrow('request is too large');
+  });
 });

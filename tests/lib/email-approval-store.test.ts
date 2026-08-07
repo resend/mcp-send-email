@@ -67,6 +67,42 @@ describe('EmailApprovalStore', () => {
     expect(updated.attachments).toEqual(created.attachments);
   });
 
+  it('rejects retaining the same attachment more than once', () => {
+    const store = new EmailApprovalStore();
+    const created = store.create({
+      from: 'Acme <hello@acme.com>',
+      to: ['ada@example.com'],
+      replyTo: 'support@acme.com',
+      subject: 'Original subject',
+      text: 'Hi Ada',
+      attachments: [
+        {
+          filename: 'invoice.pdf',
+          content: Buffer.from('test').toString('base64'),
+        },
+      ],
+    });
+
+    expect(() =>
+      store.update({
+        draftId: created.draftId,
+        revisionId: created.revisionId,
+        message: {
+          from: 'Acme <hello@acme.com>',
+          to: ['ada@example.com'],
+          replyTo: 'support@acme.com',
+          subject: 'Updated subject',
+          text: 'Hi Ada',
+        },
+        retainAttachmentIds: [
+          created.attachments[0].id,
+          created.attachments[0].id,
+        ],
+        newAttachments: [],
+      }),
+    ).toThrow('more than once');
+  });
+
   it('rejects an expired draft without extending its expiry on update', () => {
     let now = Date.UTC(2026, 7, 4, 12, 0, 0);
     const store = new EmailApprovalStore({ now: () => now });
@@ -161,5 +197,44 @@ describe('EmailApprovalStore', () => {
         ],
       }),
     ).toThrow('attachment limit');
+  });
+
+  it('rejects a draft whose Base64 attachment payload exceeds the delivery limit', () => {
+    const store = new EmailApprovalStore({ maxEncodedAttachmentBytes: 7 });
+
+    expect(() =>
+      store.create({
+        from: 'Acme <hello@acme.com>',
+        to: ['ada@example.com'],
+        replyTo: 'support@acme.com',
+        subject: 'Hello',
+        text: 'Hi Ada',
+        attachments: [
+          {
+            filename: 'one.txt',
+            content: Buffer.from('test').toString('base64'),
+          },
+        ],
+      }),
+    ).toThrow('delivery attachment limit');
+  });
+
+  it.each([
+    'a',
+    'abc',
+    'dGVzdA=',
+  ])('rejects malformed Base64 attachment content: %s', (content) => {
+    const store = new EmailApprovalStore();
+
+    expect(() =>
+      store.create({
+        from: 'Acme <hello@acme.com>',
+        to: ['ada@example.com'],
+        replyTo: 'support@acme.com',
+        subject: 'Hello',
+        text: 'Hi Ada',
+        attachments: [{ filename: 'invalid.txt', content }],
+      }),
+    ).toThrow('valid Base64');
   });
 });

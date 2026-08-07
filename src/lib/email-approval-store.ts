@@ -1,5 +1,17 @@
 import { createHash, randomUUID } from 'node:crypto';
 
+const BASE64_PATTERN =
+  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+export const MAX_EMAIL_ATTACHMENT_ENCODED_BYTES = 40_000_000;
+
+function decodedBase64Size(content: string): number {
+  if (!content || !BASE64_PATTERN.test(content)) {
+    throw new Error('Attachment content must be valid Base64.');
+  }
+  const padding = content.endsWith('==') ? 2 : content.endsWith('=') ? 1 : 0;
+  return (content.length / 4) * 3 - padding;
+}
+
 export interface EmailApprovalAttachmentInput {
   filename: string;
   content: string;
@@ -72,16 +84,20 @@ export class EmailApprovalStore {
   private readonly drafts = new Map<string, StoredDraft>();
   private readonly now: () => number;
   private readonly maxAttachmentBytes: number;
+  private readonly maxEncodedAttachmentBytes: number;
 
   constructor({
     now = Date.now,
     maxAttachmentBytes = 40 * 1024 * 1024,
+    maxEncodedAttachmentBytes = MAX_EMAIL_ATTACHMENT_ENCODED_BYTES,
   }: {
     now?: () => number;
     maxAttachmentBytes?: number;
+    maxEncodedAttachmentBytes?: number;
   } = {}) {
     this.now = now;
     this.maxAttachmentBytes = maxAttachmentBytes;
+    this.maxEncodedAttachmentBytes = maxEncodedAttachmentBytes;
   }
 
   create(input: EmailApprovalDraftInput): EmailApprovalDraftSummary {
@@ -91,6 +107,7 @@ export class EmailApprovalStore {
     }
     const attachmentInputs = input.attachments ?? [];
     this.assertInputAttachmentLimit(attachmentInputs);
+    this.assertDeliveryAttachmentLimit([], attachmentInputs);
     const attachments = this.createAttachments(attachmentInputs);
     const summary: EmailApprovalDraftSummary = {
       draftId: randomUUID(),
@@ -121,6 +138,9 @@ export class EmailApprovalStore {
     if (!draft || draft.summary.revisionId !== revisionId) {
       throw new Error('Email approval draft or revision was not found.');
     }
+    if (new Set(retainAttachmentIds).size !== retainAttachmentIds.length) {
+      throw new Error('An attachment cannot be retained more than once.');
+    }
 
     const retainedAttachments = retainAttachmentIds.map((attachmentId) => {
       const attachment = draft.attachments.find(
@@ -138,6 +158,7 @@ export class EmailApprovalStore {
       draftId,
       retainedAttachments,
     );
+    this.assertDeliveryAttachmentLimit(retainedAttachments, newAttachments);
     const addedAttachments = this.createAttachments(newAttachments);
     const attachments = [...retainedAttachments, ...addedAttachments];
     this.assertAttachmentLimit(attachments, draftId);
@@ -212,10 +233,7 @@ export class EmailApprovalStore {
       0,
     );
     const inputBytes = attachmentInputs.reduce((total, attachment) => {
-      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(attachment.content)) {
-        throw new Error('Attachment content must be valid Base64.');
-      }
-      return total + Buffer.byteLength(attachment.content, 'base64');
+      return total + decodedBase64Size(attachment.content);
     }, 0);
     if (storedBytes + retainedBytes + inputBytes > this.maxAttachmentBytes) {
       throw new Error(
@@ -236,6 +254,25 @@ export class EmailApprovalStore {
     if (storedBytes + candidateBytes > this.maxAttachmentBytes) {
       throw new Error(
         'Pending drafts exceed the attachment limit for this session.',
+      );
+    }
+  }
+
+  private assertDeliveryAttachmentLimit(
+    retainedAttachments: StoredAttachment[],
+    newAttachments: EmailApprovalAttachmentInput[],
+  ): void {
+    const retainedBytes = retainedAttachments.reduce(
+      (total, attachment) => total + 4 * Math.ceil(attachment.size / 3),
+      0,
+    );
+    const newBytes = newAttachments.reduce(
+      (total, attachment) => total + attachment.content.length,
+      0,
+    );
+    if (retainedBytes + newBytes > this.maxEncodedAttachmentBytes) {
+      throw new Error(
+        'Draft exceeds the delivery attachment limit after Base64 encoding.',
       );
     }
   }
