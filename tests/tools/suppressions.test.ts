@@ -47,7 +47,7 @@ const entry = {
   email: 'a@b.com',
   origin: 'bounce',
   source_id: 'em_1',
-  created_at: '2026-01-01T00:00:00Z',
+  created_at: '2026-01-01 00:00:00+00',
 };
 
 describe('suppression tools', () => {
@@ -209,7 +209,7 @@ describe('get-suppression', () => {
     expect(text).toContain('Email: a@b.com');
     expect(text).toContain('ID: sup_1');
     expect(text).toContain('Origin: bounce');
-    expect(text).toContain('Created at: 2026-01-01T00:00:00Z');
+    expect(text).toContain('Created at: 2026-01-01 00:00:00+00');
   });
 });
 

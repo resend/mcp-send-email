@@ -140,8 +140,8 @@ describe('get-contact-import', () => {
         object: 'contact_import',
         id: 'imp_1',
         status: 'completed',
-        created_at: '2026-01-01T00:00:00Z',
-        completed_at: '2026-01-01T00:01:00Z',
+        created_at: '2026-01-01 00:00:00+00',
+        completed_at: '2026-01-01 00:01:00+00',
         counts: { total: 5, created: 3, updated: 1, skipped: 1, failed: 0 },
       },
     });
@@ -154,7 +154,7 @@ describe('get-contact-import', () => {
     const text = textOf(result as never);
     expect(text).toContain('Status: completed');
     expect(text).toContain('Created: 3');
-    expect(text).toContain('Completed at: 2026-01-01T00:01:00Z');
+    expect(text).toContain('Completed at: 2026-01-01 00:01:00+00');
   });
 
   it('omits completed_at when null', async () => {
@@ -163,7 +163,7 @@ describe('get-contact-import', () => {
         object: 'contact_import',
         id: 'imp_1',
         status: 'in_progress',
-        created_at: '2026-01-01T00:00:00Z',
+        created_at: '2026-01-01 00:00:00+00',
         completed_at: null,
         counts: { total: 0, created: 0, updated: 0, skipped: 0, failed: 0 },
       },
@@ -191,8 +191,8 @@ describe('list-contact-imports', () => {
             object: 'contact_import',
             id: 'imp_1',
             status: 'completed',
-            created_at: '2026-01-01T00:00:00Z',
-            completed_at: '2026-01-01T00:01:00Z',
+            created_at: '2026-01-01 00:00:00+00',
+            completed_at: '2026-01-01 00:01:00+00',
             counts: { total: 1, created: 1, updated: 0, skipped: 0, failed: 0 },
           },
         ],
