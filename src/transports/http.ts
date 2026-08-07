@@ -1,13 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
-import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
+import {
+  hostHeaderValidation,
+  localhostHostValidation,
+} from '@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import express from 'express';
 import { Resend } from 'resend';
+import { MAX_EMAIL_ATTACHMENT_ENCODED_BYTES } from '../lib/email-approval-store.js';
 import { createMcpServer } from '../server.js';
 import type { ServerOptions } from '../types.js';
 
 const sessions: Record<string, StreamableHTTPServerTransport> = {};
+const MAX_MCP_REQUEST_BYTES = MAX_EMAIL_ATTACHMENT_ENCODED_BYTES + 1024 * 1024;
 
 function sendJsonRpcError(
   res: ServerResponse,
@@ -71,7 +77,20 @@ export async function runHttp(
   httpOptions: HttpTransportOptions = {},
 ): Promise<Server> {
   const { host = '127.0.0.1', allowedHosts } = httpOptions;
-  const app = createMcpExpressApp({ host, allowedHosts });
+  const app = express();
+  app.use(express.json({ limit: MAX_MCP_REQUEST_BYTES }));
+
+  if (allowedHosts) {
+    app.use(hostHeaderValidation(allowedHosts));
+  } else if (['127.0.0.1', 'localhost', '::1'].includes(host)) {
+    app.use(localhostHostValidation());
+  } else if (host === '0.0.0.0' || host === '::') {
+    console.warn(
+      `Warning: Server is binding to ${host} without DNS rebinding protection. ` +
+        'Consider using the allowedHosts option to restrict allowed hosts, ' +
+        'or use authentication to protect your server.',
+    );
+  }
 
   app.get('/health', (_req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
