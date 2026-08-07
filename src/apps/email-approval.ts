@@ -17,10 +17,13 @@ type DraftResult = EditableApprovalDraft & {
 const app = new App({ name: 'Resend Email Studio', version: '1.0.0' }, {});
 const root = document.querySelector<HTMLElement>('#app');
 const MAX_FILE_SNAPSHOT_BYTES = 30_000_000;
+const MAX_EMAIL_ATTACHMENT_ENCODED_BYTES = 40_000_000;
 
 let draft: DraftResult | undefined;
 let retainedAttachmentIds = new Set<string>();
 let newAttachments: EmailApprovalAttachmentInput[] = [];
+let attachmentReadsInFlight = 0;
+let isSubmitting = false;
 
 function splitAddresses(value: string): string[] {
   return value
@@ -53,6 +56,35 @@ function toBase64(buffer: ArrayBuffer): string {
     );
   }
   return btoa(binary);
+}
+
+function base64EncodedSize(bytes: number): number {
+  return 4 * Math.ceil(bytes / 3);
+}
+
+function totalAttachmentEncodedBytes(files: File[]): number {
+  const retainedBytes =
+    draft?.attachments.reduce(
+      (total, attachment) =>
+        retainedAttachmentIds.has(attachment.id)
+          ? total + base64EncodedSize(attachment.size)
+          : total,
+      0,
+    ) ?? 0;
+  const addedBytes = newAttachments.reduce(
+    (total, attachment) => total + attachment.content.length,
+    0,
+  );
+  const selectedBytes = files.reduce(
+    (total, file) => total + base64EncodedSize(file.size),
+    0,
+  );
+  return retainedBytes + addedBytes + selectedBytes;
+}
+
+function updateApproveState(form: HTMLFormElement): void {
+  const approve = form.querySelector<HTMLButtonElement>('#approve');
+  if (approve) approve.disabled = isSubmitting || attachmentReadsInFlight > 0;
 }
 
 function messageFromForm(
@@ -239,6 +271,7 @@ function render(): void {
 
   const attachments = form.querySelector<HTMLUListElement>('#attachments');
   if (attachments) renderAttachmentList(attachments);
+  updateApproveState(form);
 
   form
     .querySelector<HTMLInputElement>('#files')
@@ -256,17 +289,42 @@ function render(): void {
         );
         return;
       }
-      newAttachments = [
-        ...newAttachments,
-        ...(await Promise.all(
+      if (
+        totalAttachmentEncodedBytes(files) > MAX_EMAIL_ATTACHMENT_ENCODED_BYTES
+      ) {
+        renderStatus(
+          'Selected files exceed the 40 MB attachment limit for this email.',
+          true,
+        );
+        (event.currentTarget as HTMLInputElement).value = '';
+        return;
+      }
+
+      const draftId = draft?.draftId;
+      attachmentReadsInFlight += 1;
+      updateApproveState(form);
+      try {
+        const converted = await Promise.all(
           files.map(async (file) => ({
             filename: file.name,
             content: toBase64(await file.arrayBuffer()),
             contentType: file.type || undefined,
           })),
-        )),
-      ];
-      if (attachments) renderAttachmentList(attachments);
+        );
+        if (draft?.draftId !== draftId) return;
+        newAttachments = [...newAttachments, ...converted];
+        if (attachments) renderAttachmentList(attachments);
+      } catch (error) {
+        renderStatus(
+          error instanceof Error
+            ? `Unable to read selected attachment: ${error.message}`
+            : 'Unable to read selected attachment.',
+          true,
+        );
+      } finally {
+        attachmentReadsInFlight -= 1;
+        updateApproveState(form);
+      }
     });
 
   form
@@ -290,8 +348,13 @@ function render(): void {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!draft) return;
-    const approve = form.querySelector<HTMLButtonElement>('#approve');
-    if (approve) approve.disabled = true;
+    if (attachmentReadsInFlight > 0) {
+      renderStatus('Wait for selected attachments to finish loading.', true);
+      updateApproveState(form);
+      return;
+    }
+    isSubmitting = true;
+    updateApproveState(form);
     try {
       const update = buildUpdateArguments(draft, {
         message: messageFromForm(form),
@@ -332,7 +395,8 @@ function render(): void {
           : 'Unable to update email draft.',
         true,
       );
-      if (approve) approve.disabled = false;
+      isSubmitting = false;
+      updateApproveState(form);
     }
   });
 }
@@ -345,6 +409,7 @@ app.ontoolresult = (params) => {
     result.attachments.map((attachment) => attachment.id),
   );
   newAttachments = [];
+  isSubmitting = false;
   render();
 };
 

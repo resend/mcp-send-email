@@ -92,6 +92,7 @@ describe('Email Studio composer', () => {
       value: [
         {
           name: 'notes.txt',
+          size: 5,
           type: 'text/plain',
           arrayBuffer: async () => new TextEncoder().encode('notes').buffer,
         },
@@ -111,6 +112,71 @@ describe('Email Studio composer', () => {
     expect((form.elements.namedItem('text') as HTMLTextAreaElement).value).toBe(
       'Edited body',
     );
+  });
+
+  it('prevents approval until selected attachments have finished loading', async () => {
+    const form = document.querySelector('form')!;
+    let resolveFile: ((value: ArrayBuffer) => void) | undefined;
+    const files = form.querySelector<HTMLInputElement>('#files')!;
+    Object.defineProperty(files, 'files', {
+      value: [
+        {
+          name: 'slow.txt',
+          size: 4,
+          type: 'text/plain',
+          arrayBuffer: () =>
+            new Promise<ArrayBuffer>((resolve) => {
+              resolveFile = resolve;
+            }),
+        },
+      ],
+    });
+
+    files.dispatchEvent(new Event('change'));
+
+    const approve = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Approve and send',
+    )!;
+    expect(approve.disabled).toBe(true);
+
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    expect(app.callServerTool).not.toHaveBeenCalled();
+
+    resolveFile!(new TextEncoder().encode('slow').buffer);
+    await vi.waitFor(() => expect(approve.disabled).toBe(false));
+  });
+
+  it('rejects selected files whose combined encoded size exceeds the delivery limit', async () => {
+    const form = document.querySelector('form')!;
+    const firstArrayBuffer = vi.fn();
+    const secondArrayBuffer = vi.fn();
+    const files = form.querySelector<HTMLInputElement>('#files')!;
+    Object.defineProperty(files, 'files', {
+      value: [
+        {
+          name: 'maximum.bin',
+          size: 30_000_000,
+          type: 'application/octet-stream',
+          arrayBuffer: firstArrayBuffer,
+        },
+        {
+          name: 'one-byte-more.bin',
+          size: 1,
+          type: 'application/octet-stream',
+          arrayBuffer: secondArrayBuffer,
+        },
+      ],
+    });
+
+    files.dispatchEvent(new Event('change'));
+
+    await vi.waitFor(() => {
+      expect(document.querySelector('#status')?.textContent).toContain(
+        'attachment limit',
+      );
+    });
+    expect(firstArrayBuffer).not.toHaveBeenCalled();
+    expect(secondArrayBuffer).not.toHaveBeenCalled();
   });
 
   it('rejects an oversized file before reading it into the composer', async () => {
