@@ -23,6 +23,7 @@ let draft: DraftResult | undefined;
 let retainedAttachmentIds = new Set<string>();
 let newAttachments: EmailApprovalAttachmentInput[] = [];
 let attachmentReadsInFlight = 0;
+let pendingAttachmentEncodedBytes = 0;
 let isSubmitting = false;
 
 function splitAddresses(value: string): string[] {
@@ -79,7 +80,9 @@ function totalAttachmentEncodedBytes(files: File[]): number {
     (total, file) => total + base64EncodedSize(file.size),
     0,
   );
-  return retainedBytes + addedBytes + selectedBytes;
+  return (
+    retainedBytes + addedBytes + pendingAttachmentEncodedBytes + selectedBytes
+  );
 }
 
 function updateApproveState(form: HTMLFormElement): void {
@@ -301,6 +304,11 @@ function render(): void {
       }
 
       const draftId = draft?.draftId;
+      const selectedEncodedBytes = files.reduce(
+        (total, file) => total + base64EncodedSize(file.size),
+        0,
+      );
+      pendingAttachmentEncodedBytes += selectedEncodedBytes;
       attachmentReadsInFlight += 1;
       updateApproveState(form);
       try {
@@ -322,6 +330,7 @@ function render(): void {
           true,
         );
       } finally {
+        pendingAttachmentEncodedBytes -= selectedEncodedBytes;
         attachmentReadsInFlight -= 1;
         updateApproveState(form);
       }

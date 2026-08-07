@@ -146,6 +146,60 @@ describe('Email Studio composer', () => {
     await vi.waitFor(() => expect(approve.disabled).toBe(false));
   });
 
+  it('reserves the attachment budget while an earlier file selection is loading', async () => {
+    const form = document.querySelector('form')!;
+    const files = form.querySelector<HTMLInputElement>('#files')!;
+    let resolveFirstFile: ((value: ArrayBuffer) => void) | undefined;
+    const firstArrayBuffer = vi.fn(
+      () =>
+        new Promise<ArrayBuffer>((resolve) => {
+          resolveFirstFile = resolve;
+        }),
+    );
+    const secondArrayBuffer = vi.fn();
+
+    Object.defineProperty(files, 'files', {
+      configurable: true,
+      value: [
+        {
+          name: 'first-large.bin',
+          size: 29_999_990,
+          type: 'application/octet-stream',
+          arrayBuffer: firstArrayBuffer,
+        },
+      ],
+    });
+    files.dispatchEvent(new Event('change'));
+    expect(firstArrayBuffer).toHaveBeenCalledOnce();
+
+    Object.defineProperty(files, 'files', {
+      configurable: true,
+      value: [
+        {
+          name: 'second-large.bin',
+          size: 29_999_990,
+          type: 'application/octet-stream',
+          arrayBuffer: secondArrayBuffer,
+        },
+      ],
+    });
+    files.dispatchEvent(new Event('change'));
+
+    await vi.waitFor(() => {
+      expect(document.querySelector('#status')?.textContent).toContain(
+        'attachment limit',
+      );
+    });
+    expect(secondArrayBuffer).not.toHaveBeenCalled();
+
+    resolveFirstFile!(new Uint8Array([1]).buffer);
+    await vi.waitFor(() => {
+      expect(document.querySelector('#attachments')?.textContent).toContain(
+        'first-large.bin',
+      );
+    });
+  });
+
   it('rejects selected files whose combined encoded size exceeds the delivery limit', async () => {
     const form = document.querySelector('form')!;
     const firstArrayBuffer = vi.fn();
