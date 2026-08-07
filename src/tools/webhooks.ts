@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 
@@ -72,7 +72,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
         'List all webhooks from Resend. Use to get webhook IDs and see which endpoints and events are configured. Not for listing emails, segments, or broadcasts.',
       inputSchema: {},
     },
-    async () => {
+    async (_args, _ctx) => {
       const response = await resend.webhooks.list();
 
       if (response.error) {

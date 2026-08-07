@@ -1,4 +1,5 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, ServerContext } from '@modelcontextprotocol/server';
+import { CLIENT_INFO_META_KEY } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { DashboardClient } from '../lib/dashboard-client.js';
 import type { ResendEditorClient } from '../lib/resend-editor-client.js';
@@ -17,9 +18,14 @@ export function addEditorTools(
 ) {
   let activeConnection: EditorConnection | null = null;
 
-  /** MCP client name (e.g. "claude-code", "cursor") used as the agent_name for editor presence. */
-  function getAgentName(): string | undefined {
-    return server.server.getClientVersion()?.name;
+  function getAgentName(ctx?: ServerContext): string | undefined {
+    const envelope = ctx?.mcpReq.envelope as
+      | Record<typeof CLIENT_INFO_META_KEY, { name?: string } | undefined>
+      | undefined;
+    return (
+      envelope?.[CLIENT_INFO_META_KEY]?.name ??
+      server.server.getClientVersion()?.name
+    );
   }
 
   /**
@@ -30,6 +36,7 @@ export function addEditorTools(
   async function withEditorSession<T>(
     conn: EditorConnection,
     fn: () => Promise<T>,
+    ctx?: ServerContext,
   ): Promise<T> {
     if (!apiClient) {
       return fn();
@@ -42,7 +49,7 @@ export function addEditorTools(
 
     if (!alreadyConnected) {
       try {
-        const agent_name = conn.agent_name ?? getAgentName();
+        const agent_name = conn.agent_name ?? getAgentName(ctx);
         await apiClient.createEditorConnection({ ...conn, agent_name });
         activeConnection = { ...conn, agent_name };
       } catch {
@@ -97,7 +104,10 @@ export function addEditorTools(
           ),
       },
     },
-    async ({ resource_type, resource_id: rawResourceId, include_schema }) => {
+    async (
+      { resource_type, resource_id: rawResourceId, include_schema },
+      ctx,
+    ) => {
       const resource_id = extractIdFromUrl(
         rawResourceId,
         resource_type === 'broadcast' ? 'broadcasts' : 'templates',
@@ -111,7 +121,7 @@ export function addEditorTools(
         activeConnection.resource_type !== resource_type ||
         activeConnection.resource_id !== resource_id
       ) {
-        const agent_name = getAgentName();
+        const agent_name = getAgentName(ctx);
         try {
           await apiClient.createEditorConnection({
             resource_type,
@@ -182,7 +192,7 @@ export function addEditorTools(
           .describe('Display name for the agent avatar'),
       },
     },
-    async ({ resource_type, resource_id: rawResourceId, agent_name }) => {
+    async ({ resource_type, resource_id: rawResourceId, agent_name }, ctx) => {
       if (!apiClient) {
         throw new Error('API client not configured. Provide a Resend API key.');
       }
@@ -192,7 +202,7 @@ export function addEditorTools(
         resource_type === 'broadcast' ? 'broadcasts' : 'templates',
       );
 
-      const resolvedAgentName = agent_name ?? getAgentName();
+      const resolvedAgentName = agent_name ?? getAgentName(ctx);
 
       const result = await apiClient.createEditorConnection({
         resource_type,
@@ -224,7 +234,7 @@ export function addEditorTools(
         'Remove agent presence from the Resend dashboard editor. Call this when done editing.',
       inputSchema: {},
     },
-    async () => {
+    async (_args, _ctx) => {
       if (!apiClient) {
         throw new Error('API client not configured. Provide a Resend API key.');
       }

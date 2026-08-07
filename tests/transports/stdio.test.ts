@@ -2,19 +2,18 @@ import type { Resend } from 'resend';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { runStdio } from '../../src/transports/stdio.js';
 
-const mockConnect = vi.fn().mockResolvedValue(undefined);
-
-vi.mock('../../src/server.js', () => ({
-  createMcpServer: vi.fn(() => ({
-    connect: mockConnect,
+const { mockServeStdio } = vi.hoisted(() => ({
+  mockServeStdio: vi.fn(() => ({
+    close: vi.fn().mockResolvedValue(undefined),
   })),
 }));
 
-vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
-  // biome-ignore lint/complexity/useArrowFunction: arrow functions cannot be used as constructors
-  StdioServerTransport: vi.fn(function () {
-    return {};
-  }),
+vi.mock('../../src/server.js', () => ({
+  createMcpServer: vi.fn(() => ({ mock: 'server' })),
+}));
+
+vi.mock('@modelcontextprotocol/server/stdio', () => ({
+  serveStdio: mockServeStdio,
 }));
 
 describe('runStdio', () => {
@@ -27,16 +26,28 @@ describe('runStdio', () => {
     vi.restoreAllMocks();
   });
 
-  it('creates server and connects transport', async () => {
+  it('serves with legacy: "serve" so old clients are unaffected', async () => {
+    const resend = {} as Resend;
+    await runStdio(resend, { replierEmailAddresses: [] }, 're_test_key');
+
+    expect(mockServeStdio).toHaveBeenCalledTimes(1);
+    const [, options] = mockServeStdio.mock.calls[0];
+    expect(options).toMatchObject({ legacy: 'serve' });
+  });
+
+  it('creates server via the factory passed to serveStdio', async () => {
     const resend = {} as Resend;
     await runStdio(resend, { replierEmailAddresses: [] }, 're_test_key');
     const { createMcpServer } = await import('../../src/server.js');
+
+    const [factory] = mockServeStdio.mock.calls[0];
+    factory();
+
     expect(createMcpServer).toHaveBeenCalledWith(
       resend,
       { senderEmailAddress: undefined, replierEmailAddresses: [] },
       're_test_key',
     );
-    expect(mockConnect).toHaveBeenCalledTimes(1);
   });
 
   it('passes sender and repliers to server', async () => {
@@ -50,6 +61,9 @@ describe('runStdio', () => {
       're_test_key',
     );
     const { createMcpServer } = await import('../../src/server.js');
+    const [factory] = mockServeStdio.mock.calls[0];
+    factory();
+
     expect(createMcpServer).toHaveBeenCalledWith(
       resend,
       {
@@ -60,11 +74,11 @@ describe('runStdio', () => {
     );
   });
 
-  it('rejects when server.connect rejects', async () => {
-    mockConnect.mockRejectedValueOnce(new Error('connect failed'));
+  it('wires connection errors to onerror instead of a rejected promise', async () => {
     const resend = {} as Resend;
-    await expect(
-      runStdio(resend, { replierEmailAddresses: [] }, 're_test_key'),
-    ).rejects.toThrow('connect failed');
+    await runStdio(resend, { replierEmailAddresses: [] }, 're_test_key');
+
+    const [, options] = mockServeStdio.mock.calls[0];
+    expect(() => options.onerror(new Error('boom'))).not.toThrow();
   });
 });
