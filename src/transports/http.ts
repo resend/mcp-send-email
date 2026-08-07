@@ -31,7 +31,7 @@ function sendJsonRpcError(
  */
 function extractBearerToken(req: IncomingMessage): string | null {
   const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) return null;
+  if (!header?.startsWith('Bearer ')) return null;
   const token = header.slice('Bearer '.length).trim();
   return token || null;
 }

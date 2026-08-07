@@ -46,7 +46,7 @@ export function resolveConfig(
 
   // Stdio requires an API key at startup. HTTP mode is lenient because
   // each client provides their own key via the Authorization: Bearer header.
-  if (!http && (!apiKey || !apiKey.trim())) {
+  if (!http && !apiKey?.trim()) {
     return {
       ok: false,
       error:
