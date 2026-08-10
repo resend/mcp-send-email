@@ -282,6 +282,11 @@ export async function runHttp(
     });
     server.once('error', reject);
 
+    const removeShutdownListeners = () => {
+      process.off('SIGINT', shutdown);
+      process.off('SIGTERM', shutdown);
+    };
+
     const shutdown = async () => {
       for (const sid of Object.keys(sessions)) {
         try {
@@ -297,5 +302,6 @@ export async function runHttp(
     };
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
+    server.once('close', removeShutdownListeners);
   });
 }

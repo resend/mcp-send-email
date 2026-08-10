@@ -40,6 +40,12 @@ function getWithHost(
   });
 }
 
+function closeServer(server: import('node:http').Server): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+}
+
 vi.mock('../../src/server.js', () => ({
   createMcpServer: vi.fn(() => ({
     connect: vi.fn().mockResolvedValue(undefined),
@@ -59,6 +65,20 @@ describe('runHttp', () => {
     const server = await runHttp({ replierEmailAddresses: [] }, 0);
     expect(server).toBeDefined();
     server.close();
+  });
+
+  it('removes shutdown signal listeners when the HTTP server closes', async () => {
+    const server = await runHttp({ replierEmailAddresses: [] }, 0);
+    const sigintHandler = process.listeners('SIGINT').at(-1);
+    const sigtermHandler = process.listeners('SIGTERM').at(-1);
+
+    expect(sigintHandler).toBeDefined();
+    expect(sigtermHandler).toBeDefined();
+
+    await closeServer(server);
+
+    expect(process.listeners('SIGINT')).not.toContain(sigintHandler);
+    expect(process.listeners('SIGTERM')).not.toContain(sigtermHandler);
   });
 
   it('GET /health returns 200 with status ok', async () => {
