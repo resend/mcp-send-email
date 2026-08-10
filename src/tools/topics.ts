@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 
@@ -59,7 +59,7 @@ export function addTopicTools(server: McpServer, resend: Resend) {
         'List all topics from Resend. This tool is useful for getting topic IDs to use with other tools like send-email.',
       inputSchema: {},
     },
-    async () => {
+    async (_args, _ctx) => {
       const response = await resend.topics.list();
 
       if (response.error) {

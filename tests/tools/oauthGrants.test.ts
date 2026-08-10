@@ -1,6 +1,5 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Client } from '@modelcontextprotocol/client';
+import { InMemoryTransport, McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { addOAuthGrantTools } from '../../src/tools/oauthGrants.js';
@@ -36,7 +35,7 @@ const grant = {
   id: 'grant_1',
   client_id: 'client_1',
   scopes: ['emails:send'],
-  created_at: '2026-01-01T00:00:00.000Z',
+  created_at: '2026-01-01 00:00:00+00',
   revoked_at: null,
   revoked_reason: null,
   client: { name: 'Resend CLI', logo_uri: null },
@@ -69,7 +68,7 @@ describe('list-oauth-grants', () => {
             ...grant,
             id: 'grant_2',
             scopes: ['emails:send', 'domains:read'],
-            revoked_at: '2026-01-02T00:00:00.000Z',
+            revoked_at: '2026-01-02 00:00:00+00',
             revoked_reason: 'revoked_from_api',
           },
         ],
@@ -91,7 +90,7 @@ describe('list-oauth-grants', () => {
     expect(text).toContain('App: Resend CLI');
     expect(text).toContain('emails:send, domains:read');
     expect(text).toContain('active');
-    expect(text).toContain('revoked (2026-01-02T00:00:00.000Z)');
+    expect(text).toContain('revoked (2026-01-02 00:00:00+00)');
   });
 
   it('forwards the limit to the SDK', async () => {

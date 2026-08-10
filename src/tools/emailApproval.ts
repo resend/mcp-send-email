@@ -1,12 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import {
-  getUiCapability,
-  RESOURCE_MIME_TYPE,
-  registerAppResource,
-  registerAppTool,
-} from '@modelcontextprotocol/ext-apps/server';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 import {
@@ -21,6 +15,7 @@ import { createSharedEmailApprovalStore } from '../lib/shared-email-approval-sto
 
 const EMAIL_APPROVAL_RESOURCE = 'ui://resend/email-approval';
 const APPROVAL_TOKEN_META_KEY = 'io.resend/email-approval-token';
+const RESOURCE_MIME_TYPE = 'text/html;profile=mcp-app';
 
 const attachmentSchema = z
   .object({
@@ -87,8 +82,13 @@ const draftSummarySchema = z.object({
 });
 
 function supportsUi(server: McpServer): boolean {
-  const capability = getUiCapability(server.server.getClientCapabilities());
-  return capability?.mimeTypes?.includes(RESOURCE_MIME_TYPE) ?? false;
+  const capability = server.server.getClientCapabilities()?.extensions?.[
+    'io.modelcontextprotocol/ui'
+  ] as { mimeTypes?: unknown } | undefined;
+  return (
+    Array.isArray(capability?.mimeTypes) &&
+    capability.mimeTypes.includes(RESOURCE_MIME_TYPE)
+  );
 }
 
 function reviewPreview(message: EmailApprovalDraftInput): string {
@@ -101,6 +101,7 @@ function reviewPreview(message: EmailApprovalDraftInput): string {
 function uiMetadata(visibility: Array<'model' | 'app'>) {
   return {
     ui: { resourceUri: EMAIL_APPROVAL_RESOURCE, visibility },
+    'ui/resourceUri': EMAIL_APPROVAL_RESOURCE,
   };
 }
 
@@ -144,8 +145,7 @@ export function addEmailApprovalTools(
     return storePromise;
   };
 
-  registerAppResource(
-    server,
+  server.registerResource(
     'Email Studio approval composer',
     EMAIL_APPROVAL_RESOURCE,
     {
@@ -186,8 +186,7 @@ export function addEmailApprovalTools(
         : {}),
     });
 
-  registerAppTool(
-    server,
+  server.registerTool(
     'prepare-email-approval',
     {
       title: 'Prepare Email for Human Approval',
@@ -242,8 +241,7 @@ export function addEmailApprovalTools(
     },
   );
 
-  registerAppTool(
-    server,
+  server.registerTool(
     'update-email-approval',
     {
       title: 'Update Email Approval Draft',
@@ -297,8 +295,7 @@ export function addEmailApprovalTools(
     },
   );
 
-  registerAppTool(
-    server,
+  server.registerTool(
     'approve-email-approval',
     {
       title: 'Approve and Send Email Draft',
@@ -343,8 +340,7 @@ export function addEmailApprovalTools(
     },
   );
 
-  registerAppTool(
-    server,
+  server.registerTool(
     'cancel-email-approval',
     {
       title: 'Cancel Email Approval Draft',

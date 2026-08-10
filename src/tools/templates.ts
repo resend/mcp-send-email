@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, ServerContext } from '@modelcontextprotocol/server';
 import type {
   CreateTemplateOptions,
   Resend,
@@ -37,6 +37,7 @@ export function addTemplateTools(
     withEditorSession: <T>(
       conn: { resource_type: 'broadcast' | 'template'; resource_id: string },
       fn: () => Promise<T>,
+      ctx?: ServerContext,
     ) => Promise<T>;
   },
 ) {
@@ -321,12 +322,13 @@ export function addTemplateTools(
         name: z.string().optional().describe('Update the template name.'),
       },
     },
-    async ({ id: rawId, content, subject, name }) => {
+    async ({ id: rawId, content, subject, name }, ctx) => {
       const id = extractIdFromUrl(rawId, 'templates');
       // Compose the TipTap content with editor session
       await withEditorSession(
         { resource_type: 'template', resource_id: id },
         () => apiClient.composeTemplateContent(id, { content }),
+        ctx,
       );
 
       // Update metadata if any was provided

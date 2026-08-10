@@ -1,5 +1,5 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { Client } from '@modelcontextprotocol/client';
+import { InMemoryTransport } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { afterEach, describe, expect, it } from 'vitest';
 import { stopSharedEmailApprovalStoresForTest } from '../src/lib/shared-email-approval-store.js';

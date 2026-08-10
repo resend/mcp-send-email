@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, ServerContext } from '@modelcontextprotocol/server';
 import type { CreateBroadcastOptions, Resend } from 'resend';
 import { z } from 'zod';
 import { EMAIL_HTML_RULES } from '../lib/email-html-rules.js';
@@ -19,6 +19,7 @@ export function addBroadcastTools(
     withEditorSession: <T>(
       conn: { resource_type: 'broadcast' | 'template'; resource_id: string },
       fn: () => Promise<T>,
+      ctx?: ServerContext,
     ) => Promise<T>;
   },
 ) {
@@ -245,7 +246,7 @@ export function addBroadcastTools(
 **When to use:** User asks "show my broadcasts", "what newsletters did I send?", "list campaigns". Use get-broadcast for full details of one.`,
       inputSchema: {},
     },
-    async () => {
+    async (_args, _ctx) => {
       const response = await resend.broadcasts.list();
 
       if (response.error) {
@@ -456,18 +457,16 @@ export function addBroadcastTools(
           .describe('Update the broadcast name (internal label).'),
       },
     },
-    async ({
-      broadcastId: rawBroadcastId,
-      content,
-      subject,
-      previewText,
-      name,
-    }) => {
+    async (
+      { broadcastId: rawBroadcastId, content, subject, previewText, name },
+      ctx,
+    ) => {
       const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
       // Compose the TipTap content with editor session
       await withEditorSession(
         { resource_type: 'broadcast', resource_id: broadcastId },
         () => apiClient.composeBroadcastContent(broadcastId, { content }),
+        ctx,
       );
 
       // Update metadata if any was provided
