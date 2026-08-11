@@ -366,6 +366,43 @@ export function addBroadcastTools(
   );
 
   server.registerTool(
+    'cancel-broadcast',
+    {
+      title: 'Cancel Broadcast',
+      description: `**Purpose:** Cancel a queued or scheduled broadcast by ID or Resend dashboard URL, without removing it. Cancelling a queued broadcast stops it mid-send (emails already sent are not affected). Cancelling a scheduled broadcast reverts it to draft.
+
+**NOT for:** Removing a broadcast entirely (use remove-broadcast). Draft and sent broadcasts cannot be cancelled — sent broadcasts are immutable, and drafts have nothing to cancel.
+
+**When to use:** User wants to "stop", "cancel", or "pause" a broadcast that is currently sending or scheduled to send.`,
+      inputSchema: {
+        broadcastId: z
+          .string()
+          .nonempty()
+          .describe(
+            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+          ),
+      },
+    },
+    async ({ broadcastId: rawBroadcastId }) => {
+      const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
+      const response = await resend.broadcasts.cancel(broadcastId);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to cancel broadcast: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      return {
+        content: [
+          { type: 'text', text: 'Broadcast cancelled successfully.' },
+          { type: 'text', text: `ID: ${response.data.id}` },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
     'remove-broadcast',
     {
       title: 'Remove Broadcast',
