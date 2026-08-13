@@ -196,54 +196,141 @@ function renderAttachmentList(list: HTMLUListElement): void {
   }
 }
 
+function formatExpiry(expiresAt: string): string {
+  const date = new Date(expiresAt);
+  if (Number.isNaN(date.getTime())) return expiresAt;
+
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 function render(): void {
   if (!root || !draft) return;
   const message = draft.message;
   root.replaceChildren();
   const form = document.createElement('form');
+  form.dataset.emailStudio = 'true';
   form.innerHTML = `
     <style>
-      :root { color: #172033; font-family: system-ui, sans-serif; }
-      main { max-width: 760px; margin: 0 auto; padding: 20px; }
-      fieldset { border: 1px solid #d8dee9; border-radius: 8px; margin: 0 0 14px; padding: 14px; }
-      legend { font-weight: 700; } label { display: block; font-size: 14px; margin: 8px 0; }
-      input, textarea { box-sizing: border-box; display: block; width: 100%; margin-top: 4px; padding: 8px; font: inherit; }
-      textarea { min-height: 96px; } ul { padding-left: 18px; } li { display: flex; gap: 10px; justify-content: space-between; margin: 8px 0; }
-      button { cursor: pointer; padding: 8px 12px; } #approve { background: #16794c; color: white; border: 0; border-radius: 5px; }
-      #status[data-error="true"] { color: #b42318; } iframe { width: 100%; min-height: 180px; border: 1px solid #d8dee9; }
+      :root { color: #fdfdfd; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #000; }
+      * { box-sizing: border-box; }
+      [data-email-studio] { width: min(100%, 1040px); margin: 0 auto; padding: 16px; color: #fdfdfd; }
+      .studio-shell { overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: #0d0e10; }
+      .studio-header { display: flex; gap: 18px; align-items: center; justify-content: space-between; min-width: 0; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,.11); }
+      .studio-title { min-width: 0; }
+      .eyebrow { margin: 0 0 4px; color: #70b8ff; font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+      h1 { margin: 0; font-size: 24px; line-height: 1.15; letter-spacing: -.035em; font-weight: 650; }
+      .review-state { display: flex; flex: 0 1 auto; flex-wrap: wrap; gap: 6px 9px; align-items: center; justify-content: flex-end; min-width: 0; color: rgba(253,253,253,.62); font-size: 12px; line-height: 1.35; text-align: right; }
+      .review-state strong { color: #46fea5d4; font-weight: 600; }
+      .state-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: #46fea5d4; box-shadow: 0 0 0 3px #22ff991e; }
+      .expiry { margin: 0; color: #ffca16; }
+      .review-guidance { margin: 0; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,.08); color: rgba(253,253,253,.62); font-size: 13px; line-height: 1.45; }
+      .studio-body { padding: 0; }
+      .section { padding: 20px; }
+      .section-header { display: flex; gap: 16px; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+      h2 { margin: 0; font-size: 15px; letter-spacing: -.015em; }
+      .section-note { margin: 0; color: rgba(253,253,253,.48); font-size: 12px; text-align: right; }
+      .field-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field-grid .wide { grid-column: 1 / -1; }
+      label { display: block; color: rgba(253,253,253,.78); font-size: 12px; font-weight: 560; }
+      input, textarea { display: block; width: 100%; margin-top: 7px; padding: 10px 11px; border: 1px solid rgba(255,255,255,.16); border-radius: 7px; outline: none; background: #000; color: #fdfdfd; font: inherit; font-size: 14px; line-height: 1.45; transition: border-color .16s, box-shadow .16s; }
+      input:focus, textarea:focus { border-color: #70b8ff; box-shadow: 0 0 0 3px #0077ff3a; }
+      input[readonly] { color: rgba(253,253,253,.5); background: rgba(255,255,255,.04); }
+      textarea { min-height: 132px; resize: vertical; }
+      textarea[name="html"] { min-height: 112px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+      .workspace { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr); border-top: 1px solid rgba(255,255,255,.1); }
+      .compose-section { border-right: 1px solid rgba(255,255,255,.1); }
+      .preview-section { background: rgba(255,255,255,.018); }
+      .preview-label { color: rgba(253,253,253,.65); }
+      iframe { width: 100%; min-height: 425px; margin-top: 7px; border: 1px solid rgba(255,255,255,.14); border-radius: 7px; background: #fff; }
+      .attachments-section { border-top: 1px solid rgba(255,255,255,.1); }
+      #attachments { display: grid; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
+      #attachments li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 11px; border: 1px solid rgba(255,255,255,.1); border-radius: 7px; color: rgba(253,253,253,.68); font-size: 12px; line-height: 1.4; }
+      .file-picker { display: flex; align-items: center; gap: 10px; padding: 11px; border: 1px dashed rgba(255,255,255,.2); border-radius: 7px; color: rgba(253,253,253,.58); }
+      .file-picker input { width: auto; margin: 0; padding: 0; border: 0; background: transparent; font-size: 12px; }
+      details { border-top: 1px solid rgba(255,255,255,.1); }
+      summary { cursor: pointer; padding: 16px 20px; color: #fdfdfd; font-size: 14px; font-weight: 600; list-style: none; }
+      summary::-webkit-details-marker { display: none; }
+      summary::after { float: right; color: rgba(253,253,253,.48); content: '+'; font-size: 19px; font-weight: 400; line-height: 12px; }
+      details[open] summary { border-bottom: 1px solid rgba(255,255,255,.1); }
+      details[open] summary::after { content: '−'; }
+      .advanced-fields { padding: 4px 20px 20px; }
+      .actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,.1); background: #111214; }
+      button { cursor: pointer; padding: 10px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 7px; background: transparent; color: #fdfdfd; font: inherit; font-size: 14px; font-weight: 560; transition: background .16s, border-color .16s, opacity .16s; }
+      button:hover { border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.06); }
+      button:focus-visible { outline: 3px solid #0077ff3a; outline-offset: 2px; }
+      #attachments button { padding: 5px 8px; border-color: rgba(255,149,146,.4); color: #ff9592; font-size: 12px; }
+      #approve { border-color: #46fea5d4; background: #fdfdfd; color: #000; }
+      #approve:hover { background: #e7e7e7; }
+      #approve:disabled { cursor: not-allowed; border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.16); color: rgba(255,255,255,.42); }
+      #status { min-height: 0; margin: 0; color: #70b8ff; font-size: 13px; line-height: 1.45; }
+      #status:not(:empty) { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
+      #status[data-error="true"] { border: 1px solid #ff173f45; border-radius: 0; background: #ff173f2d; color: #ff9592; }
+      @media (max-width: 800px) { .workspace { grid-template-columns: 1fr; } .compose-section { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.1); } iframe { min-height: 260px; } }
+      @media (max-width: 640px) { [data-email-studio] { padding: 0; } .studio-shell { border-radius: 0; border-left: 0; border-right: 0; } .studio-header { display: block; padding: 16px; } .review-state { justify-content: flex-start; margin-top: 12px; text-align: left; } .review-guidance, .section, summary, .advanced-fields { padding-left: 16px; padding-right: 16px; } .field-grid { grid-template-columns: 1fr; } .field-grid .wide { grid-column: auto; } .section-header { align-items: flex-start; flex-direction: column; gap: 4px; } .section-note { text-align: left; } .actions { justify-content: stretch; padding: 14px 16px; } .actions button { flex: 1; } }
     </style>
-    <h1>Review and approve email</h1>
-    <p id="expiry"></p>
-    <p id="status" role="status"></p>
-    <fieldset><legend>Delivery</legend>
-      <label>To<input name="to" required></label>
-      <label>CC<input name="cc"></label>
-      <label>BCC<input name="bcc"></label>
-      <label>From<input name="from" required></label>
-      <label>Reply-to<input name="replyTo" required></label>
-    </fieldset>
-    <fieldset><legend>Message</legend>
-      <label>Subject<input name="subject" required></label>
-      <label>Plain text<textarea name="text" required></textarea></label>
-      <label>HTML (optional)<textarea name="html"></textarea></label>
-      <label>Rendered HTML preview<iframe id="html-preview" sandbox=""></iframe></label>
-    </fieldset>
-    <fieldset><legend>Attachments</legend><ul id="attachments"></ul>
-      <label>Add Base64 snapshot via file picker<input id="files" type="file" multiple></label>
-    </fieldset>
-    <fieldset><legend>Advanced</legend>
-      <label>Schedule<input name="scheduledAt" placeholder="tomorrow at 10am"></label>
-      <label>Topic ID<input name="topicId"></label>
-      <label>Idempotency key<input name="idempotencyKey"></label>
-      <label>Tags JSON<textarea name="tags"></textarea></label>
-      <label>Headers JSON<textarea name="headers"></textarea></label>
-    </fieldset>
-    <p><button id="cancel" type="button">Cancel draft</button> <button id="approve" type="submit">Approve and send</button></p>
+    <div class="studio-shell">
+      <header class="studio-header" data-email-studio-header>
+        <div class="studio-title">
+          <p class="eyebrow">Resend · Email Studio</p>
+          <h1>Review email</h1>
+        </div>
+        <div class="review-state"><span class="state-dot" aria-hidden="true"></span><strong>Draft active</strong><span id="expiry" class="expiry"></span></div>
+      </header>
+      <p class="review-guidance">Confirm delivery and content. Saving changes creates a new revision; approval sends only the revision shown here.</p>
+      <div class="studio-body">
+        <p id="status" role="status"></p>
+        <section class="section delivery-section">
+          <div class="section-header"><h2>Delivery</h2><p class="section-note">Recipients and sender</p></div>
+          <div class="field-grid">
+            <label class="wide">To<input name="to" required></label>
+            <label>CC<input name="cc"></label>
+            <label>BCC<input name="bcc"></label>
+            <label>From<input name="from" required></label>
+            <label>Reply-to<input name="replyTo" required></label>
+          </div>
+        </section>
+        <div class="workspace" data-email-studio-workspace>
+        <section class="section compose-section">
+          <div class="section-header"><h2>Message</h2><p class="section-note">What the recipient reads</p></div>
+          <div class="field-grid">
+            <label class="wide">Subject<input name="subject" required></label>
+            <label class="wide">Plain text<textarea name="text" required></textarea></label>
+            <label class="wide">HTML <span class="section-note">Optional</span><textarea name="html"></textarea></label>
+          </div>
+        </section>
+        <section class="section preview-section">
+          <div class="section-header"><h2>Preview</h2><p class="section-note">Rendered HTML</p></div>
+          <label class="preview-label">Email preview<iframe id="html-preview" title="Rendered email preview" sandbox=""></iframe></label>
+        </section>
+        </div>
+        <section class="section attachments-section">
+          <div class="section-header"><h2>Attachments</h2><p class="section-note">Base64 snapshots only · 40 MB total</p></div>
+          <ul id="attachments"></ul>
+          <label class="file-picker">Add files <input id="files" type="file" multiple></label>
+        </section>
+        <details name="advanced">
+          <summary>Advanced options</summary>
+          <div class="advanced-fields field-grid">
+            <label>Schedule<input name="scheduledAt" placeholder="tomorrow at 10am"></label>
+            <label>Topic ID<input name="topicId"></label>
+            <label class="wide">Idempotency key<input name="idempotencyKey"></label>
+            <label class="wide">Tags JSON<textarea name="tags"></textarea></label>
+            <label class="wide">Headers JSON<textarea name="headers"></textarea></label>
+          </div>
+        </details>
+      </div>
+      <footer class="actions"><button id="cancel" type="button">Cancel draft</button><button id="approve" type="submit">Approve and send</button></footer>
+    </div>
   `;
   root.append(form);
 
   form.querySelector<HTMLElement>('#expiry')!.textContent =
-    `This draft expires at ${draft.expiresAt}. Approval sends this exact saved revision once.`;
+    `Expires ${formatExpiry(draft.expiresAt)} · sends once`;
   (form.elements.namedItem('to') as HTMLInputElement).value =
     message.to.join(', ');
   (form.elements.namedItem('cc') as HTMLInputElement).value =

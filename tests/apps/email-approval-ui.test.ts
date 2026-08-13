@@ -60,6 +60,21 @@ describe('Email Studio composer', () => {
     });
   });
 
+  it('renders a compact review workspace with advanced options collapsed', () => {
+    expect(document.querySelector('[data-email-studio]')).not.toBeNull();
+    expect(
+      document.querySelector('[data-email-studio-header]')?.textContent,
+    ).toContain('Review email');
+    expect(
+      document.querySelector('[data-email-studio-workspace]'),
+    ).not.toBeNull();
+    expect(document.querySelector('#expiry')?.textContent).toContain('Expires');
+    expect(document.querySelector('details[name="advanced"]')).not.toBeNull();
+    expect(document.querySelector('details[name="advanced"]')?.open).toBe(
+      false,
+    );
+  });
+
   it('keeps unsaved field edits when an attachment is removed', () => {
     const form = document.querySelector('form')!;
     (form.elements.namedItem('subject') as HTMLInputElement).value =
