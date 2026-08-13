@@ -385,7 +385,7 @@ Resend's MCP server gives your AI agent native access to the full Resend platfor
 - **Received Emails**: List and read inbound emails. List and download received email attachments.
 - **Templates**: Create, list, get, update, publish, duplicate, and remove email templates. Supports composing template content and `{{{VARIABLE}}}` placeholders.
 - **Contacts**: Create, list, get, update, and remove contacts. Manage segment memberships, topic subscriptions, and CSV contact imports. Supports custom contact properties.
-- **Broadcasts**: Create, send, list, get, update, and remove broadcast campaigns. Supports scheduling, personalization placeholders, and preview text.
+- **Broadcasts**: Create, send, cancel, list, get, update, and remove broadcast campaigns. Supports scheduling, personalization placeholders, and preview text.
 
 > [!IMPORTANT]
 > Email Studio is a review workflow for trusted MCP Apps hosts, not an authorization boundary against a compromised host, browser, or API credential. The server enforces the exact frozen revision, one-time consumption, expiry, and the per-draft capability; the host is responsible for presenting and protecting the human approval interaction.
