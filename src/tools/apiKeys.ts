@@ -143,6 +143,38 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
   );
 
   server.registerTool(
+    'update-api-key',
+    {
+      title: 'Update API Key',
+      description: 'Rename an existing API key in Resend.',
+      inputSchema: {
+        id: z.string().nonempty().describe('API key ID'),
+        name: z
+          .string()
+          .nonempty()
+          .max(50)
+          .describe('New API key name (max 50 characters)'),
+      },
+    },
+    async ({ id, name }) => {
+      const response = await resend.apiKeys.update(id, { name });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to update API key: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      return {
+        content: [
+          { type: 'text', text: 'API key updated successfully.' },
+          { type: 'text', text: `ID: ${response.data.id}` },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
     'remove-api-key',
     {
       title: 'Remove API Key',
