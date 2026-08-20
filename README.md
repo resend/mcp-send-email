@@ -392,7 +392,7 @@ Resend's MCP server gives your AI agent native access to the full Resend platfor
 - **Suppressions**: List, get, add, and remove suppression list entries, individually or in batch. Hard bounces and spam complaints are suppressed automatically; add addresses manually to honor do-not-contact requests.
 - **Topics**: Create, list, get, update, and remove subscription topics.
 - **Contact Properties**: Create, list, get, update, and remove custom contact attributes.
-- **API Keys**: Create, list, and remove API keys.
+- **API Keys**: Create, list, update, and remove API keys.
 - **Webhooks**: Create, list, get, update, and remove webhooks for event notifications.
 - **Logs**: List and inspect API request logs, including full request and response bodies.
 - **Editor**: Connect to (and disconnect from) the visual editor in the Resend dashboard, and read a draft's content while collaborating on broadcasts and templates.

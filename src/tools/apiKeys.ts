@@ -10,11 +10,7 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
       description:
         'Create a new API key in Resend. The token is only shown once upon creation, so you MUST display it to the user.',
       inputSchema: {
-        name: z
-          .string()
-          .nonempty()
-          .max(50)
-          .describe('API key name (max 50 characters)'),
+        name: z.string().nonempty().describe('API key name'),
         permission: z
           .enum(['full_access', 'sending_access'])
           .optional()
@@ -137,6 +133,34 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
                 },
               ]
             : []),
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
+    'update-api-key',
+    {
+      title: 'Update API Key',
+      description: 'Rename an existing API key in Resend.',
+      inputSchema: {
+        id: z.string().nonempty().describe('API key ID'),
+        name: z.string().nonempty().describe('New API key name'),
+      },
+    },
+    async ({ id, name }) => {
+      const response = await resend.apiKeys.update(id, { name });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to update API key: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      return {
+        content: [
+          { type: 'text', text: 'API key updated successfully.' },
+          { type: 'text', text: `ID: ${response.data.id}` },
         ],
       };
     },
