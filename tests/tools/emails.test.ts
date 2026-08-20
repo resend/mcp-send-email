@@ -6,9 +6,10 @@ import { addEmailTools } from '../../src/tools/emails.js';
 
 const send = vi.fn();
 const batchSend = vi.fn();
+const share = vi.fn();
 
 const resend = {
-  emails: { send },
+  emails: { send, share },
   batch: { send: batchSend },
 } as unknown as Resend;
 
@@ -402,5 +403,57 @@ describe('send-batch-emails custom headers', () => {
     );
     const [, secondEmail] = batchSend.mock.calls[0][0];
     expect(secondEmail).not.toHaveProperty('headers');
+  });
+});
+
+describe('share-email', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    share.mockResolvedValue({
+      data: {
+        object: 'email',
+        id: 'email_1',
+        url: 'https://resend.com/share/abc123',
+      },
+      error: null,
+    });
+  });
+
+  it('shares an email and returns the share URL', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'share-email',
+      arguments: { id: 'email_1' },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(share).toHaveBeenCalledWith('email_1', undefined);
+    expect(textOf(result)).toContain('https://resend.com/share/abc123');
+  });
+
+  it('passes expiresIn through to the SDK when provided', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'share-email',
+      arguments: { id: 'email_1', expiresIn: '1h 30m' },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(share).toHaveBeenCalledWith('email_1', { expiresIn: '1h 30m' });
+  });
+
+  it('surfaces SDK errors', async () => {
+    share.mockResolvedValue({
+      data: null,
+      error: { name: 'not_found', message: 'Email not found' },
+    });
+
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'share-email',
+      arguments: { id: 'missing_email' },
+    });
+
+    expect(result.isError).toBe(true);
   });
 });

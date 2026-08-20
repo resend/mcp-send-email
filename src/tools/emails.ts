@@ -848,6 +848,47 @@ export function addEmailTools(
   );
 
   server.registerTool(
+    'share-email',
+    {
+      title: 'Share Email',
+      description:
+        'Create a shareable link for a sent or received email, so anyone with the link can view it without Resend dashboard access. Works for any email ID, sent or received.',
+      inputSchema: {
+        id: z
+          .string()
+          .describe('The ID of the sent or received email to share'),
+        expiresIn: z
+          .string()
+          .optional()
+          .describe(
+            'How long the share link stays valid, as a human-readable duration (e.g. "10m", "2 hours", "1 day", "1h 30m"). Defaults to 48 hours; capped at 48 hours.',
+          ),
+      },
+    },
+    async ({ id, expiresIn }) => {
+      const response = await resend.emails.share(
+        id,
+        expiresIn ? { expiresIn } : undefined,
+      );
+
+      if (response.error) {
+        throw new Error(
+          `Failed to share email: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Share link for email ${response.data?.id}: ${response.data?.url}`,
+          },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
     'list-sent-email-attachments',
     {
       title: 'List Sent Email Attachments',
