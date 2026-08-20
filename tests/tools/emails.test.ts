@@ -442,6 +442,16 @@ describe('share-email', () => {
     expect(share).toHaveBeenCalledWith('email_1', { expiresIn: '1h 30m' });
   });
 
+  it('passes an empty expiresIn through to the SDK instead of dropping it', async () => {
+    const client = await makeClient();
+    await client.callTool({
+      name: 'share-email',
+      arguments: { id: 'email_1', expiresIn: '' },
+    });
+
+    expect(share).toHaveBeenCalledWith('email_1', { expiresIn: '' });
+  });
+
   it('surfaces SDK errors', async () => {
     share.mockResolvedValue({
       data: null,

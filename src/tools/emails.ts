@@ -868,7 +868,7 @@ export function addEmailTools(
     async ({ id, expiresIn }) => {
       const response = await resend.emails.share(
         id,
-        expiresIn ? { expiresIn } : undefined,
+        expiresIn !== undefined ? { expiresIn } : undefined,
       );
 
       if (response.error) {
