@@ -385,7 +385,7 @@ Resend's MCP server gives your AI agent native access to the full Resend platfor
 - **Templates**: Create, list, get, update, publish, duplicate, and remove email templates. Supports composing template content and `{{{VARIABLE}}}` placeholders.
 - **Contacts**: Create, list, get, update, and remove contacts. Manage segment memberships, topic subscriptions, and CSV contact imports. Supports custom contact properties.
 - **Broadcasts**: Create, send, cancel, list, get, update, and remove broadcast campaigns. Supports scheduling, personalization placeholders, and preview text.
-- **Automations**: Create, list, get, update, and remove automations. Review the runs of an automation.
+- **Automations**: Create, list, get, update, duplicate, and remove automations. Review the runs of an automation.
 - **Events**: Send events to trigger automations for a contact. Create, update, and remove event definitions.
 - **Domains**: Create, list, get, update, remove, and verify sender domains. Configure tracking, TLS, and sending/receiving capabilities. Create and verify domain claims.
 - **Segments**: Create, list, get, and remove audience segments.
