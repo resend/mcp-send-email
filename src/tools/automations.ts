@@ -411,6 +411,45 @@ ${WORKFLOW_GUIDANCE}`,
   );
 
   server.registerTool(
+    'duplicate-automation',
+    {
+      title: 'Duplicate Automation',
+      description:
+        'Duplicate an existing automation by ID or Resend dashboard URL. Creates a copy with its own ID, including the steps and connections of the original. Use this when the user wants a new automation based on one they already have, instead of rebuilding the workflow from scratch. Use update-automation on the new ID to rename it or change its workflow.',
+      inputSchema: {
+        id: z
+          .string()
+          .nonempty()
+          .describe(
+            'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>) of the automation to duplicate',
+          ),
+      },
+    },
+    async ({ id: rawId }) => {
+      const id = extractIdFromUrl(rawId, 'automations');
+      const response = await resend.automations.duplicate(id);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to duplicate automation: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const newId = response.data.id;
+      return {
+        content: [
+          { type: 'text', text: 'Automation duplicated successfully.' },
+          { type: 'text', text: `New automation ID: ${newId}` },
+          {
+            type: 'text',
+            text: `Preview: https://resend.com/automations/${newId}`,
+          },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
     'remove-automation',
     {
       title: 'Remove Automation',
