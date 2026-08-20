@@ -1,5 +1,25 @@
 const SUPPORTED_RESOURCES = ['broadcasts', 'templates', 'automations'];
 
+const DEFAULT_DASHBOARD_HOSTS = ['resend.com', 'www.resend.com'];
+
+function allowedDashboardHosts(): string[] {
+  const configured = process.env.RESEND_DASHBOARD_URL;
+  if (!configured) return DEFAULT_DASHBOARD_HOSTS;
+
+  let hostname: string;
+  try {
+    hostname = new URL(configured).hostname;
+  } catch {
+    return DEFAULT_DASHBOARD_HOSTS;
+  }
+
+  if (DEFAULT_DASHBOARD_HOSTS.includes(hostname)) {
+    return DEFAULT_DASHBOARD_HOSTS;
+  }
+
+  return [...DEFAULT_DASHBOARD_HOSTS, hostname];
+}
+
 /**
  * Extracts a resource ID from a Resend dashboard URL.
  *
@@ -7,6 +27,11 @@ const SUPPORTED_RESOURCES = ['broadcasts', 'templates', 'automations'];
  *   https://resend.com/broadcasts/<id>
  *   https://resend.com/templates/<id>
  *   https://resend.com/automations/<id>
+ *
+ * Production hosts are always accepted. A server pointed at another stack also
+ * accepts its own dashboard host from `RESEND_DASHBOARD_URL`, the same env var
+ * `DashboardClient` reads, so a URL copied from the dashboard the client is
+ * actually using resolves. Every other host is still rejected.
  *
  * If the input is not a URL, it is returned as-is (assumed to be a raw ID).
  * If the input is a URL but cannot be resolved to an ID, an error is thrown.
@@ -34,10 +59,10 @@ export function extractIdFromUrl(
     );
   }
 
-  // Only handle resend.com URLs
-  if (url.hostname !== 'resend.com' && url.hostname !== 'www.resend.com') {
+  const dashboardHosts = allowedDashboardHosts();
+  if (!dashboardHosts.includes(url.hostname)) {
     throw new Error(
-      `Unrecognized URL host "${url.hostname}". Expected a resend.com URL (e.g. https://resend.com/${expectedResource ?? 'broadcasts'}/<id>) or a raw resource ID.`,
+      `Unrecognized URL host "${url.hostname}". Expected a dashboard URL on ${dashboardHosts.join(' or ')} (e.g. https://resend.com/${expectedResource ?? 'broadcasts'}/<id>) or a raw resource ID.`,
     );
   }
 
