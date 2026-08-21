@@ -868,4 +868,153 @@ export function addBroadcastTools(
       };
     },
   );
+
+  server.registerTool(
+    'list-broadcast-recipients',
+    {
+      title: 'List Broadcast Recipients',
+      annotations: { readOnlyHint: true },
+      description: `**Purpose:** List the individual recipients of a broadcast for a given event type (sent, delivered, opened, clicked, bounced, complained, unsubscribed, suppressed).
+
+**NOT for:** Listing broadcasts themselves (use list-broadcasts). Not for aggregate/summary stats — this returns per-recipient rows, one per contact per event type.
+
+**Returns:** For each recipient: email, id (opaque pagination cursor), contact_id (when known). Also includes count for "opened"/"clicked", bounce_type for "bounced", and clicked_links (url + click count) for "clicked". Use pagination (limit, after/before) for large lists.
+
+**When to use:** User asks "who opened this broadcast?", "who bounced?", "who clicked this link?", "who unsubscribed from this campaign?", or wants the list of contacts behind a specific broadcast engagement metric. Use get-broadcast first if you need the broadcast ID from a name.`,
+      inputSchema: {
+        broadcastId: z
+          .string()
+          .nonempty()
+          .describe(
+            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+          ),
+        type: z
+          .enum([
+            'sent',
+            'delivered',
+            'opened',
+            'clicked',
+            'bounced',
+            'complained',
+            'unsubscribed',
+            'suppressed',
+          ])
+          .describe('Recipient event type to list recipients for.'),
+        email: z
+          .string()
+          .optional()
+          .describe('Filter recipients by a substring of their email address.'),
+        bounceType: z
+          .enum(['permanent', 'transient', 'undetermined'])
+          .optional()
+          .describe(
+            'Filter by bounce type. Only meaningful when "type" is "bounced".',
+          ),
+        limit: z
+          .number()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            'Number of recipients to retrieve. Default: 20, Max: 100, Min: 1',
+          ),
+        after: z
+          .string()
+          .optional()
+          .describe(
+            'Recipient ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+          ),
+        before: z
+          .string()
+          .optional()
+          .describe(
+            'Recipient ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+          ),
+      },
+    },
+    async ({
+      broadcastId: rawBroadcastId,
+      type,
+      email,
+      bounceType,
+      limit,
+      after,
+      before,
+    }) => {
+      if (after && before) {
+        throw new Error(
+          'Cannot use both "after" and "before" parameters. Use only one for pagination.',
+        );
+      }
+
+      const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
+
+      const paginationOptions = after
+        ? { limit, after }
+        : before
+          ? { limit, before }
+          : limit !== undefined
+            ? { limit }
+            : {};
+
+      const response = await resend.broadcasts.recipients(broadcastId, {
+        ...paginationOptions,
+        type,
+        ...(email !== undefined && { email }),
+        ...(bounceType !== undefined && { bounceType }),
+      });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to list broadcast recipients: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const recipients = response.data?.data ?? [];
+      const hasMore = response.data?.has_more ?? false;
+
+      if (recipients.length === 0) {
+        return {
+          content: [{ type: 'text', text: 'No recipients found.' }],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Found ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}:`,
+          },
+          ...recipients.map((recipient) => ({
+            type: 'text' as const,
+            text: [
+              `Email: ${recipient.email}`,
+              `ID: ${recipient.id}`,
+              recipient.contact_id !== null &&
+                `Contact ID: ${recipient.contact_id}`,
+              'count' in recipient &&
+                recipient.count !== undefined &&
+                `Count: ${recipient.count}`,
+              'bounce_type' in recipient &&
+                recipient.bounce_type !== undefined &&
+                `Bounce type: ${recipient.bounce_type}`,
+              'clicked_links' in recipient &&
+                recipient.clicked_links !== undefined &&
+                `Clicked links: ${recipient.clicked_links.map((link) => `${link.url} (${link.clicks} click${link.clicks === 1 ? '' : 's'})`).join(', ')}`,
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          })),
+          ...(hasMore
+            ? [
+                {
+                  type: 'text' as const,
+                  text: 'There are more recipients available. Use the "after" parameter with the last ID to retrieve more.',
+                },
+              ]
+            : []),
+        ],
+      };
+    },
+  );
 }
