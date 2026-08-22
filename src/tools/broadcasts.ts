@@ -757,4 +757,109 @@ export function addBroadcastTools(
       };
     },
   );
+
+  server.registerTool(
+    'list-broadcast-clicked-links',
+    {
+      title: 'List Broadcast Clicked Links',
+      annotations: { readOnlyHint: true },
+      description: `**Purpose:** List the links clicked in a broadcast, ranked by total clicks.
+
+**Returns:** For each link: url, clicks (total), unique_clicks. Use pagination (limit, after/before) for large lists.
+
+**When to use:**
+- User asks "what links were clicked in this broadcast?", "top clicked links", "click breakdown for this campaign"
+- Use get-broadcast for overall broadcast details; use this for per-link click data.`,
+      inputSchema: {
+        broadcastId: z
+          .string()
+          .nonempty()
+          .describe(
+            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+          ),
+        limit: z
+          .number()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            'Number of links to retrieve. Default: 20, Max: 100, Min: 1',
+          ),
+        after: z
+          .string()
+          .optional()
+          .describe(
+            'Cursor after which to retrieve more (for forward pagination). Cannot be used with "before".',
+          ),
+        before: z
+          .string()
+          .optional()
+          .describe(
+            'Cursor before which to retrieve more (for backward pagination). Cannot be used with "after".',
+          ),
+      },
+    },
+    async ({ broadcastId: rawBroadcastId, limit, after, before }) => {
+      if (after && before) {
+        throw new Error(
+          'Cannot use both "after" and "before" parameters. Use only one for pagination.',
+        );
+      }
+
+      const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
+      const paginationOptions = after
+        ? { limit, after }
+        : before
+          ? { limit, before }
+          : limit !== undefined
+            ? { limit }
+            : undefined;
+
+      const response = await resend.broadcasts.clickedLinks(
+        broadcastId,
+        paginationOptions,
+      );
+
+      if (response.error) {
+        throw new Error(
+          `Failed to list broadcast clicked links: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const links = response.data?.data ?? [];
+      const hasMore = response.data?.has_more ?? false;
+
+      if (links.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'No clicked links found for this broadcast.',
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Found ${links.length} clicked link${links.length === 1 ? '' : 's'}:`,
+          },
+          ...links.map(({ url, clicks, unique_clicks }) => ({
+            type: 'text' as const,
+            text: `URL: ${url}\nClicks: ${clicks}\nUnique clicks: ${unique_clicks}`,
+          })),
+          ...(hasMore
+            ? [
+                {
+                  type: 'text' as const,
+                  text: 'There are more clicked links available. Use the "after" parameter with the last cursor to retrieve more.',
+                },
+              ]
+            : []),
+        ],
+      };
+    },
+  );
 }
