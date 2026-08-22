@@ -675,7 +675,7 @@ describe('email-metrics', () => {
       arguments: { dimensions: [dimension] },
     });
 
-    expect(textOf(result)).toContain(id);
+    expect(textOf(result)).toContain(`- ${id} — sent: 100`);
   });
 
   it('falls back to the raw id when the name is an empty string', async () => {

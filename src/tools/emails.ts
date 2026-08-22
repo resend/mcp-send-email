@@ -1035,10 +1035,11 @@ export function addEmailTools(
           // the id as a fallback if the name is missing/blank so the label is never
           // empty, and never show a blank/missing name field on its own.
           const hasDomainName =
-            typeof row.domain_name === 'string' && row.domain_name.length > 0;
+            typeof row.domain_name === 'string' &&
+            row.domain_name.trim().length > 0;
           const hasBroadcastName =
             typeof row.broadcast_name === 'string' &&
-            row.broadcast_name.length > 0;
+            row.broadcast_name.trim().length > 0;
           const labelFields = Object.entries(row).filter(([key]) => {
             if (data.metrics.includes(key as never)) return false;
             if (key === 'domain_id') return !hasDomainName;
