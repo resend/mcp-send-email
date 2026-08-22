@@ -889,6 +889,168 @@ export function addEmailTools(
   );
 
   server.registerTool(
+    'email-metrics',
+    {
+      title: 'Email Metrics',
+      annotations: { readOnlyHint: true },
+      description:
+        'Retrieve account-level email delivery and engagement metrics (sent, delivered, bounced, opened, clicked, etc.) for a date range, optionally broken down by period, domain, email, or broadcast.',
+      inputSchema: {
+        startDate: z
+          .string()
+          .optional()
+          .describe(
+            'Start of the date range, as an ISO 8601 date or datetime. Defaults to 6 days before endDate.',
+          ),
+        endDate: z
+          .string()
+          .optional()
+          .describe(
+            'End of the date range, as an ISO 8601 date or datetime. Defaults to now.',
+          ),
+        timezone: z
+          .string()
+          .optional()
+          .describe(
+            'IANA timezone (e.g. "America/New_York") used to bucket periods when "period" is in dimensions. Defaults to UTC.',
+          ),
+        granularity: z
+          .enum(['hourly', 'daily', 'weekly', 'monthly'])
+          .optional()
+          .describe(
+            'Bucket size used when "period" is in dimensions. Defaults to "daily".',
+          ),
+        metrics: z
+          .array(
+            z.enum([
+              'received',
+              'delivered',
+              'complained',
+              'suppressed',
+              'bounced',
+              'bounced_transient',
+              'bounced_permanent',
+              'bounced_undetermined',
+              'opened',
+              'clicked',
+              'unsubscribed',
+              'delivery_delayed',
+              'failed',
+              'sent',
+              'unique_opened',
+              'unique_clicked',
+              'delivery_rate',
+              'open_rate',
+              'click_rate',
+              'bounce_rate',
+              'complaint_rate',
+              'unsubscribe_rate',
+            ]),
+          )
+          .optional()
+          .describe(
+            'Metrics to include in the response. Defaults to all metrics.',
+          ),
+        dimensions: z
+          .array(z.enum(['period', 'domain', 'email', 'broadcast']))
+          .optional()
+          .describe(
+            'Dimensions to break the response down by. "email" and "broadcast" cannot be combined. Defaults to none, which returns totals only.',
+          ),
+        domainId: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Restrict the response to these sending domain IDs (max 100).',
+          ),
+        emailId: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Restrict the response to these email IDs (max 100). Cannot be combined with the "broadcast" dimension or broadcastId.',
+          ),
+        broadcastId: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Restrict the response to these broadcast IDs (max 100). Cannot be combined with the "email" dimension or emailId.',
+          ),
+      },
+    },
+    async ({
+      startDate,
+      endDate,
+      timezone,
+      granularity,
+      metrics,
+      dimensions,
+      domainId,
+      emailId,
+      broadcastId,
+    }) => {
+      const hasEmail =
+        (dimensions?.includes('email') ?? false) || (emailId?.length ?? 0) > 0;
+      const hasBroadcast =
+        (dimensions?.includes('broadcast') ?? false) ||
+        (broadcastId?.length ?? 0) > 0;
+
+      if (hasEmail && hasBroadcast) {
+        throw new Error(
+          'Cannot combine the "broadcast" dimension/broadcastId filter with the "email" dimension/emailId filter.',
+        );
+      }
+
+      const response = await resend.emails.metrics({
+        startDate,
+        endDate,
+        timezone,
+        granularity,
+        metrics,
+        dimensions,
+        domainId,
+        emailId,
+        broadcastId,
+      } as Parameters<typeof resend.emails.metrics>[0]);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to retrieve email metrics: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const data = response.data;
+
+      let text = `Email metrics for ${data.start_date} to ${data.end_date} (${data.granularity} granularity):\n\nTotals:\n`;
+      for (const [metric, value] of Object.entries(data.totals)) {
+        text += `- ${metric}: ${value}\n`;
+      }
+
+      if (data.data && data.data.length > 0) {
+        text += `\nBreakdown by ${data.dimensions.join(', ')}:\n`;
+        for (const row of data.data) {
+          const labelFields = Object.entries(row).filter(
+            ([key]) => !data.metrics.includes(key as never),
+          );
+          const label = labelFields.map(([, value]) => value).join(' / ');
+          const metricValues = data.metrics
+            .map((metric) => `${metric}: ${row[metric]}`)
+            .join(', ');
+          text += `- ${label} — ${metricValues}\n`;
+        }
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text,
+          },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
     'list-sent-email-attachments',
     {
       title: 'List Sent Email Attachments',
