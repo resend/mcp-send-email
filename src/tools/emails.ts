@@ -958,19 +958,22 @@ export function addEmailTools(
             'Dimensions to break the response down by. "email" and "broadcast" cannot be combined. Defaults to none, which returns totals only.',
           ),
         domainId: z
-          .array(z.string())
+          .array(z.uuid())
+          .max(100)
           .optional()
           .describe(
             'Restrict the response to these sending domain IDs (max 100).',
           ),
         emailId: z
-          .array(z.string())
+          .array(z.uuid())
+          .max(100)
           .optional()
           .describe(
             'Restrict the response to these email IDs (max 100). Cannot be combined with the "broadcast" dimension or broadcastId.',
           ),
         broadcastId: z
-          .array(z.string())
+          .array(z.uuid())
+          .max(100)
           .optional()
           .describe(
             'Restrict the response to these broadcast IDs (max 100). Cannot be combined with the "email" dimension or emailId.',
@@ -1028,9 +1031,22 @@ export function addEmailTools(
       if (data.data && data.data.length > 0) {
         text += `\nBreakdown by ${data.dimensions.join(', ')}:\n`;
         for (const row of data.data) {
-          const labelFields = Object.entries(row).filter(
-            ([key]) => !data.metrics.includes(key as never),
-          );
+          // Prefer domain_name/broadcast_name over the raw id when present, but keep
+          // the id as a fallback if the name is missing/blank so the label is never
+          // empty, and never show a blank/missing name field on its own.
+          const hasDomainName =
+            typeof row.domain_name === 'string' && row.domain_name.length > 0;
+          const hasBroadcastName =
+            typeof row.broadcast_name === 'string' &&
+            row.broadcast_name.length > 0;
+          const labelFields = Object.entries(row).filter(([key]) => {
+            if (data.metrics.includes(key as never)) return false;
+            if (key === 'domain_id') return !hasDomainName;
+            if (key === 'broadcast_id') return !hasBroadcastName;
+            if (key === 'domain_name') return hasDomainName;
+            if (key === 'broadcast_name') return hasBroadcastName;
+            return true;
+          });
           const label = labelFields.map(([, value]) => value).join(' / ');
           const metricValues = data.metrics
             .map((metric) => `${metric}: ${row[metric]}`)
