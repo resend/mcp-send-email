@@ -446,6 +446,26 @@ describe('list-broadcast-recipients', () => {
     expect(recipients).not.toHaveBeenCalled();
   });
 
+  it('rejects an empty-string after cursor', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'list-broadcast-recipients',
+      arguments: { broadcastId: 'bc_1', type: 'sent', after: '' },
+    });
+    expect(result.isError).toBe(true);
+    expect(recipients).not.toHaveBeenCalled();
+  });
+
+  it('rejects an empty-string before cursor', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'list-broadcast-recipients',
+      arguments: { broadcastId: 'bc_1', type: 'sent', before: '' },
+    });
+    expect(result.isError).toBe(true);
+    expect(recipients).not.toHaveBeenCalled();
+  });
+
   it('reports when none are found', async () => {
     recipients.mockResolvedValue({ data: { has_more: false, data: [] } });
     const client = await makeClient();

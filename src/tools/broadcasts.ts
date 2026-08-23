@@ -920,12 +920,14 @@ export function addBroadcastTools(
           ),
         after: z
           .string()
+          .nonempty()
           .optional()
           .describe(
             'Recipient ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
           ),
         before: z
           .string()
+          .nonempty()
           .optional()
           .describe(
             'Recipient ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
