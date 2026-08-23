@@ -946,6 +946,9 @@ export function addBroadcastTools(
           'Cannot use both "after" and "before" parameters. Use only one for pagination.',
         );
       }
+      if (bounceType !== undefined && type !== 'bounced') {
+        throw new Error('"bounceType" is only valid when type is "bounced".');
+      }
 
       const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
 
@@ -997,6 +1000,7 @@ export function addBroadcastTools(
                 `Count: ${recipient.count}`,
               'bounce_type' in recipient &&
                 recipient.bounce_type !== undefined &&
+                recipient.bounce_type !== null &&
                 `Bounce type: ${recipient.bounce_type}`,
               'clicked_links' in recipient &&
                 recipient.clicked_links !== undefined &&
@@ -1009,7 +1013,9 @@ export function addBroadcastTools(
             ? [
                 {
                   type: 'text' as const,
-                  text: 'There are more recipients available. Use the "after" parameter with the last ID to retrieve more.',
+                  text: before
+                    ? 'There are more recipients available. Use the "before" parameter with the first ID shown above to retrieve earlier recipients.'
+                    : 'There are more recipients available. Use the "after" parameter with the last ID shown above to retrieve more.',
                 },
               ]
             : []),

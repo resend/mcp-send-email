@@ -321,6 +321,45 @@ describe('list-broadcast-recipients', () => {
     expect(textOf(result as never)).toContain('Bounce type: permanent');
   });
 
+  it('omits bounce type when it is null', async () => {
+    recipients.mockResolvedValue({
+      data: {
+        has_more: false,
+        data: [
+          {
+            id: 'rcp_1',
+            contact_id: null,
+            email: 'a@b.com',
+            bounce_type: null,
+          },
+        ],
+      },
+    });
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'list-broadcast-recipients',
+      arguments: { broadcastId: 'bc_1', type: 'bounced' },
+    });
+    expect(textOf(result as never)).not.toContain('Bounce type:');
+  });
+
+  it('rejects bounceType when type is not bounced', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'list-broadcast-recipients',
+      arguments: {
+        broadcastId: 'bc_1',
+        type: 'sent',
+        bounceType: 'permanent',
+      },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result as never)).toContain(
+      '"bounceType" is only valid when type is "bounced"',
+    );
+    expect(recipients).not.toHaveBeenCalled();
+  });
+
   it('includes clicked links for clicked recipients', async () => {
     recipients.mockResolvedValue({
       data: {
@@ -429,9 +468,22 @@ describe('list-broadcast-recipients', () => {
       name: 'list-broadcast-recipients',
       arguments: { broadcastId: 'bc_1', type: 'sent' },
     });
-    expect(textOf(result as never)).toContain(
-      'There are more recipients available',
-    );
+    expect(textOf(result as never)).toContain('Use the "after" parameter');
+  });
+
+  it('shows a backward-pagination has_more hint when paging with before', async () => {
+    recipients.mockResolvedValue({
+      data: {
+        has_more: true,
+        data: [{ id: 'rcp_1', contact_id: null, email: 'a@b.com' }],
+      },
+    });
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'list-broadcast-recipients',
+      arguments: { broadcastId: 'bc_1', type: 'sent', before: 'rcp_9' },
+    });
+    expect(textOf(result as never)).toContain('Use the "before" parameter');
   });
 
   it('surfaces SDK errors', async () => {
