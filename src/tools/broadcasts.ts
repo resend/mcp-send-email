@@ -787,12 +787,14 @@ export function addBroadcastTools(
           ),
         after: z
           .string()
+          .min(1)
           .optional()
           .describe(
             'Cursor after which to retrieve more (for forward pagination). Cannot be used with "before".',
           ),
         before: z
           .string()
+          .min(1)
           .optional()
           .describe(
             'Cursor before which to retrieve more (for backward pagination). Cannot be used with "after".',
@@ -846,15 +848,17 @@ export function addBroadcastTools(
             type: 'text',
             text: `Found ${links.length} clicked link${links.length === 1 ? '' : 's'}:`,
           },
-          ...links.map(({ url, clicks, unique_clicks }) => ({
+          ...links.map(({ id, url, clicks, unique_clicks }) => ({
             type: 'text' as const,
-            text: `URL: ${url}\nClicks: ${clicks}\nUnique clicks: ${unique_clicks}`,
+            text: `ID: ${id}\nURL: ${url}\nClicks: ${clicks}\nUnique clicks: ${unique_clicks}`,
           })),
           ...(hasMore
             ? [
                 {
                   type: 'text' as const,
-                  text: 'There are more clicked links available. Use the "after" parameter with the last cursor to retrieve more.',
+                  text: before
+                    ? 'There are more clicked links available. Use the "before" parameter with the first cursor to retrieve more.'
+                    : 'There are more clicked links available. Use the "after" parameter with the last cursor to retrieve more.',
                 },
               ]
             : []),
