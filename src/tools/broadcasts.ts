@@ -765,7 +765,7 @@ export function addBroadcastTools(
       annotations: { readOnlyHint: true },
       description: `**Purpose:** List the links clicked in a broadcast, ranked by total clicks.
 
-**Returns:** For each link: url, clicks (total), unique_clicks. Use pagination (limit, after/before) for large lists.
+**Returns:** For each link: id (opaque pagination cursor for that row, not an entity id), url, clicks (total), unique_clicks. Use pagination (limit, after/before) for large lists.
 
 **When to use:**
 - User asks "what links were clicked in this broadcast?", "top clicked links", "click breakdown for this campaign"
@@ -787,6 +787,7 @@ export function addBroadcastTools(
           ),
         after: z
           .string()
+          .trim()
           .min(1)
           .optional()
           .describe(
@@ -794,6 +795,7 @@ export function addBroadcastTools(
           ),
         before: z
           .string()
+          .trim()
           .min(1)
           .optional()
           .describe(
