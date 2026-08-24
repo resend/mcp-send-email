@@ -3,101 +3,151 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 
-export function addContactImportTools(server: McpServer, resend: Resend) {
-  server.registerTool(
-    'create-contact-import',
-    {
-      title: 'Create Contact Import',
-      description:
-        'Bulk-import contacts from a CSV file into Resend. The import is processed asynchronously: this returns an import ID immediately, then use get-contact-import to poll its status and counts. Provide the CSV via exactly one of `filePath`, `content`, or `url`. Max file size 100MB.',
-      inputSchema: {
-        filePath: z
+// Tool schemas/metadata are built once at module load, not per request:
+// createMcpServer() runs on every HTTP request, and rebuilding these Zod
+// schema trees each time is expensive enough to matter under concurrent
+// long-lived connections (e.g. subscriptions/listen streams held open for
+// minutes to hours each retain their own copy for the connection's lifetime).
+const CREATE_CONTACT_IMPORT_TOOL = {
+  title: 'Create Contact Import',
+  description:
+    'Bulk-import contacts from a CSV file into Resend. The import is processed asynchronously: this returns an import ID immediately, then use get-contact-import to poll its status and counts. Provide the CSV via exactly one of `filePath`, `content`, or `url`. Max file size 100MB.',
+  inputSchema: {
+    filePath: z
+      .string()
+      .optional()
+      .describe(
+        'Local path to a CSV file to read and upload. Use one of filePath, content, or url.',
+      ),
+    content: z
+      .string()
+      .optional()
+      .describe(
+        'Raw CSV text to upload (e.g. "email,first_name\\na@b.com,Ada"). Use one of filePath, content, or url.',
+      ),
+    url: z
+      .string()
+      .optional()
+      .describe(
+        'URL of a CSV file to fetch and upload. Use one of filePath, content, or url.',
+      ),
+    filename: z
+      .string()
+      .optional()
+      .describe('Name for the uploaded file. Defaults to "contacts.csv".'),
+    columnMap: z
+      .object({
+        email: z
           .string()
           .optional()
-          .describe(
-            'Local path to a CSV file to read and upload. Use one of filePath, content, or url.',
-          ),
-        content: z
+          .describe('CSV header name that contains email addresses.'),
+        firstName: z
           .string()
           .optional()
-          .describe(
-            'Raw CSV text to upload (e.g. "email,first_name\\na@b.com,Ada"). Use one of filePath, content, or url.',
-          ),
-        url: z
+          .describe('CSV header name that contains first names.'),
+        lastName: z
           .string()
           .optional()
-          .describe(
-            'URL of a CSV file to fetch and upload. Use one of filePath, content, or url.',
-          ),
-        filename: z
+          .describe('CSV header name that contains last names.'),
+        unsubscribed: z
           .string()
           .optional()
-          .describe('Name for the uploaded file. Defaults to "contacts.csv".'),
-        columnMap: z
-          .object({
-            email: z
-              .string()
-              .optional()
-              .describe('CSV header name that contains email addresses.'),
-            firstName: z
-              .string()
-              .optional()
-              .describe('CSV header name that contains first names.'),
-            lastName: z
-              .string()
-              .optional()
-              .describe('CSV header name that contains last names.'),
-            unsubscribed: z
-              .string()
-              .optional()
-              .describe('CSV header name that contains the unsubscribed flag.'),
-            properties: z
-              .record(
-                z.string(),
-                z.object({
-                  column: z
-                    .string()
-                    .describe('CSV header name to map to this property.'),
-                  type: z
-                    .enum(['string', 'number', 'boolean'])
-                    .optional()
-                    .describe('Property type. Defaults to "string".'),
-                }),
-              )
-              .optional()
-              .describe(
-                'Maps custom property keys to CSV columns (e.g. { "company_name": { "column": "Company" } }).',
-              ),
-          })
-          .optional()
-          .describe(
-            'Maps contact fields to CSV header names. When omitted, headers are matched case-sensitively to "email", "first_name", and "last_name".',
-          ),
-        onConflict: z
-          .enum(['upsert', 'skip'])
-          .optional()
-          .describe(
-            'How to handle contacts that already exist: "upsert" updates them, "skip" leaves them unchanged. Defaults to "upsert".',
-          ),
-        segmentIds: z
-          .array(z.string())
-          .optional()
-          .describe('Array of segment IDs to assign the imported contacts to.'),
-        topics: z
-          .array(
+          .describe('CSV header name that contains the unsubscribed flag.'),
+        properties: z
+          .record(
+            z.string(),
             z.object({
-              id: z.string().describe('Topic ID'),
-              subscription: z
-                .enum(['opt_in', 'opt_out'])
-                .describe('Subscription preference for this topic'),
+              column: z
+                .string()
+                .describe('CSV header name to map to this property.'),
+              type: z
+                .enum(['string', 'number', 'boolean'])
+                .optional()
+                .describe('Property type. Defaults to "string".'),
             }),
           )
           .optional()
           .describe(
-            'Topic subscription configurations applied to the imported contacts.',
+            'Maps custom property keys to CSV columns (e.g. { "company_name": { "column": "Company" } }).',
           ),
-      },
-    },
+      })
+      .optional()
+      .describe(
+        'Maps contact fields to CSV header names. When omitted, headers are matched case-sensitively to "email", "first_name", and "last_name".',
+      ),
+    onConflict: z
+      .enum(['upsert', 'skip'])
+      .optional()
+      .describe(
+        'How to handle contacts that already exist: "upsert" updates them, "skip" leaves them unchanged. Defaults to "upsert".',
+      ),
+    segmentIds: z
+      .array(z.string())
+      .optional()
+      .describe('Array of segment IDs to assign the imported contacts to.'),
+    topics: z
+      .array(
+        z.object({
+          id: z.string().describe('Topic ID'),
+          subscription: z
+            .enum(['opt_in', 'opt_out'])
+            .describe('Subscription preference for this topic'),
+        }),
+      )
+      .optional()
+      .describe(
+        'Topic subscription configurations applied to the imported contacts.',
+      ),
+  },
+} as const;
+
+const GET_CONTACT_IMPORT_TOOL = {
+  title: 'Get Contact Import',
+  annotations: { readOnlyHint: true },
+  description:
+    'Get the status and counts of a contact import by ID. Use after create-contact-import to track progress (queued, in_progress, completed, failed).',
+  inputSchema: {
+    id: z.string().describe('Contact import ID'),
+  },
+} as const;
+
+const LIST_CONTACT_IMPORTS_TOOL = {
+  title: 'List Contact Imports',
+  annotations: { readOnlyHint: true },
+  description:
+    'List contact imports from Resend. Optionally filter by status. Use to discover import IDs or review past imports.',
+  inputSchema: {
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe(
+        'Number of contact imports to retrieve. Default: 10, Max: 100, Min: 1',
+      ),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'Contact import ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'Contact import ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+    status: z
+      .enum(['queued', 'in_progress', 'completed', 'failed'])
+      .optional()
+      .describe('Filter imports by status.'),
+  },
+} as const;
+
+export function addContactImportTools(server: McpServer, resend: Resend) {
+  server.registerTool(
+    'create-contact-import',
+    CREATE_CONTACT_IMPORT_TOOL,
     async ({
       filePath,
       content,
@@ -166,15 +216,7 @@ export function addContactImportTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'get-contact-import',
-    {
-      title: 'Get Contact Import',
-      annotations: { readOnlyHint: true },
-      description:
-        'Get the status and counts of a contact import by ID. Use after create-contact-import to track progress (queued, in_progress, completed, failed).',
-      inputSchema: {
-        id: z.string().describe('Contact import ID'),
-      },
-    },
+    GET_CONTACT_IMPORT_TOOL,
     async ({ id }) => {
       const response = await resend.contacts.imports.get(id);
 
@@ -211,38 +253,7 @@ export function addContactImportTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'list-contact-imports',
-    {
-      title: 'List Contact Imports',
-      annotations: { readOnlyHint: true },
-      description:
-        'List contact imports from Resend. Optionally filter by status. Use to discover import IDs or review past imports.',
-      inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of contact imports to retrieve. Default: 10, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'Contact import ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'Contact import ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-        status: z
-          .enum(['queued', 'in_progress', 'completed', 'failed'])
-          .optional()
-          .describe('Filter imports by status.'),
-      },
-    },
+    LIST_CONTACT_IMPORTS_TOOL,
     async ({ limit, after, before, status }) => {
       if (after && before) {
         throw new Error(

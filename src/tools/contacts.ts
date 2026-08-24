@@ -7,44 +7,252 @@ import type {
 } from 'resend';
 import { z } from 'zod';
 
+// Tool schemas/metadata are built once at module load, not per request:
+// createMcpServer() runs on every HTTP request, and rebuilding these Zod
+// schema trees each time is expensive enough to matter under concurrent
+// long-lived connections (e.g. subscriptions/listen streams held open for
+// minutes to hours each retain their own copy for the connection's lifetime).
+const CREATE_CONTACT_TOOL = {
+  title: 'Create Contact',
+  description:
+    'Create a new contact in Resend. Optionally assign to segments and configure topic subscriptions.',
+  inputSchema: {
+    email: z.email().describe('Contact email address'),
+    firstName: z.string().optional().describe('Contact first name'),
+    lastName: z.string().optional().describe('Contact last name'),
+    unsubscribed: z
+      .boolean()
+      .optional()
+      .describe('Whether the contact is unsubscribed from all broadcasts'),
+    properties: z
+      .record(z.string(), z.union([z.string(), z.number(), z.null()]))
+      .optional()
+      .describe(
+        'Custom property key-value pairs for the contact (e.g. { "company_name": "Acme" })',
+      ),
+    segmentIds: z
+      .array(z.string())
+      .optional()
+      .describe('Array of segment IDs to assign this contact to'),
+    topics: z
+      .array(
+        z.object({
+          id: z.string().describe('Topic ID'),
+          subscription: z
+            .enum(['opt_in', 'opt_out'])
+            .describe('Subscription preference for this topic'),
+        }),
+      )
+      .optional()
+      .describe('Array of topic subscription configurations'),
+  },
+} as const;
+
+const LIST_CONTACTS_TOOL = {
+  title: 'List Contacts',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** List contacts from Resend. Optionally filter by segment. Use to discover contact IDs or emails.
+
+**NOT for:** Listing segments (use list-segments). Not for listing sent emails (use list-emails) or broadcasts (use list-broadcasts).
+
+**Returns:** For each contact: id, email, first_name, last_name, unsubscribed, created_at.
+
+**When to use:** User asks "who's in this list?", "show contacts", "who did I add?" Don't bother telling the user the IDs, unsubscribe statuses, or creation dates unless they ask for them.`,
+  inputSchema: {
+    segmentId: z
+      .string()
+      .optional()
+      .describe(
+        'Segment ID to filter by. If provided, only contacts in this segment will be returned.',
+      ),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe(
+        'Number of contacts to retrieve. Default: 20, Max: 100, Min: 1',
+      ),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'Contact ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'Contact ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const GET_CONTACT_TOOL = {
+  title: 'Get Contact',
+  annotations: { readOnlyHint: true },
+  description: 'Get a contact by ID or email from Resend.',
+  inputSchema: {
+    id: z.string().optional().describe('Contact ID'),
+    email: z.email().optional().describe('Contact email address'),
+  },
+} as const;
+
+const UPDATE_CONTACT_TOOL = {
+  title: 'Update Contact',
+  description: 'Update a contact in Resend (by ID or email).',
+  inputSchema: {
+    id: z.string().optional().describe('Contact ID'),
+    email: z.email().optional().describe('Contact email address'),
+    firstName: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "Contact first name. Pass `null` to remove the contact's first name.",
+      ),
+    lastName: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "Contact last name. Pass `null` to remove the contact's last name.",
+      ),
+    unsubscribed: z
+      .boolean()
+      .optional()
+      .describe('Whether the contact is unsubscribed from all broadcasts'),
+    properties: z
+      .record(z.string(), z.union([z.string(), z.number(), z.null()]))
+      .optional()
+      .describe(
+        'Custom property key-value pairs to update (e.g. { "company_name": "Acme" })',
+      ),
+  },
+} as const;
+
+const REMOVE_CONTACT_TOOL = {
+  title: 'Remove Contact',
+  description:
+    "Remove a contact from Resend (by ID or email). Before using this tool, you MUST double-check with the user that they want to remove this contact. Reference the contact's name (if present) and email address when double-checking, and warn the user that removing a contact is irreversible. You may only use this tool if the user explicitly confirms they want to remove the contact after you double-check.",
+  inputSchema: {
+    id: z.string().optional().describe('Contact ID'),
+    email: z.email().optional().describe('Contact email address'),
+  },
+} as const;
+
+const ADD_CONTACT_TO_SEGMENT_TOOL = {
+  title: 'Add Contact to Segment',
+  description: 'Add a contact to a segment in Resend (by contact ID or email).',
+  inputSchema: {
+    contactId: z.string().optional().describe('Contact ID'),
+    email: z.email().optional().describe('Contact email address'),
+    segmentId: z
+      .string()
+      .nonempty()
+      .describe('Segment ID to add the contact to'),
+  },
+} as const;
+
+const REMOVE_CONTACT_FROM_SEGMENT_TOOL = {
+  title: 'Remove Contact from Segment',
+  description:
+    'Remove a contact from a segment in Resend (by contact ID or email). Before using this tool, you MUST double-check with the user that they want to remove the contact from the segment.',
+  inputSchema: {
+    contactId: z.string().optional().describe('Contact ID'),
+    email: z.email().optional().describe('Contact email address'),
+    segmentId: z
+      .string()
+      .nonempty()
+      .describe('Segment ID to remove the contact from'),
+  },
+} as const;
+
+const LIST_CONTACT_SEGMENTS_TOOL = {
+  title: 'List Contact Segments',
+  annotations: { readOnlyHint: true },
+  description:
+    "List all segments a contact belongs to in Resend (by contact ID or email). Don't bother telling the user the IDs or creation dates unless they ask for them.",
+  inputSchema: {
+    contactId: z.string().optional().describe('Contact ID'),
+    email: z.email().optional().describe('Contact email address'),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe(
+        'Number of segments to retrieve. Max: 100, Min: 1. If omitted, all segments are returned.',
+      ),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'Segment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'Segment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const LIST_CONTACT_TOPICS_TOOL = {
+  title: 'List Contact Topics',
+  annotations: { readOnlyHint: true },
+  description:
+    "List all topic subscriptions for a contact in Resend (by contact ID or email). Don't bother telling the user the IDs unless they ask for them.",
+  inputSchema: {
+    id: z.string().optional().describe('Contact ID'),
+    email: z.email().optional().describe('Contact email address'),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Number of topics to retrieve. Default: 20, Max: 100, Min: 1'),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'Topic ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'Topic ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const UPDATE_CONTACT_TOPICS_TOOL = {
+  title: 'Update Contact Topics',
+  description:
+    'Update topic subscriptions for a contact in Resend (by contact ID or email).',
+  inputSchema: {
+    id: z.string().optional().describe('Contact ID'),
+    email: z.email().optional().describe('Contact email address'),
+    topics: z
+      .array(
+        z.object({
+          id: z.string().describe('Topic ID'),
+          subscription: z
+            .enum(['opt_in', 'opt_out'])
+            .describe('Subscription preference for this topic'),
+        }),
+      )
+      .min(1)
+      .describe('Array of topic subscription configurations to update'),
+  },
+} as const;
+
 export function addContactTools(server: McpServer, resend: Resend) {
   server.registerTool(
     'create-contact',
-    {
-      title: 'Create Contact',
-      description:
-        'Create a new contact in Resend. Optionally assign to segments and configure topic subscriptions.',
-      inputSchema: {
-        email: z.email().describe('Contact email address'),
-        firstName: z.string().optional().describe('Contact first name'),
-        lastName: z.string().optional().describe('Contact last name'),
-        unsubscribed: z
-          .boolean()
-          .optional()
-          .describe('Whether the contact is unsubscribed from all broadcasts'),
-        properties: z
-          .record(z.string(), z.union([z.string(), z.number(), z.null()]))
-          .optional()
-          .describe(
-            'Custom property key-value pairs for the contact (e.g. { "company_name": "Acme" })',
-          ),
-        segmentIds: z
-          .array(z.string())
-          .optional()
-          .describe('Array of segment IDs to assign this contact to'),
-        topics: z
-          .array(
-            z.object({
-              id: z.string().describe('Topic ID'),
-              subscription: z
-                .enum(['opt_in', 'opt_out'])
-                .describe('Subscription preference for this topic'),
-            }),
-          )
-          .optional()
-          .describe('Array of topic subscription configurations'),
-      },
-    },
+    CREATE_CONTACT_TOOL,
     async ({
       email,
       firstName,
@@ -82,45 +290,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'list-contacts',
-    {
-      title: 'List Contacts',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** List contacts from Resend. Optionally filter by segment. Use to discover contact IDs or emails.
-
-**NOT for:** Listing segments (use list-segments). Not for listing sent emails (use list-emails) or broadcasts (use list-broadcasts).
-
-**Returns:** For each contact: id, email, first_name, last_name, unsubscribed, created_at.
-
-**When to use:** User asks "who's in this list?", "show contacts", "who did I add?" Don't bother telling the user the IDs, unsubscribe statuses, or creation dates unless they ask for them.`,
-      inputSchema: {
-        segmentId: z
-          .string()
-          .optional()
-          .describe(
-            'Segment ID to filter by. If provided, only contacts in this segment will be returned.',
-          ),
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of contacts to retrieve. Default: 20, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'Contact ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'Contact ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_CONTACTS_TOOL,
     async ({ segmentId, limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -197,15 +367,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'get-contact',
-    {
-      title: 'Get Contact',
-      annotations: { readOnlyHint: true },
-      description: 'Get a contact by ID or email from Resend.',
-      inputSchema: {
-        id: z.string().optional().describe('Contact ID'),
-        email: z.email().optional().describe('Contact email address'),
-      },
-    },
+    GET_CONTACT_TOOL,
     async ({ id, email }) => {
       let response: GetContactResponse;
       if (id) {
@@ -253,38 +415,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'update-contact',
-    {
-      title: 'Update Contact',
-      description: 'Update a contact in Resend (by ID or email).',
-      inputSchema: {
-        id: z.string().optional().describe('Contact ID'),
-        email: z.email().optional().describe('Contact email address'),
-        firstName: z
-          .string()
-          .nullable()
-          .optional()
-          .describe(
-            "Contact first name. Pass `null` to remove the contact's first name.",
-          ),
-        lastName: z
-          .string()
-          .nullable()
-          .optional()
-          .describe(
-            "Contact last name. Pass `null` to remove the contact's last name.",
-          ),
-        unsubscribed: z
-          .boolean()
-          .optional()
-          .describe('Whether the contact is unsubscribed from all broadcasts'),
-        properties: z
-          .record(z.string(), z.union([z.string(), z.number(), z.null()]))
-          .optional()
-          .describe(
-            'Custom property key-value pairs to update (e.g. { "company_name": "Acme" })',
-          ),
-      },
-    },
+    UPDATE_CONTACT_TOOL,
     async ({ id, email, firstName, lastName, unsubscribed, properties }) => {
       const commonOptions = {
         firstName,
@@ -322,15 +453,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'remove-contact',
-    {
-      title: 'Remove Contact',
-      description:
-        "Remove a contact from Resend (by ID or email). Before using this tool, you MUST double-check with the user that they want to remove this contact. Reference the contact's name (if present) and email address when double-checking, and warn the user that removing a contact is irreversible. You may only use this tool if the user explicitly confirms they want to remove the contact after you double-check.",
-      inputSchema: {
-        id: z.string().optional().describe('Contact ID'),
-        email: z.email().optional().describe('Contact email address'),
-      },
-    },
+    REMOVE_CONTACT_TOOL,
     async ({ id, email }) => {
       let response: RemoveContactsResponse;
       if (id) {
@@ -360,19 +483,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'add-contact-to-segment',
-    {
-      title: 'Add Contact to Segment',
-      description:
-        'Add a contact to a segment in Resend (by contact ID or email).',
-      inputSchema: {
-        contactId: z.string().optional().describe('Contact ID'),
-        email: z.email().optional().describe('Contact email address'),
-        segmentId: z
-          .string()
-          .nonempty()
-          .describe('Segment ID to add the contact to'),
-      },
-    },
+    ADD_CONTACT_TO_SEGMENT_TOOL,
     async ({ contactId, email, segmentId }) => {
       let response;
       if (contactId) {
@@ -402,19 +513,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'remove-contact-from-segment',
-    {
-      title: 'Remove Contact from Segment',
-      description:
-        'Remove a contact from a segment in Resend (by contact ID or email). Before using this tool, you MUST double-check with the user that they want to remove the contact from the segment.',
-      inputSchema: {
-        contactId: z.string().optional().describe('Contact ID'),
-        email: z.email().optional().describe('Contact email address'),
-        segmentId: z
-          .string()
-          .nonempty()
-          .describe('Segment ID to remove the contact from'),
-      },
-    },
+    REMOVE_CONTACT_FROM_SEGMENT_TOOL,
     async ({ contactId, email, segmentId }) => {
       let response;
       if (contactId) {
@@ -447,36 +546,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'list-contact-segments',
-    {
-      title: 'List Contact Segments',
-      annotations: { readOnlyHint: true },
-      description:
-        "List all segments a contact belongs to in Resend (by contact ID or email). Don't bother telling the user the IDs or creation dates unless they ask for them.",
-      inputSchema: {
-        contactId: z.string().optional().describe('Contact ID'),
-        email: z.email().optional().describe('Contact email address'),
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of segments to retrieve. Max: 100, Min: 1. If omitted, all segments are returned.',
-          ),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'Segment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'Segment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_CONTACT_SEGMENTS_TOOL,
     async ({ contactId, email, limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -545,36 +615,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'list-contact-topics',
-    {
-      title: 'List Contact Topics',
-      annotations: { readOnlyHint: true },
-      description:
-        "List all topic subscriptions for a contact in Resend (by contact ID or email). Don't bother telling the user the IDs unless they ask for them.",
-      inputSchema: {
-        id: z.string().optional().describe('Contact ID'),
-        email: z.email().optional().describe('Contact email address'),
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of topics to retrieve. Default: 20, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'Topic ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'Topic ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_CONTACT_TOPICS_TOOL,
     async ({ id, email, limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -652,26 +693,7 @@ export function addContactTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'update-contact-topics',
-    {
-      title: 'Update Contact Topics',
-      description:
-        'Update topic subscriptions for a contact in Resend (by contact ID or email).',
-      inputSchema: {
-        id: z.string().optional().describe('Contact ID'),
-        email: z.email().optional().describe('Contact email address'),
-        topics: z
-          .array(
-            z.object({
-              id: z.string().describe('Topic ID'),
-              subscription: z
-                .enum(['opt_in', 'opt_out'])
-                .describe('Subscription preference for this topic'),
-            }),
-          )
-          .min(1)
-          .describe('Array of topic subscription configurations to update'),
-      },
-    },
+    UPDATE_CONTACT_TOPICS_TOOL,
     async ({ id, email, topics }) => {
       if (!id && !email) {
         throw new Error(

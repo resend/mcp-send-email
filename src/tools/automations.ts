@@ -128,12 +128,14 @@ const workflowSchema = z
     'The workflow definition. See the tool description for the full schema and examples.',
   );
 
-export function addAutomationTools(server: McpServer, resend: Resend) {
-  server.registerTool(
-    'create-automation',
-    {
-      title: 'Create Automation',
-      description: `**Purpose:** Create an automation workflow that triggers on events and executes a sequence of steps.
+// Tool schemas/metadata are built once at module load, not per request:
+// createMcpServer() runs on every HTTP request, and rebuilding these Zod
+// schema trees each time is expensive enough to matter under concurrent
+// long-lived connections (e.g. subscriptions/listen streams held open for
+// minutes to hours each retain their own copy for the connection's lifetime).
+const CREATE_AUTOMATION_TOOL = {
+  title: 'Create Automation',
+  description: `**Purpose:** Create an automation workflow that triggers on events and executes a sequence of steps.
 
 **When to use:**
 - User wants to set up automated email sequences (welcome series, drip campaigns, re-engagement)
@@ -144,20 +146,181 @@ export function addAutomationTools(server: McpServer, resend: Resend) {
 **Returns:** Automation ID and dashboard link.
 
 ${WORKFLOW_GUIDANCE}`,
-      inputSchema: {
-        name: z
-          .string()
-          .nonempty()
-          .describe('Name for the automation (e.g., "Welcome Series")'),
-        status: z
-          .enum(['enabled', 'disabled'])
-          .optional()
-          .describe(
-            'Initial status. Default: disabled. Use "enabled" to activate immediately.',
-          ),
-        workflow: workflowSchema,
-      },
-    },
+  inputSchema: {
+    name: z
+      .string()
+      .nonempty()
+      .describe('Name for the automation (e.g., "Welcome Series")'),
+    status: z
+      .enum(['enabled', 'disabled'])
+      .optional()
+      .describe(
+        'Initial status. Default: disabled. Use "enabled" to activate immediately.',
+      ),
+    workflow: workflowSchema,
+  },
+} as const;
+
+const UPDATE_AUTOMATION_TOOL = {
+  title: 'Update Automation',
+  description: `**Purpose:** Update an automation's name, status, or workflow.
+
+**When to use:**
+- User wants to rename an automation
+- User wants to enable or disable an automation (use status: "disabled" to stop it)
+- User wants to modify the workflow steps
+
+**Important:**
+- To disable/stop an automation, set status to "disabled". Existing runs will continue to completion.
+- When updating the workflow, provide the complete new workflow — it replaces the existing one.
+- Use get-automation first to see the current workflow before making changes.
+
+${WORKFLOW_GUIDANCE}`,
+  inputSchema: {
+    id: z
+      .string()
+      .nonempty()
+      .describe(
+        'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>)',
+      ),
+    name: z.string().optional().describe('New name for the automation.'),
+    status: z
+      .enum(['enabled', 'disabled'])
+      .optional()
+      .describe(
+        'New status. Use "disabled" to stop the automation (prevents new runs).',
+      ),
+    workflow: workflowSchema
+      .optional()
+      .describe(
+        'New workflow definition. Replaces the existing workflow entirely.',
+      ),
+  },
+} as const;
+
+const GET_AUTOMATION_TOOL = {
+  title: 'Get Automation',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** Get details of a specific automation (with its workflow) or list all automations.
+
+**Modes:**
+- With \`id\`: Returns full automation details including the workflow definition.
+- Without \`id\`: Lists all automations with optional status filter and pagination.
+
+**When to use:**
+- User asks "show me my automations" or "what automations do I have?"
+- User wants to inspect a specific automation's workflow
+- Before update-automation, to see the current workflow`,
+  inputSchema: {
+    id: z
+      .string()
+      .optional()
+      .describe(
+        'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>). If omitted, lists all automations.',
+      ),
+    status: z
+      .enum(['enabled', 'disabled'])
+      .optional()
+      .describe('Filter by status (for list mode only).'),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Number of automations to retrieve (for list mode).'),
+    after: z
+      .string()
+      .optional()
+      .describe('Cursor for forward pagination (for list mode).'),
+    before: z
+      .string()
+      .optional()
+      .describe('Cursor for backward pagination (for list mode).'),
+  },
+} as const;
+
+const DUPLICATE_AUTOMATION_TOOL = {
+  title: 'Duplicate Automation',
+  description:
+    'Duplicate an existing automation by ID or Resend dashboard URL. Creates a copy with its own ID, including the steps and connections of the original. Use this when the user wants a new automation based on one they already have, instead of rebuilding the workflow from scratch. Use update-automation on the new ID to rename it or change its workflow.',
+  inputSchema: {
+    id: z
+      .string()
+      .nonempty()
+      .describe(
+        'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>) of the automation to duplicate',
+      ),
+  },
+} as const;
+
+const REMOVE_AUTOMATION_TOOL = {
+  title: 'Remove Automation',
+  description:
+    'Remove an automation by ID or Resend dashboard URL. Before using this tool, you MUST double-check with the user that they want to remove this automation. Reference the NAME of the automation when confirming, and warn the user that removal is irreversible and will stop all future runs. You may only use this tool if the user explicitly confirms.',
+  inputSchema: {
+    id: z
+      .string()
+      .nonempty()
+      .describe(
+        'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>)',
+      ),
+  },
+} as const;
+
+const GET_AUTOMATION_RUNS_TOOL = {
+  title: 'Get Automation Runs',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** List runs for an automation, or get details of a specific run.
+
+**Modes:**
+- With \`runId\`: Returns detailed run info with step-by-step execution status, outputs, and errors.
+- Without \`runId\`: Lists runs for the automation with optional status filter.
+
+**When to use:**
+- User wants to see if an automation is working
+- User wants to debug a failed automation run
+- User asks "why did this automation fail?" or "show me recent runs"
+
+**Run statuses:** running, completed, failed, cancelled
+**Step statuses:** pending, running, completed, failed, skipped, waiting`,
+  inputSchema: {
+    automationId: z
+      .string()
+      .nonempty()
+      .describe(
+        'The automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>)',
+      ),
+    runId: z
+      .string()
+      .optional()
+      .describe(
+        'Specific run ID to get details for. If omitted, lists all runs.',
+      ),
+    status: z
+      .enum(['running', 'completed', 'failed', 'cancelled'])
+      .optional()
+      .describe('Filter runs by status (for list mode only).'),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Number of runs to retrieve (for list mode).'),
+    after: z
+      .string()
+      .optional()
+      .describe('Cursor for forward pagination (for list mode).'),
+    before: z
+      .string()
+      .optional()
+      .describe('Cursor for backward pagination (for list mode).'),
+  },
+} as const;
+
+export function addAutomationTools(server: McpServer, resend: Resend) {
+  server.registerTool(
+    'create-automation',
+    CREATE_AUTOMATION_TOOL,
     async ({ name, status, workflow }) => {
       const { steps, connections } = workflowToSdkOptions(
         workflow as WorkflowDefinition,
@@ -196,42 +359,7 @@ ${WORKFLOW_GUIDANCE}`,
 
   server.registerTool(
     'update-automation',
-    {
-      title: 'Update Automation',
-      description: `**Purpose:** Update an automation's name, status, or workflow.
-
-**When to use:**
-- User wants to rename an automation
-- User wants to enable or disable an automation (use status: "disabled" to stop it)
-- User wants to modify the workflow steps
-
-**Important:**
-- To disable/stop an automation, set status to "disabled". Existing runs will continue to completion.
-- When updating the workflow, provide the complete new workflow — it replaces the existing one.
-- Use get-automation first to see the current workflow before making changes.
-
-${WORKFLOW_GUIDANCE}`,
-      inputSchema: {
-        id: z
-          .string()
-          .nonempty()
-          .describe(
-            'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>)',
-          ),
-        name: z.string().optional().describe('New name for the automation.'),
-        status: z
-          .enum(['enabled', 'disabled'])
-          .optional()
-          .describe(
-            'New status. Use "disabled" to stop the automation (prevents new runs).',
-          ),
-        workflow: workflowSchema
-          .optional()
-          .describe(
-            'New workflow definition. Replaces the existing workflow entirely.',
-          ),
-      },
-    },
+    UPDATE_AUTOMATION_TOOL,
     async ({ id: rawId, name, status, workflow }) => {
       const id = extractIdFromUrl(rawId, 'automations');
       const updateOptions: {
@@ -278,46 +406,7 @@ ${WORKFLOW_GUIDANCE}`,
 
   server.registerTool(
     'get-automation',
-    {
-      title: 'Get Automation',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** Get details of a specific automation (with its workflow) or list all automations.
-
-**Modes:**
-- With \`id\`: Returns full automation details including the workflow definition.
-- Without \`id\`: Lists all automations with optional status filter and pagination.
-
-**When to use:**
-- User asks "show me my automations" or "what automations do I have?"
-- User wants to inspect a specific automation's workflow
-- Before update-automation, to see the current workflow`,
-      inputSchema: {
-        id: z
-          .string()
-          .optional()
-          .describe(
-            'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>). If omitted, lists all automations.',
-          ),
-        status: z
-          .enum(['enabled', 'disabled'])
-          .optional()
-          .describe('Filter by status (for list mode only).'),
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe('Number of automations to retrieve (for list mode).'),
-        after: z
-          .string()
-          .optional()
-          .describe('Cursor for forward pagination (for list mode).'),
-        before: z
-          .string()
-          .optional()
-          .describe('Cursor for backward pagination (for list mode).'),
-      },
-    },
+    GET_AUTOMATION_TOOL,
     async ({ id: rawId, status, limit, after, before }) => {
       const id = rawId ? extractIdFromUrl(rawId, 'automations') : undefined;
       // Get single automation
@@ -412,19 +501,7 @@ ${WORKFLOW_GUIDANCE}`,
 
   server.registerTool(
     'duplicate-automation',
-    {
-      title: 'Duplicate Automation',
-      description:
-        'Duplicate an existing automation by ID or Resend dashboard URL. Creates a copy with its own ID, including the steps and connections of the original. Use this when the user wants a new automation based on one they already have, instead of rebuilding the workflow from scratch. Use update-automation on the new ID to rename it or change its workflow.',
-      inputSchema: {
-        id: z
-          .string()
-          .nonempty()
-          .describe(
-            'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>) of the automation to duplicate',
-          ),
-      },
-    },
+    DUPLICATE_AUTOMATION_TOOL,
     async ({ id: rawId }) => {
       const id = extractIdFromUrl(rawId, 'automations');
       const response = await resend.automations.duplicate(id);
@@ -451,19 +528,7 @@ ${WORKFLOW_GUIDANCE}`,
 
   server.registerTool(
     'remove-automation',
-    {
-      title: 'Remove Automation',
-      description:
-        'Remove an automation by ID or Resend dashboard URL. Before using this tool, you MUST double-check with the user that they want to remove this automation. Reference the NAME of the automation when confirming, and warn the user that removal is irreversible and will stop all future runs. You may only use this tool if the user explicitly confirms.',
-      inputSchema: {
-        id: z
-          .string()
-          .nonempty()
-          .describe(
-            'Automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>)',
-          ),
-      },
-    },
+    REMOVE_AUTOMATION_TOOL,
     async ({ id: rawId }) => {
       const id = extractIdFromUrl(rawId, 'automations');
       const response = await resend.automations.remove(id);
@@ -485,55 +550,7 @@ ${WORKFLOW_GUIDANCE}`,
 
   server.registerTool(
     'get-automation-runs',
-    {
-      title: 'Get Automation Runs',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** List runs for an automation, or get details of a specific run.
-
-**Modes:**
-- With \`runId\`: Returns detailed run info with step-by-step execution status, outputs, and errors.
-- Without \`runId\`: Lists runs for the automation with optional status filter.
-
-**When to use:**
-- User wants to see if an automation is working
-- User wants to debug a failed automation run
-- User asks "why did this automation fail?" or "show me recent runs"
-
-**Run statuses:** running, completed, failed, cancelled
-**Step statuses:** pending, running, completed, failed, skipped, waiting`,
-      inputSchema: {
-        automationId: z
-          .string()
-          .nonempty()
-          .describe(
-            'The automation ID or Resend dashboard URL (e.g. https://resend.com/automations/<id>)',
-          ),
-        runId: z
-          .string()
-          .optional()
-          .describe(
-            'Specific run ID to get details for. If omitted, lists all runs.',
-          ),
-        status: z
-          .enum(['running', 'completed', 'failed', 'cancelled'])
-          .optional()
-          .describe('Filter runs by status (for list mode only).'),
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe('Number of runs to retrieve (for list mode).'),
-        after: z
-          .string()
-          .optional()
-          .describe('Cursor for forward pagination (for list mode).'),
-        before: z
-          .string()
-          .optional()
-          .describe('Cursor for backward pagination (for list mode).'),
-      },
-    },
+    GET_AUTOMATION_RUNS_TOOL,
     async ({
       automationId: rawAutomationId,
       runId,

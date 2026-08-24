@@ -11,6 +11,78 @@ interface EditorConnection {
   agent_name?: string;
 }
 
+// Tool schemas/metadata are built once at module load, not per request:
+// createMcpServer() runs on every HTTP request, and rebuilding these Zod
+// schema trees each time is expensive enough to matter under concurrent
+// long-lived connections (e.g. subscriptions/listen streams held open for
+// minutes to hours each retain their own copy for the connection's lifetime).
+const GET_TIPTAP_JSON_CONTENT_TOOL = {
+  title: 'Get TipTap JSON Content',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** Retrieve the existing TipTap JSON content of a broadcast or template, optionally bundled with the TipTap schema reference. Also connects the agent to the editor so the avatar is visible while content is being generated.
+
+**When to use:**
+- **Always call this before compose-broadcast or compose-template** to fetch the current document state — even if you expect it to be empty, the resource may have content set via the dashboard
+- When the user asks to edit, tweak, or modify existing email content
+- To inspect the current TipTap structure of a resource
+
+**Returns:** The TipTap JSON content object for the resource, and optionally the TipTap schema. Use the content as the base for modifications, then pass the updated JSON to compose-broadcast or compose-template.
+
+**Note:** This tool automatically connects the agent to the editor. The subsequent compose-broadcast or compose-template call will disconnect when done.
+
+**Tip:** Set include_schema to true to get both the existing content and the schema in one call.`,
+  inputSchema: {
+    resource_type: z
+      .enum(['broadcast', 'template'])
+      .describe('Type of resource to fetch content for'),
+    resource_id: z
+      .string()
+      .nonempty()
+      .describe(
+        'The broadcast ID (UUID), template identifier (UUID or alias), or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id> or https://resend.com/templates/<id>)',
+      ),
+    include_schema: z
+      .boolean()
+      .default(true)
+      .describe(
+        'Returns the TipTap schema reference alongside the content. Required for producing valid TipTap JSON. Set to false only if you already have the schema.',
+      ),
+  },
+} as const;
+
+const CONNECT_TO_EDITOR_TOOL = {
+  title: 'Connect to Editor',
+  description: `**Purpose:** Show agent presence in the Resend dashboard editor. Users will see an agent avatar while connected.
+
+**When to use:**
+- To signal to dashboard users that an AI agent is working on the content outside of compose workflows
+- **Not needed before compose-broadcast or compose-template** — get-tiptap-json-content connects automatically, and compose tools disconnect when done.
+
+**Returns:** Connection token and room ID.`,
+  inputSchema: {
+    resource_type: z
+      .enum(['broadcast', 'template'])
+      .describe('Type of resource to connect to'),
+    resource_id: z
+      .string()
+      .nonempty()
+      .describe(
+        'ID of the resource or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id> or https://resend.com/templates/<id>)',
+      ),
+    agent_name: z
+      .string()
+      .optional()
+      .describe('Display name for the agent avatar'),
+  },
+} as const;
+
+const DISCONNECT_FROM_EDITOR_TOOL = {
+  title: 'Disconnect from Editor',
+  description:
+    'Remove agent presence from the Resend dashboard editor. Call this when done editing.',
+  inputSchema: {},
+} as const;
+
 export function addEditorTools(
   server: McpServer,
   dashboard: DashboardClient,
@@ -71,39 +143,7 @@ export function addEditorTools(
 
   server.registerTool(
     'get-tiptap-json-content',
-    {
-      title: 'Get TipTap JSON Content',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** Retrieve the existing TipTap JSON content of a broadcast or template, optionally bundled with the TipTap schema reference. Also connects the agent to the editor so the avatar is visible while content is being generated.
-
-**When to use:**
-- **Always call this before compose-broadcast or compose-template** to fetch the current document state — even if you expect it to be empty, the resource may have content set via the dashboard
-- When the user asks to edit, tweak, or modify existing email content
-- To inspect the current TipTap structure of a resource
-
-**Returns:** The TipTap JSON content object for the resource, and optionally the TipTap schema. Use the content as the base for modifications, then pass the updated JSON to compose-broadcast or compose-template.
-
-**Note:** This tool automatically connects the agent to the editor. The subsequent compose-broadcast or compose-template call will disconnect when done.
-
-**Tip:** Set include_schema to true to get both the existing content and the schema in one call.`,
-      inputSchema: {
-        resource_type: z
-          .enum(['broadcast', 'template'])
-          .describe('Type of resource to fetch content for'),
-        resource_id: z
-          .string()
-          .nonempty()
-          .describe(
-            'The broadcast ID (UUID), template identifier (UUID or alias), or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id> or https://resend.com/templates/<id>)',
-          ),
-        include_schema: z
-          .boolean()
-          .default(true)
-          .describe(
-            'Returns the TipTap schema reference alongside the content. Required for producing valid TipTap JSON. Set to false only if you already have the schema.',
-          ),
-      },
-    },
+    GET_TIPTAP_JSON_CONTENT_TOOL,
     async (
       { resource_type, resource_id: rawResourceId, include_schema },
       ctx,
@@ -167,31 +207,7 @@ export function addEditorTools(
 
   server.registerTool(
     'connect-to-editor',
-    {
-      title: 'Connect to Editor',
-      description: `**Purpose:** Show agent presence in the Resend dashboard editor. Users will see an agent avatar while connected.
-
-**When to use:**
-- To signal to dashboard users that an AI agent is working on the content outside of compose workflows
-- **Not needed before compose-broadcast or compose-template** — get-tiptap-json-content connects automatically, and compose tools disconnect when done.
-
-**Returns:** Connection token and room ID.`,
-      inputSchema: {
-        resource_type: z
-          .enum(['broadcast', 'template'])
-          .describe('Type of resource to connect to'),
-        resource_id: z
-          .string()
-          .nonempty()
-          .describe(
-            'ID of the resource or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id> or https://resend.com/templates/<id>)',
-          ),
-        agent_name: z
-          .string()
-          .optional()
-          .describe('Display name for the agent avatar'),
-      },
-    },
+    CONNECT_TO_EDITOR_TOOL,
     async ({ resource_type, resource_id: rawResourceId, agent_name }, ctx) => {
       if (!apiClient) {
         throw new Error('API client not configured. Provide a Resend API key.');
@@ -228,12 +244,7 @@ export function addEditorTools(
 
   server.registerTool(
     'disconnect-from-editor',
-    {
-      title: 'Disconnect from Editor',
-      description:
-        'Remove agent presence from the Resend dashboard editor. Call this when done editing.',
-      inputSchema: {},
-    },
+    DISCONNECT_FROM_EDITOR_TOOL,
     async (_args, _ctx) => {
       if (!apiClient) {
         throw new Error('API client not configured. Provide a Resend API key.');

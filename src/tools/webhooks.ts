@@ -22,21 +22,76 @@ const webhookEventSchema = z.enum([
   'domain.deleted',
 ]);
 
+// Tool schemas/metadata are built once at module load, not per request:
+// createMcpServer() runs on every HTTP request, and rebuilding these Zod
+// schema trees each time is expensive enough to matter under concurrent
+// long-lived connections (e.g. subscriptions/listen streams held open for
+// minutes to hours each retain their own copy for the connection's lifetime).
+const CREATE_WEBHOOK_TOOL = {
+  title: 'Create Webhook',
+  description:
+    'Create a new webhook in Resend. A webhook allows you to receive notifications at a specified URL when certain events occur (e.g. email.sent, email.delivered, email.bounced).',
+  inputSchema: {
+    endpoint: z.url().describe('The URL where webhook events will be sent'),
+    events: webhookEventSchema
+      .array()
+      .min(1)
+      .describe('Array of event types to subscribe to'),
+  },
+} as const;
+
+const LIST_WEBHOOKS_TOOL = {
+  title: 'List Webhooks',
+  annotations: { readOnlyHint: true },
+  description:
+    'List all webhooks from Resend. Use to get webhook IDs and see which endpoints and events are configured. Not for listing emails, segments, or broadcasts.',
+  inputSchema: {},
+} as const;
+
+const GET_WEBHOOK_TOOL = {
+  title: 'Get Webhook',
+  annotations: { readOnlyHint: true },
+  description: 'Get a webhook by ID from Resend.',
+  inputSchema: {
+    webhookId: z.string().nonempty().describe('Webhook ID'),
+  },
+} as const;
+
+const UPDATE_WEBHOOK_TOOL = {
+  title: 'Update Webhook',
+  description:
+    'Update an existing webhook in Resend. You can change the endpoint URL, subscribed events, or enable/disable the webhook.',
+  inputSchema: {
+    webhookId: z.string().nonempty().describe('Webhook ID'),
+    endpoint: z
+      .url()
+      .optional()
+      .describe('New URL where webhook events will be sent'),
+    events: webhookEventSchema
+      .array()
+      .min(1)
+      .optional()
+      .describe('New array of event types to subscribe to'),
+    status: z
+      .enum(['enabled', 'disabled'])
+      .optional()
+      .describe('Webhook status'),
+  },
+} as const;
+
+const REMOVE_WEBHOOK_TOOL = {
+  title: 'Remove Webhook',
+  description:
+    'Remove a webhook by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this webhook. Reference the ENDPOINT of the webhook when double-checking, and warn the user that removing a webhook is irreversible. You may only use this tool if the user explicitly confirms they want to remove the webhook after you double-check.',
+  inputSchema: {
+    webhookId: z.string().nonempty().describe('Webhook ID'),
+  },
+} as const;
+
 export function addWebhookTools(server: McpServer, resend: Resend) {
   server.registerTool(
     'create-webhook',
-    {
-      title: 'Create Webhook',
-      description:
-        'Create a new webhook in Resend. A webhook allows you to receive notifications at a specified URL when certain events occur (e.g. email.sent, email.delivered, email.bounced).',
-      inputSchema: {
-        endpoint: z.url().describe('The URL where webhook events will be sent'),
-        events: webhookEventSchema
-          .array()
-          .min(1)
-          .describe('Array of event types to subscribe to'),
-      },
-    },
+    CREATE_WEBHOOK_TOOL,
     async ({ endpoint, events }) => {
       const response = await resend.webhooks.create({ endpoint, events });
 
@@ -65,13 +120,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'list-webhooks',
-    {
-      title: 'List Webhooks',
-      annotations: { readOnlyHint: true },
-      description:
-        'List all webhooks from Resend. Use to get webhook IDs and see which endpoints and events are configured. Not for listing emails, segments, or broadcasts.',
-      inputSchema: {},
-    },
+    LIST_WEBHOOKS_TOOL,
     async (_args, _ctx) => {
       const response = await resend.webhooks.list();
 
@@ -99,14 +148,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'get-webhook',
-    {
-      title: 'Get Webhook',
-      annotations: { readOnlyHint: true },
-      description: 'Get a webhook by ID from Resend.',
-      inputSchema: {
-        webhookId: z.string().nonempty().describe('Webhook ID'),
-      },
-    },
+    GET_WEBHOOK_TOOL,
     async ({ webhookId }) => {
       const response = await resend.webhooks.get(webhookId);
 
@@ -130,27 +172,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'update-webhook',
-    {
-      title: 'Update Webhook',
-      description:
-        'Update an existing webhook in Resend. You can change the endpoint URL, subscribed events, or enable/disable the webhook.',
-      inputSchema: {
-        webhookId: z.string().nonempty().describe('Webhook ID'),
-        endpoint: z
-          .url()
-          .optional()
-          .describe('New URL where webhook events will be sent'),
-        events: webhookEventSchema
-          .array()
-          .min(1)
-          .optional()
-          .describe('New array of event types to subscribe to'),
-        status: z
-          .enum(['enabled', 'disabled'])
-          .optional()
-          .describe('Webhook status'),
-      },
-    },
+    UPDATE_WEBHOOK_TOOL,
     async ({ webhookId, endpoint, events, status }) => {
       const response = await resend.webhooks.update(webhookId, {
         endpoint,
@@ -175,14 +197,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'remove-webhook',
-    {
-      title: 'Remove Webhook',
-      description:
-        'Remove a webhook by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this webhook. Reference the ENDPOINT of the webhook when double-checking, and warn the user that removing a webhook is irreversible. You may only use this tool if the user explicitly confirms they want to remove the webhook after you double-check.',
-      inputSchema: {
-        webhookId: z.string().nonempty().describe('Webhook ID'),
-      },
-    },
+    REMOVE_WEBHOOK_TOOL,
     async ({ webhookId }) => {
       const response = await resend.webhooks.remove(webhookId);
 

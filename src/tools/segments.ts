@@ -2,17 +2,76 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 
+// Tool schemas/metadata are built once at module load, not per request:
+// createMcpServer() runs on every HTTP request, and rebuilding these Zod
+// schema trees each time is expensive enough to matter under concurrent
+// long-lived connections (e.g. subscriptions/listen streams held open for
+// minutes to hours each retain their own copy for the connection's lifetime).
+const CREATE_SEGMENT_TOOL = {
+  title: 'Create Segment',
+  description:
+    'Create a new segment in Resend. A segment is a group of contacts that can be used to target specific broadcasts.',
+  inputSchema: {
+    name: z.string().nonempty().describe('Name for the new segment'),
+  },
+} as const;
+
+const LIST_SEGMENTS_TOOL = {
+  title: 'List Segments',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** List all segments in the account. Use to get segment IDs required by create-contact, create-broadcast, list-contacts.
+
+**NOT for:** Listing contacts inside a segment (use list-contacts with segmentId). Not for listing broadcasts (use list-broadcasts).
+
+**Returns:** For each segment: name, id, created_at. Use pagination (limit, after/before) for large lists.
+
+**When to use:** User says "show my segments", "what lists do I have?", or before create-contact/create-broadcast when segmentId is unknown.`,
+  inputSchema: {
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe(
+        'Number of segments to retrieve. Default: 20, Max: 100, Min: 1',
+      ),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'Segment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'Segment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const GET_SEGMENT_TOOL = {
+  title: 'Get Segment',
+  annotations: { readOnlyHint: true },
+  description: 'Get a segment by ID from Resend.',
+  inputSchema: {
+    id: z.string().nonempty().describe('Segment ID'),
+  },
+} as const;
+
+const REMOVE_SEGMENT_TOOL = {
+  title: 'Remove Segment',
+  description:
+    'Remove a segment by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this segment. Reference the NAME of the segment when double-checking, and warn the user that removing a segment is irreversible. You may only use this tool if the user explicitly confirms they want to remove the segment after you double-check.',
+  inputSchema: {
+    id: z.string().nonempty().describe('Segment ID'),
+  },
+} as const;
+
 export function addSegmentTools(server: McpServer, resend: Resend) {
   server.registerTool(
     'create-segment',
-    {
-      title: 'Create Segment',
-      description:
-        'Create a new segment in Resend. A segment is a group of contacts that can be used to target specific broadcasts.',
-      inputSchema: {
-        name: z.string().nonempty().describe('Name for the new segment'),
-      },
-    },
+    CREATE_SEGMENT_TOOL,
     async ({ name }) => {
       const response = await resend.segments.create({ name });
 
@@ -34,39 +93,7 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'list-segments',
-    {
-      title: 'List Segments',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** List all segments in the account. Use to get segment IDs required by create-contact, create-broadcast, list-contacts.
-
-**NOT for:** Listing contacts inside a segment (use list-contacts with segmentId). Not for listing broadcasts (use list-broadcasts).
-
-**Returns:** For each segment: name, id, created_at. Use pagination (limit, after/before) for large lists.
-
-**When to use:** User says "show my segments", "what lists do I have?", or before create-contact/create-broadcast when segmentId is unknown.`,
-      inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of segments to retrieve. Default: 20, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'Segment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'Segment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_SEGMENTS_TOOL,
     async ({ limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -122,62 +149,40 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.registerTool(
-    'get-segment',
-    {
-      title: 'Get Segment',
-      annotations: { readOnlyHint: true },
-      description: 'Get a segment by ID from Resend.',
-      inputSchema: {
-        id: z.string().nonempty().describe('Segment ID'),
-      },
-    },
-    async ({ id }) => {
-      const response = await resend.segments.get(id);
+  server.registerTool('get-segment', GET_SEGMENT_TOOL, async ({ id }) => {
+    const response = await resend.segments.get(id);
 
-      if (response.error) {
-        throw new Error(
-          `Failed to get segment: ${JSON.stringify(response.error)}`,
-        );
-      }
+    if (response.error) {
+      throw new Error(
+        `Failed to get segment: ${JSON.stringify(response.error)}`,
+      );
+    }
 
-      const segment = response.data;
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Name: ${segment.name}\nID: ${segment.id}\nCreated at: ${segment.created_at}`,
-          },
-        ],
-      };
-    },
-  );
+    const segment = response.data;
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Name: ${segment.name}\nID: ${segment.id}\nCreated at: ${segment.created_at}`,
+        },
+      ],
+    };
+  });
 
-  server.registerTool(
-    'remove-segment',
-    {
-      title: 'Remove Segment',
-      description:
-        'Remove a segment by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this segment. Reference the NAME of the segment when double-checking, and warn the user that removing a segment is irreversible. You may only use this tool if the user explicitly confirms they want to remove the segment after you double-check.',
-      inputSchema: {
-        id: z.string().nonempty().describe('Segment ID'),
-      },
-    },
-    async ({ id }) => {
-      const response = await resend.segments.remove(id);
+  server.registerTool('remove-segment', REMOVE_SEGMENT_TOOL, async ({ id }) => {
+    const response = await resend.segments.remove(id);
 
-      if (response.error) {
-        throw new Error(
-          `Failed to remove segment: ${JSON.stringify(response.error)}`,
-        );
-      }
+    if (response.error) {
+      throw new Error(
+        `Failed to remove segment: ${JSON.stringify(response.error)}`,
+      );
+    }
 
-      return {
-        content: [
-          { type: 'text', text: 'Segment removed successfully.' },
-          { type: 'text', text: `ID: ${response.data.id}` },
-        ],
-      };
-    },
-  );
+    return {
+      content: [
+        { type: 'text', text: 'Segment removed successfully.' },
+        { type: 'text', text: `ID: ${response.data.id}` },
+      ],
+    };
+  });
 }

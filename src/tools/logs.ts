@@ -2,13 +2,15 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 
-export function addLogTools(server: McpServer, resend: Resend) {
-  server.registerTool(
-    'list-logs',
-    {
-      title: 'List Logs',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** List API request logs for the account. Use to review recent API activity, debug issues, or audit API usage.
+// Tool schemas/metadata are built once at module load, not per request:
+// createMcpServer() runs on every HTTP request, and rebuilding these Zod
+// schema trees each time is expensive enough to matter under concurrent
+// long-lived connections (e.g. subscriptions/listen streams held open for
+// minutes to hours each retain their own copy for the connection's lifetime).
+const LIST_LOGS_TOOL = {
+  title: 'List Logs',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** List API request logs for the account. Use to review recent API activity, debug issues, or audit API usage.
 
 **Returns:** For each log: id, created_at, endpoint, method, response_status, user_agent. Use pagination (limit, after/before) for large lists.
 
@@ -16,29 +18,48 @@ export function addLogTools(server: McpServer, resend: Resend) {
 - User wants to see recent API activity
 - Debugging API issues or checking request history
 - User says "show my logs", "what API calls were made?", "check recent requests"`,
-      inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of logs to retrieve. Default: 20, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'Log ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'Log ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+  inputSchema: {
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Number of logs to retrieve. Default: 20, Max: 100, Min: 1'),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'Log ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'Log ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const GET_LOG_TOOL = {
+  title: 'Get Log',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** Get detailed information about a specific API request log, including the full request and response bodies.
+
+**Returns:** Log details: id, created_at, endpoint, method, response_status, user_agent, request_body, response_body.
+
+**When to use:**
+- User wants to inspect a specific API request
+- Debugging a particular API call
+- User says "show me that log", "what was in that request?"`,
+  inputSchema: {
+    logId: z.string().nonempty().describe('The Log ID to retrieve'),
+  },
+} as const;
+
+export function addLogTools(server: McpServer, resend: Resend) {
+  server.registerTool(
+    'list-logs',
+    LIST_LOGS_TOOL,
     async ({ limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -103,47 +124,29 @@ export function addLogTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.registerTool(
-    'get-log',
-    {
-      title: 'Get Log',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** Get detailed information about a specific API request log, including the full request and response bodies.
+  server.registerTool('get-log', GET_LOG_TOOL, async ({ logId }) => {
+    const response = await resend.logs.get(logId);
 
-**Returns:** Log details: id, created_at, endpoint, method, response_status, user_agent, request_body, response_body.
+    if (response.error) {
+      throw new Error(`Failed to get log: ${JSON.stringify(response.error)}`);
+    }
 
-**When to use:**
-- User wants to inspect a specific API request
-- Debugging a particular API call
-- User says "show me that log", "what was in that request?"`,
-      inputSchema: {
-        logId: z.string().nonempty().describe('The Log ID to retrieve'),
-      },
-    },
-    async ({ logId }) => {
-      const response = await resend.logs.get(logId);
-
-      if (response.error) {
-        throw new Error(`Failed to get log: ${JSON.stringify(response.error)}`);
-      }
-
-      const log = response.data;
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `ID: ${log.id}\nEndpoint: ${log.method} ${log.endpoint}\nStatus: ${log.response_status}\nUser Agent: ${log.user_agent}\nCreated at: ${log.created_at}`,
-          },
-          {
-            type: 'text',
-            text: `Request Body:\n${JSON.stringify(log.request_body, null, 2)}`,
-          },
-          {
-            type: 'text',
-            text: `Response Body:\n${JSON.stringify(log.response_body, null, 2)}`,
-          },
-        ],
-      };
-    },
-  );
+    const log = response.data;
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `ID: ${log.id}\nEndpoint: ${log.method} ${log.endpoint}\nStatus: ${log.response_status}\nUser Agent: ${log.user_agent}\nCreated at: ${log.created_at}`,
+        },
+        {
+          type: 'text',
+          text: `Request Body:\n${JSON.stringify(log.request_body, null, 2)}`,
+        },
+        {
+          type: 'text',
+          text: `Response Body:\n${JSON.stringify(log.response_body, null, 2)}`,
+        },
+      ],
+    };
+  });
 }

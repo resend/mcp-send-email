@@ -2,12 +2,14 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 
-export function addEventTools(server: McpServer, resend: Resend) {
-  server.registerTool(
-    'send-event',
-    {
-      title: 'Send Event',
-      description: `**Purpose:** Fire an event to trigger automations for a specific contact.
+// Tool schemas/metadata are built once at module load, not per request:
+// createMcpServer() runs on every HTTP request, and rebuilding these Zod
+// schema trees each time is expensive enough to matter under concurrent
+// long-lived connections (e.g. subscriptions/listen streams held open for
+// minutes to hours each retain their own copy for the connection's lifetime).
+const SEND_EVENT_TOOL = {
+  title: 'Send Event',
+  description: `**Purpose:** Fire an event to trigger automations for a specific contact.
 
 **When to use:**
 - User wants to trigger an automation workflow for a contact
@@ -19,31 +21,90 @@ export function addEventTools(server: McpServer, resend: Resend) {
 - The event name must match the trigger event name in an automation for it to fire.
 - Identify the contact by either contactId OR email, not both.
 - The payload is optional and can contain any key-value data that the automation steps can reference via event.* variables.`,
-      inputSchema: {
-        event: z
-          .string()
-          .nonempty()
-          .describe('The event name (e.g., "user.created", "payment.failed")'),
-        contactId: z
-          .string()
-          .optional()
-          .describe(
-            'The contact ID to associate with the event. Use either contactId or email, not both.',
-          ),
-        email: z
-          .string()
-          .optional()
-          .describe(
-            'The contact email to associate with the event. Use either contactId or email, not both.',
-          ),
-        payload: z
-          .record(z.string(), z.unknown())
-          .optional()
-          .describe(
-            'Optional key-value data passed to the automation. Accessible in steps via event.* variables.',
-          ),
-      },
-    },
+  inputSchema: {
+    event: z
+      .string()
+      .nonempty()
+      .describe('The event name (e.g., "user.created", "payment.failed")'),
+    contactId: z
+      .string()
+      .optional()
+      .describe(
+        'The contact ID to associate with the event. Use either contactId or email, not both.',
+      ),
+    email: z
+      .string()
+      .optional()
+      .describe(
+        'The contact email to associate with the event. Use either contactId or email, not both.',
+      ),
+    payload: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        'Optional key-value data passed to the automation. Accessible in steps via event.* variables.',
+      ),
+  },
+} as const;
+
+const MANAGE_EVENTS_TOOL = {
+  title: 'Manage Events',
+  description: `**Purpose:** Create, list, get, update, or remove event definitions in Resend.
+
+Events define named triggers that your application sends to start automations. Each event can have an optional schema that validates payload data.
+
+**Actions:**
+- \`create\`: Define a new event with a name and optional schema.
+- \`list\`: List all event definitions (paginated).
+- \`get\`: Get event details by ID or name.
+- \`update\`: Update an event's schema.
+- \`remove\`: Delete an event. You MUST confirm with the user before removing.
+
+**Workflow:** manage-events (create) → create-automation → send-event
+
+**Schema types:** string, number, boolean, date`,
+  inputSchema: {
+    action: z
+      .enum(['create', 'list', 'get', 'update', 'remove'])
+      .describe('The operation to perform.'),
+    name: z
+      .string()
+      .optional()
+      .describe(
+        'Event name (for create). Use dot notation like "user.created". Cannot start with "resend:".',
+      ),
+    identifier: z
+      .string()
+      .optional()
+      .describe('Event ID or name (for get, update, remove).'),
+    schema: z
+      .record(z.string(), z.enum(['string', 'number', 'boolean', 'date']))
+      .nullable()
+      .optional()
+      .describe(
+        'Event payload schema (for create, update). Maps field names to types. Pass null to remove the schema.',
+      ),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Number of events to retrieve (for list). Default: 20.'),
+    after: z
+      .string()
+      .optional()
+      .describe('Cursor for forward pagination (for list).'),
+    before: z
+      .string()
+      .optional()
+      .describe('Cursor for backward pagination (for list).'),
+  },
+} as const;
+
+export function addEventTools(server: McpServer, resend: Resend) {
+  server.registerTool(
+    'send-event',
+    SEND_EVENT_TOOL,
     async ({ event, contactId, email, payload }) => {
       if (!contactId && !email) {
         throw new Error(
@@ -92,59 +153,7 @@ export function addEventTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'manage-events',
-    {
-      title: 'Manage Events',
-      description: `**Purpose:** Create, list, get, update, or remove event definitions in Resend.
-
-Events define named triggers that your application sends to start automations. Each event can have an optional schema that validates payload data.
-
-**Actions:**
-- \`create\`: Define a new event with a name and optional schema.
-- \`list\`: List all event definitions (paginated).
-- \`get\`: Get event details by ID or name.
-- \`update\`: Update an event's schema.
-- \`remove\`: Delete an event. You MUST confirm with the user before removing.
-
-**Workflow:** manage-events (create) → create-automation → send-event
-
-**Schema types:** string, number, boolean, date`,
-      inputSchema: {
-        action: z
-          .enum(['create', 'list', 'get', 'update', 'remove'])
-          .describe('The operation to perform.'),
-        name: z
-          .string()
-          .optional()
-          .describe(
-            'Event name (for create). Use dot notation like "user.created". Cannot start with "resend:".',
-          ),
-        identifier: z
-          .string()
-          .optional()
-          .describe('Event ID or name (for get, update, remove).'),
-        schema: z
-          .record(z.string(), z.enum(['string', 'number', 'boolean', 'date']))
-          .nullable()
-          .optional()
-          .describe(
-            'Event payload schema (for create, update). Maps field names to types. Pass null to remove the schema.',
-          ),
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe('Number of events to retrieve (for list). Default: 20.'),
-        after: z
-          .string()
-          .optional()
-          .describe('Cursor for forward pagination (for list).'),
-        before: z
-          .string()
-          .optional()
-          .describe('Cursor for backward pagination (for list).'),
-      },
-    },
+    MANAGE_EVENTS_TOOL,
     async ({ action, name, identifier, schema, limit, after, before }) => {
       switch (action) {
         case 'create': {
