@@ -876,7 +876,7 @@ export function addBroadcastTools(
       annotations: { readOnlyHint: true },
       description: `**Purpose:** List the individual recipients of a broadcast for a given event type (sent, delivered, opened, clicked, bounced, complained, unsubscribed, suppressed).
 
-**NOT for:** Listing broadcasts themselves (use list-broadcasts). Not for aggregate/summary stats — this returns per-recipient rows, one per contact per event type.
+**NOT for:** Aggregate broadcast performance (use get-broadcast). Not for listing broadcasts themselves (use list-broadcasts). This tool returns per-recipient rows, one per contact per event type.
 
 **Returns:** For each recipient: email, id (opaque pagination cursor), contact_id (when known). Also includes count for "opened"/"clicked", bounce_type for "bounced", and clicked_links (url + click count) for "clicked". Use pagination (limit, after/before) for large lists.
 
@@ -912,6 +912,7 @@ export function addBroadcastTools(
           ),
         limit: z
           .number()
+          .int()
           .min(1)
           .max(100)
           .optional()
@@ -923,14 +924,14 @@ export function addBroadcastTools(
           .nonempty()
           .optional()
           .describe(
-            'Recipient ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+            'Cursor to fetch the page after this recipient (for forward pagination). Cannot be used with "before".',
           ),
         before: z
           .string()
           .nonempty()
           .optional()
           .describe(
-            'Recipient ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+            'Cursor to fetch the page before this recipient (for backward pagination). Cannot be used with "after".',
           ),
       },
     },
