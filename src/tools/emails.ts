@@ -889,7 +889,7 @@ export function addEmailTools(
   );
 
   server.registerTool(
-    'email-metrics',
+    'get-email-metrics',
     {
       title: 'Email Metrics',
       annotations: { readOnlyHint: true },

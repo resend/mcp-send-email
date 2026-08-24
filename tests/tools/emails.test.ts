@@ -469,7 +469,7 @@ describe('share-email', () => {
   });
 });
 
-describe('email-metrics', () => {
+describe('get-email-metrics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     metrics.mockResolvedValue({
@@ -489,7 +489,7 @@ describe('email-metrics', () => {
   it('retrieves metrics with no options', async () => {
     const client = await makeClient();
     const result = await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: {},
     });
 
@@ -515,7 +515,7 @@ describe('email-metrics', () => {
   it('passes filters and dimensions through to the SDK', async () => {
     const client = await makeClient();
     await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: {
         startDate: '2026-07-01',
         endDate: '2026-07-08',
@@ -540,7 +540,7 @@ describe('email-metrics', () => {
   it('passes domainId and email dimension/emailId through to the SDK', async () => {
     const client = await makeClient();
     const result = await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: {
         dimensions: ['email'],
         emailId: [EMAIL_ID],
@@ -565,7 +565,7 @@ describe('email-metrics', () => {
   it('rejects the email and broadcast dimensions combined, without calling the SDK', async () => {
     const client = await makeClient();
     const result = await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: { dimensions: ['email', 'broadcast'] },
     });
 
@@ -576,7 +576,7 @@ describe('email-metrics', () => {
   it('rejects the broadcast dimension combined with emailId, without calling the SDK', async () => {
     const client = await makeClient();
     const result = await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: { dimensions: ['broadcast'], emailId: [EMAIL_ID] },
     });
 
@@ -587,7 +587,7 @@ describe('email-metrics', () => {
   it('rejects the email dimension combined with broadcastId, without calling the SDK', async () => {
     const client = await makeClient();
     const result = await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: { dimensions: ['email'], broadcastId: [BROADCAST_ID] },
     });
 
@@ -598,7 +598,7 @@ describe('email-metrics', () => {
   it('rejects emailId and broadcastId combined, without calling the SDK', async () => {
     const client = await makeClient();
     const result = await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: { emailId: [EMAIL_ID], broadcastId: [BROADCAST_ID] },
     });
 
@@ -629,7 +629,7 @@ describe('email-metrics', () => {
 
     const client = await makeClient();
     const result = await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: { dimensions: ['broadcast'] },
     });
 
@@ -671,7 +671,7 @@ describe('email-metrics', () => {
 
     const client = await makeClient();
     const result = await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: { dimensions: [dimension] },
     });
 
@@ -695,7 +695,7 @@ describe('email-metrics', () => {
 
     const client = await makeClient();
     const result = await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: { dimensions: ['domain'] },
     });
 
@@ -712,7 +712,7 @@ describe('email-metrics', () => {
 
     const client = await makeClient();
     const result = await client.callTool({
-      name: 'email-metrics',
+      name: 'get-email-metrics',
       arguments: {},
     });
 
