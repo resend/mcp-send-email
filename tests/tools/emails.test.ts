@@ -7,9 +7,10 @@ import { addEmailTools } from '../../src/tools/emails.js';
 const send = vi.fn();
 const batchSend = vi.fn();
 const share = vi.fn();
+const metrics = vi.fn();
 
 const resend = {
-  emails: { send, share },
+  emails: { send, share, metrics },
   batch: { send: batchSend },
 } as unknown as Resend;
 
@@ -462,6 +463,257 @@ describe('share-email', () => {
     const result = await client.callTool({
       name: 'share-email',
       arguments: { id: 'missing_email' },
+    });
+
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe('get-email-metrics', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    metrics.mockResolvedValue({
+      data: {
+        object: 'metrics',
+        start_date: '2026-07-01T00:00:00.000Z',
+        end_date: '2026-07-08T00:00:00.000Z',
+        metrics: ['sent', 'delivered'],
+        dimensions: [],
+        granularity: 'daily',
+        totals: { sent: 100, delivered: 95 },
+      },
+      error: null,
+    });
+  });
+
+  it('retrieves metrics with no options', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'get-email-metrics',
+      arguments: {},
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(metrics).toHaveBeenCalledWith({
+      startDate: undefined,
+      endDate: undefined,
+      timezone: undefined,
+      granularity: undefined,
+      metrics: undefined,
+      dimensions: undefined,
+      domainId: undefined,
+      emailId: undefined,
+      broadcastId: undefined,
+    });
+    expect(textOf(result)).toContain('sent: 100');
+  });
+
+  const DOMAIN_ID = '11111111-1111-4111-8111-111111111111';
+  const EMAIL_ID = '22222222-2222-4222-8222-222222222222';
+  const BROADCAST_ID = '33333333-3333-4333-8333-333333333333';
+
+  it('passes filters and dimensions through to the SDK', async () => {
+    const client = await makeClient();
+    await client.callTool({
+      name: 'get-email-metrics',
+      arguments: {
+        startDate: '2026-07-01',
+        endDate: '2026-07-08',
+        dimensions: ['period', 'broadcast'],
+        broadcastId: [BROADCAST_ID],
+      },
+    });
+
+    expect(metrics).toHaveBeenCalledWith({
+      startDate: '2026-07-01',
+      endDate: '2026-07-08',
+      timezone: undefined,
+      granularity: undefined,
+      metrics: undefined,
+      dimensions: ['period', 'broadcast'],
+      domainId: undefined,
+      emailId: undefined,
+      broadcastId: [BROADCAST_ID],
+    });
+  });
+
+  it('passes domainId and email dimension/emailId through to the SDK', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'get-email-metrics',
+      arguments: {
+        dimensions: ['email'],
+        emailId: [EMAIL_ID],
+        domainId: [DOMAIN_ID],
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(metrics).toHaveBeenCalledWith({
+      startDate: undefined,
+      endDate: undefined,
+      timezone: undefined,
+      granularity: undefined,
+      metrics: undefined,
+      dimensions: ['email'],
+      domainId: [DOMAIN_ID],
+      emailId: [EMAIL_ID],
+      broadcastId: undefined,
+    });
+  });
+
+  it('rejects the email and broadcast dimensions combined, without calling the SDK', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'get-email-metrics',
+      arguments: { dimensions: ['email', 'broadcast'] },
+    });
+
+    expect(result.isError).toBeTruthy();
+    expect(metrics).not.toHaveBeenCalled();
+  });
+
+  it('rejects the broadcast dimension combined with emailId, without calling the SDK', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'get-email-metrics',
+      arguments: { dimensions: ['broadcast'], emailId: [EMAIL_ID] },
+    });
+
+    expect(result.isError).toBeTruthy();
+    expect(metrics).not.toHaveBeenCalled();
+  });
+
+  it('rejects the email dimension combined with broadcastId, without calling the SDK', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'get-email-metrics',
+      arguments: { dimensions: ['email'], broadcastId: [BROADCAST_ID] },
+    });
+
+    expect(result.isError).toBeTruthy();
+    expect(metrics).not.toHaveBeenCalled();
+  });
+
+  it('rejects emailId and broadcastId combined, without calling the SDK', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'get-email-metrics',
+      arguments: { emailId: [EMAIL_ID], broadcastId: [BROADCAST_ID] },
+    });
+
+    expect(result.isError).toBeTruthy();
+    expect(metrics).not.toHaveBeenCalled();
+  });
+
+  it('includes the breakdown rows when dimensions are requested, preferring the name over the raw id', async () => {
+    metrics.mockResolvedValue({
+      data: {
+        object: 'metrics',
+        start_date: '2026-07-01T00:00:00.000Z',
+        end_date: '2026-07-08T00:00:00.000Z',
+        metrics: ['sent'],
+        dimensions: ['broadcast'],
+        granularity: 'daily',
+        totals: { sent: 100 },
+        data: [
+          {
+            broadcast_id: BROADCAST_ID,
+            broadcast_name: 'July Newsletter',
+            sent: 100,
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'get-email-metrics',
+      arguments: { dimensions: ['broadcast'] },
+    });
+
+    const text = textOf(result);
+    expect(text).toContain('July Newsletter');
+    expect(text).toContain('sent: 100');
+    expect(text).not.toContain(BROADCAST_ID);
+  });
+
+  it.each([
+    {
+      dimension: 'domain' as const,
+      idKey: 'domain_id' as const,
+      id: DOMAIN_ID,
+    },
+    {
+      dimension: 'broadcast' as const,
+      idKey: 'broadcast_id' as const,
+      id: BROADCAST_ID,
+    },
+  ])('falls back to the raw id in the breakdown label when the $dimension name is missing', async ({
+    dimension,
+    idKey,
+    id,
+  }) => {
+    metrics.mockResolvedValue({
+      data: {
+        object: 'metrics',
+        start_date: '2026-07-01T00:00:00.000Z',
+        end_date: '2026-07-08T00:00:00.000Z',
+        metrics: ['sent'],
+        dimensions: [dimension],
+        granularity: 'daily',
+        totals: { sent: 100 },
+        data: [{ [idKey]: id, sent: 100 }],
+      },
+      error: null,
+    });
+
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'get-email-metrics',
+      arguments: { dimensions: [dimension] },
+    });
+
+    expect(textOf(result)).toContain(`- ${id} — sent: 100`);
+  });
+
+  it('falls back to the raw id when the name is an empty string', async () => {
+    metrics.mockResolvedValue({
+      data: {
+        object: 'metrics',
+        start_date: '2026-07-01T00:00:00.000Z',
+        end_date: '2026-07-08T00:00:00.000Z',
+        metrics: ['sent'],
+        dimensions: ['domain'],
+        granularity: 'daily',
+        totals: { sent: 100 },
+        data: [{ domain_id: DOMAIN_ID, domain_name: '', sent: 100 }],
+      },
+      error: null,
+    });
+
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'get-email-metrics',
+      arguments: { dimensions: ['domain'] },
+    });
+
+    const text = textOf(result);
+    // The id is the whole label - no stray blank segment from domain_name.
+    expect(text).toContain(`- ${DOMAIN_ID} — sent: 100`);
+  });
+
+  it('surfaces SDK errors', async () => {
+    metrics.mockResolvedValue({
+      data: null,
+      error: { name: 'validation_error', message: 'Invalid start_date' },
+    });
+
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'get-email-metrics',
+      arguments: {},
     });
 
     expect(result.isError).toBe(true);
