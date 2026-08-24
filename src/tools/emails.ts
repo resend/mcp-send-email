@@ -3,11 +3,6 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 
-// Tool schemas/metadata are built once at module load, not per request:
-// createMcpServer() runs on every HTTP request, and rebuilding these Zod
-// schema trees each time is expensive enough to matter under concurrent
-// long-lived connections (e.g. subscriptions/listen streams held open for
-// minutes to hours each retain their own copy for the connection's lifetime).
 const SEND_EMAIL_TOOL_BASE = {
   title: 'Send Email',
   description: `**Purpose:** Send a single transactional email to one or more recipients immediately (or schedule it). Use for one-off messages, notifications, and direct replies.
@@ -27,11 +22,6 @@ const SEND_EMAIL_TOOL_BASE = {
 **Key trigger phrases:** "Send an email", "Email this to", "Notify", "Send a message", "Reply to them", "Schedule an email"`,
 } as const;
 
-// send-email's inputSchema shape genuinely depends on senderEmailAddress /
-// replierEmailAddresses (server-wide config, fixed for the process's
-// lifetime — passed once into runHttp() at boot, never per-request). Cache
-// by that config instead of rebuilding on every request; in practice this is
-// a cache hit after the very first call.
 let cachedSendEmailSchemaKey: string | undefined;
 let cachedSendEmailInputSchema: ReturnType<typeof buildSendEmailInputSchema>;
 

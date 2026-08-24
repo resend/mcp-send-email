@@ -11,11 +11,6 @@ interface EditorConnection {
   agent_name?: string;
 }
 
-// Tool schemas/metadata are built once at module load, not per request:
-// createMcpServer() runs on every HTTP request, and rebuilding these Zod
-// schema trees each time is expensive enough to matter under concurrent
-// long-lived connections (e.g. subscriptions/listen streams held open for
-// minutes to hours each retain their own copy for the connection's lifetime).
 const GET_TIPTAP_JSON_CONTENT_TOOL = {
   title: 'Get TipTap JSON Content',
   annotations: { readOnlyHint: true },

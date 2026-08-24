@@ -128,11 +128,6 @@ const workflowSchema = z
     'The workflow definition. See the tool description for the full schema and examples.',
   );
 
-// Tool schemas/metadata are built once at module load, not per request:
-// createMcpServer() runs on every HTTP request, and rebuilding these Zod
-// schema trees each time is expensive enough to matter under concurrent
-// long-lived connections (e.g. subscriptions/listen streams held open for
-// minutes to hours each retain their own copy for the connection's lifetime).
 const CREATE_AUTOMATION_TOOL = {
   title: 'Create Automation',
   description: `**Purpose:** Create an automation workflow that triggers on events and executes a sequence of steps.

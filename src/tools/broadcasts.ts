@@ -5,11 +5,6 @@ import { EMAIL_HTML_RULES } from '../lib/email-html-rules.js';
 import type { ResendEditorClient } from '../lib/resend-editor-client.js';
 import { extractIdFromUrl } from '../lib/url-parser.js';
 
-// Tool schemas/metadata are built once at module load, not per request:
-// createMcpServer() runs on every HTTP request, and rebuilding these Zod
-// schema trees each time is expensive enough to matter under concurrent
-// long-lived connections (e.g. subscriptions/listen streams held open for
-// minutes to hours each retain their own copy for the connection's lifetime).
 const CREATE_BROADCAST_TOOL_BASE = {
   title: 'Create Broadcast',
   description: `**Purpose:** Create a broadcast campaign (one email sent to an entire segment). Defines subject, body, and segment; does NOT send yet. Use send-broadcast to send it.
@@ -32,11 +27,6 @@ const CREATE_BROADCAST_TOOL_BASE = {
 - **update-broadcast with html/text**: Sets static HTML/text content. Use this only when the user explicitly wants to set raw HTML. Switching between compose and html/text modes is lossy — some content or formatting may be lost. Ask the user before switching.`,
 } as const;
 
-// create-broadcast's inputSchema shape genuinely depends on senderEmailAddress /
-// replierEmailAddresses (server-wide config, fixed for the process's
-// lifetime — passed once into runHttp() at boot, never per-request). Cache
-// by that config instead of rebuilding on every request; in practice this is
-// a cache hit after the very first call.
 let cachedCreateBroadcastSchemaKey: string | undefined;
 let cachedCreateBroadcastInputSchema: ReturnType<
   typeof buildCreateBroadcastInputSchema
