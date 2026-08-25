@@ -2,35 +2,46 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 
+const LIST_OAUTH_GRANTS_TOOL = {
+  title: 'List OAuth Grants',
+  annotations: { readOnlyHint: true },
+  description:
+    "List OAuth grants for the team — the apps authorized to act on the team's behalf. Returns every grant, active and revoked; a grant with a non-null revoked_at is no longer active. Each grant includes the client (app) name, scopes, and creation date. Don't bother telling the user the IDs unless they ask for them.",
+  inputSchema: {
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Number of OAuth grants to retrieve. Max: 100, Min: 1'),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'OAuth grant ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'OAuth grant ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const REVOKE_OAUTH_GRANT_TOOL = {
+  title: 'Revoke OAuth Grant',
+  description:
+    'Revoke an OAuth grant by ID. Before using this tool, you MUST double-check with the user that they want to revoke this grant. Reference the NAME of the app (client) when double-checking, and warn the user that revocation is immediate and irreversible — every access and refresh token issued under the grant stops working, and the app would need to be re-authorized to regain access. You may only use this tool if the user explicitly confirms they want to revoke the grant after you double-check.',
+  inputSchema: {
+    id: z.string().nonempty().describe('OAuth grant ID'),
+  },
+} as const;
+
 export function addOAuthGrantTools(server: McpServer, resend: Resend) {
   server.registerTool(
     'list-oauth-grants',
-    {
-      title: 'List OAuth Grants',
-      annotations: { readOnlyHint: true },
-      description:
-        "List OAuth grants for the team — the apps authorized to act on the team's behalf. Returns every grant, active and revoked; a grant with a non-null revoked_at is no longer active. Each grant includes the client (app) name, scopes, and creation date. Don't bother telling the user the IDs unless they ask for them.",
-      inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe('Number of OAuth grants to retrieve. Max: 100, Min: 1'),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'OAuth grant ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'OAuth grant ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_OAUTH_GRANTS_TOOL,
     async ({ limit, after, before }) => {
       if (after !== undefined && before !== undefined) {
         throw new Error(
@@ -97,14 +108,7 @@ export function addOAuthGrantTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'revoke-oauth-grant',
-    {
-      title: 'Revoke OAuth Grant',
-      description:
-        'Revoke an OAuth grant by ID. Before using this tool, you MUST double-check with the user that they want to revoke this grant. Reference the NAME of the app (client) when double-checking, and warn the user that revocation is immediate and irreversible — every access and refresh token issued under the grant stops working, and the app would need to be re-authorized to regain access. You may only use this tool if the user explicitly confirms they want to revoke the grant after you double-check.',
-      inputSchema: {
-        id: z.string().nonempty().describe('OAuth grant ID'),
-      },
-    },
+    REVOKE_OAUTH_GRANT_TOOL,
     async ({ id }) => {
       const response = await resend.oauthGrants.revoke(id);
 

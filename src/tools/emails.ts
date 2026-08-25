@@ -3,22 +3,9 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 
-export function addEmailTools(
-  server: McpServer,
-  resend: Resend,
-  {
-    senderEmailAddress,
-    replierEmailAddresses,
-  }: {
-    senderEmailAddress?: string;
-    replierEmailAddresses: string[];
-  },
-) {
-  server.registerTool(
-    'send-email',
-    {
-      title: 'Send Email',
-      description: `**Purpose:** Send a single transactional email to one or more recipients immediately (or schedule it). Use for one-off messages, notifications, and direct replies.
+const SEND_EMAIL_TOOL_BASE = {
+  title: 'Send Email',
+  description: `**Purpose:** Send a single transactional email to one or more recipients immediately (or schedule it). Use for one-off messages, notifications, and direct replies.
 
 **NOT for:** Sending the same email to a whole list/audience (use create-broadcast + send-broadcast). Not for managing contacts or audiences.
 
@@ -33,131 +20,540 @@ export function addEmailTools(
 **Workflow:** Get recipient(s) and content from user → send-email. Use list-emails or get-email to check delivery status afterward.
 
 **Key trigger phrases:** "Send an email", "Email this to", "Notify", "Send a message", "Reply to them", "Schedule an email"`,
-      inputSchema: {
-        to: z
-          .array(z.email())
-          .min(1)
-          .max(50)
-          .describe('Array of recipient email addresses (1-50 recipients)'),
-        subject: z.string().describe('Email subject line'),
-        text: z.string().describe('Plain text email content'),
-        html: z
-          .string()
-          .optional()
-          .describe(
-            'HTML email content. When provided, the plain text argument MUST be provided as well.',
-          ),
-        cc: z
-          .array(z.email())
-          .optional()
-          .describe(
-            'Optional array of CC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
-          ),
-        bcc: z
-          .array(z.email())
-          .optional()
-          .describe(
-            'Optional array of BCC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
-          ),
-        scheduledAt: z
-          .string()
-          .optional()
-          .describe(
-            "Optional parameter to schedule the email. This uses natural language. Examples would be 'tomorrow at 10am' or 'in 2 hours' or 'next day at 9am PST' or 'Friday at 3pm ET'.",
-          ),
-        attachments: z
-          .array(
-            z.object({
-              filename: z
-                .string()
-                .describe(
-                  'Name of the file with extension (e.g., "report.pdf")',
-                ),
-              filePath: z
-                .string()
-                .optional()
-                .describe('Local file path to read and attach'),
-              url: z
-                .string()
-                .optional()
-                .describe(
-                  'URL where the file is hosted (Resend will fetch it)',
-                ),
-              content: z
-                .string()
-                .optional()
-                .describe('Base64-encoded file content'),
-              contentType: z
-                .string()
-                .optional()
-                .describe(
-                  'MIME type (e.g., "application/pdf"). Auto-derived from filename if not set',
-                ),
-              contentId: z
-                .string()
-                .optional()
-                .describe(
-                  'Content ID for inline images. Reference in HTML with cid:<contentId>',
-                ),
-            }),
-          )
-          .optional()
-          .describe(
-            'Array of file attachments. Each needs filename plus one of: filePath, url, or content. Max 40MB total.',
-          ),
-        tags: z
-          .array(
-            z.object({
-              name: z.string().describe('Tag name (key)'),
-              value: z.string().describe('Tag value'),
-            }),
-          )
-          .optional()
-          .describe(
-            'Array of custom tags for tracking/analytics. Each tag has a name and value.',
-          ),
-        topicId: z
-          .string()
-          .optional()
-          .describe(
-            'Topic ID for subscription-based sending. When set, the email respects contact subscription preferences for this topic.',
-          ),
-        headers: z
-          .record(z.string(), z.string())
-          .optional()
-          .describe(
-            'Optional custom email headers as key/value pairs (e.g. {"List-Unsubscribe": "<https://example.com/unsubscribe>", "X-Entity-Ref-ID": "unique-id"}). Use for one-click unsubscribe, preventing Gmail threading, or other MIME headers Resend accepts.',
-          ),
-        idempotencyKey: z
-          .string()
-          .min(1)
-          .max(256)
-          .optional()
-          .describe(
-            'Optional unique key that prevents duplicate sends on retries (sent as the Idempotency-Key header). Use the same key when retrying the same logical email; use a new key for a different email. Must be 1-256 characters.',
-          ),
-        // If sender email address is not provided, the tool requires it as an argument
-        ...(!senderEmailAddress
-          ? {
-              from: z
-                .string()
-                .nonempty()
-                .describe(
-                  'Sender email address (e.g. "onboarding@resend.com" or "Acme <onboarding@resend.com>"). You MUST ask the user for this parameter. Under no circumstance provide it yourself',
-                ),
-            }
-          : {}),
-        ...(replierEmailAddresses.length === 0
-          ? {
-              replyTo: z
-                .array(z.string())
-                .optional()
-                .describe(
-                  'Optional email addresses for the email readers to reply to (e.g. "support@example.com" or "Support Team <support@example.com>"). You MUST ask the user for this parameter. Under no circumstance provide it yourself',
-                ),
-            }
-          : {}),
-      },
+} as const;
+
+let cachedSendEmailSchemaKey: string | undefined;
+let cachedSendEmailInputSchema: ReturnType<typeof buildSendEmailInputSchema>;
+
+function buildSendEmailInputSchema(
+  senderEmailAddress: string | undefined,
+  replierEmailAddresses: string[],
+) {
+  return {
+    to: z
+      .array(z.email())
+      .min(1)
+      .max(50)
+      .describe('Array of recipient email addresses (1-50 recipients)'),
+    subject: z.string().describe('Email subject line'),
+    text: z.string().describe('Plain text email content'),
+    html: z
+      .string()
+      .optional()
+      .describe(
+        'HTML email content. When provided, the plain text argument MUST be provided as well.',
+      ),
+    cc: z
+      .array(z.email())
+      .optional()
+      .describe(
+        'Optional array of CC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
+      ),
+    bcc: z
+      .array(z.email())
+      .optional()
+      .describe(
+        'Optional array of BCC email addresses. You MUST ask the user for this parameter. Under no circumstance provide it yourself',
+      ),
+    scheduledAt: z
+      .string()
+      .optional()
+      .describe(
+        "Optional parameter to schedule the email. This uses natural language. Examples would be 'tomorrow at 10am' or 'in 2 hours' or 'next day at 9am PST' or 'Friday at 3pm ET'.",
+      ),
+    attachments: z
+      .array(
+        z.object({
+          filename: z
+            .string()
+            .describe('Name of the file with extension (e.g., "report.pdf")'),
+          filePath: z
+            .string()
+            .optional()
+            .describe('Local file path to read and attach'),
+          url: z
+            .string()
+            .optional()
+            .describe('URL where the file is hosted (Resend will fetch it)'),
+          content: z
+            .string()
+            .optional()
+            .describe('Base64-encoded file content'),
+          contentType: z
+            .string()
+            .optional()
+            .describe(
+              'MIME type (e.g., "application/pdf"). Auto-derived from filename if not set',
+            ),
+          contentId: z
+            .string()
+            .optional()
+            .describe(
+              'Content ID for inline images. Reference in HTML with cid:<contentId>',
+            ),
+        }),
+      )
+      .optional()
+      .describe(
+        'Array of file attachments. Each needs filename plus one of: filePath, url, or content. Max 40MB total.',
+      ),
+    tags: z
+      .array(
+        z.object({
+          name: z.string().describe('Tag name (key)'),
+          value: z.string().describe('Tag value'),
+        }),
+      )
+      .optional()
+      .describe(
+        'Array of custom tags for tracking/analytics. Each tag has a name and value.',
+      ),
+    topicId: z
+      .string()
+      .optional()
+      .describe(
+        'Topic ID for subscription-based sending. When set, the email respects contact subscription preferences for this topic.',
+      ),
+    headers: z
+      .record(z.string(), z.string())
+      .optional()
+      .describe(
+        'Optional custom email headers as key/value pairs (e.g. {"List-Unsubscribe": "<https://example.com/unsubscribe>", "X-Entity-Ref-ID": "unique-id"}). Use for one-click unsubscribe, preventing Gmail threading, or other MIME headers Resend accepts.',
+      ),
+    idempotencyKey: z
+      .string()
+      .min(1)
+      .max(256)
+      .optional()
+      .describe(
+        'Optional unique key that prevents duplicate sends on retries (sent as the Idempotency-Key header). Use the same key when retrying the same logical email; use a new key for a different email. Must be 1-256 characters.',
+      ),
+    // If sender email address is not provided, the tool requires it as an argument
+    ...(!senderEmailAddress
+      ? {
+          from: z
+            .string()
+            .nonempty()
+            .describe(
+              'Sender email address (e.g. "onboarding@resend.com" or "Acme <onboarding@resend.com>"). You MUST ask the user for this parameter. Under no circumstance provide it yourself',
+            ),
+        }
+      : {}),
+    ...(replierEmailAddresses.length === 0
+      ? {
+          replyTo: z
+            .array(z.string())
+            .optional()
+            .describe(
+              'Optional email addresses for the email readers to reply to (e.g. "support@example.com" or "Support Team <support@example.com>"). You MUST ask the user for this parameter. Under no circumstance provide it yourself',
+            ),
+        }
+      : {}),
+  };
+}
+
+function getSendEmailInputSchema(
+  senderEmailAddress: string | undefined,
+  replierEmailAddresses: string[],
+) {
+  const key = `${senderEmailAddress ?? ''}|${replierEmailAddresses.join(',')}`;
+  if (cachedSendEmailSchemaKey !== key) {
+    cachedSendEmailInputSchema = buildSendEmailInputSchema(
+      senderEmailAddress,
+      replierEmailAddresses,
+    );
+    cachedSendEmailSchemaKey = key;
+  }
+  return cachedSendEmailInputSchema;
+}
+
+const LIST_EMAILS_TOOL = {
+  title: 'List Emails',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** List recently sent emails (transactional emails sent via send-email) with metadata: recipient, subject, status, timestamps.
+
+**NOT for:** Listing broadcast campaigns (use list-broadcasts). Not for composing or sending.
+
+**Returns:** Paginated list with to, subject, status, created_at, message_id, and ID per email.
+
+**When to use:**
+- User asks "what emails were sent?", "show recent emails", "did my email go out?"
+- Checking delivery status of sent messages
+- Finding an email ID to fetch full content (then use get-email)
+
+**Workflow:** list-emails → get-email( id ) when user needs full body or details.`,
+  inputSchema: {
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Number of emails to retrieve. Default: 20, Max: 100, Min: 1'),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'Email ID after which to retrieve more emails (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'Email ID before which to retrieve more emails (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const GET_EMAIL_TOOL = {
+  title: 'Get Email',
+  annotations: { readOnlyHint: true },
+  description:
+    'Retrieve full details of a specific sent transactional email by ID, including message_id, HTML and plain text content.',
+  inputSchema: {
+    id: z.string().describe('The email ID to retrieve'),
+  },
+} as const;
+
+const LIST_RECEIVED_EMAILS_TOOL = {
+  title: 'List Received Emails',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** List emails received (inbox) by your Resend receiving address. Use for "show my inbox", "what emails did I get?", "list incoming mail".
+
+**NOT for:** Listing emails you sent (use list-emails). Not for listing broadcasts (use list-broadcasts).
+
+**Returns:** Paginated metadata: from, to, subject, message_id, received time. Use get-received-email with an ID for full content.`,
+  inputSchema: {
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Number of emails to retrieve. Default: 20, Max: 100, Min: 1'),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'Email ID after which to retrieve more emails (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'Email ID before which to retrieve more emails (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const GET_RECEIVED_EMAIL_TOOL = {
+  title: 'Get Received Email',
+  annotations: { readOnlyHint: true },
+  description:
+    'Retrieve full details of a specific received email by ID, including HTML and plain text content, headers, and raw email download URL.',
+  inputSchema: {
+    id: z.string().describe('The received email ID to retrieve'),
+  },
+} as const;
+
+const LIST_RECEIVED_EMAIL_ATTACHMENTS_TOOL = {
+  title: 'List Received Email Attachments',
+  annotations: { readOnlyHint: true },
+  description:
+    'List all attachments from a specific received (inbox) email. Returns attachment metadata including filename, size, content type, and a time-limited download URL. Use for emails listed by list-received-emails.',
+  inputSchema: {
+    emailId: z.string().describe('The received email ID'),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe(
+        'Number of attachments to retrieve. Default: 20, Max: 100, Min: 1',
+      ),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'Attachment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'Attachment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const GET_RECEIVED_EMAIL_ATTACHMENT_TOOL = {
+  title: 'Get Received Email Attachment',
+  annotations: { readOnlyHint: true },
+  description:
+    'Retrieve details of a specific attachment from a received email, including a time-limited download URL.',
+  inputSchema: {
+    emailId: z.string().describe('The received email ID'),
+    id: z.string().describe('The attachment ID'),
+  },
+} as const;
+
+const CANCEL_EMAIL_TOOL = {
+  title: 'Cancel Email',
+  description:
+    'Cancel a scheduled email that has not yet been sent. Only works for emails that were scheduled using the scheduledAt parameter.',
+  inputSchema: {
+    id: z.string().describe('The ID of the scheduled email to cancel'),
+  },
+} as const;
+
+const UPDATE_EMAIL_TOOL = {
+  title: 'Update Email',
+  description:
+    'Reschedule a scheduled email by updating its scheduled send time. Only works for emails that were scheduled and have not yet been sent.',
+  inputSchema: {
+    id: z.string().describe('The ID of the scheduled email to update'),
+    scheduledAt: z
+      .string()
+      .describe(
+        'The new scheduled time in ISO 8601 format (e.g., "2024-08-05T11:52:01.858Z").',
+      ),
+  },
+} as const;
+
+const SHARE_EMAIL_TOOL = {
+  title: 'Share Email',
+  description:
+    'Create a shareable link for a sent or received email, so anyone with the link can view it without Resend dashboard access. Works for any email ID, sent or received.',
+  inputSchema: {
+    id: z.string().describe('The ID of the sent or received email to share'),
+    expiresIn: z
+      .string()
+      .optional()
+      .describe(
+        'How long the share link stays valid, as a human-readable duration (e.g. "10m", "2 hours", "1 day", "1h 30m"). Defaults to 48 hours; capped at 48 hours.',
+      ),
+  },
+} as const;
+
+const GET_EMAIL_METRICS_TOOL = {
+  title: 'Email Metrics',
+  annotations: { readOnlyHint: true },
+  description:
+    'Retrieve account-level email delivery and engagement metrics (sent, delivered, bounced, opened, clicked, etc.) for a date range, optionally broken down by period, domain, email, or broadcast.',
+  inputSchema: {
+    startDate: z
+      .string()
+      .optional()
+      .describe(
+        'Start of the date range, as an ISO 8601 date or datetime. Defaults to 6 days before endDate.',
+      ),
+    endDate: z
+      .string()
+      .optional()
+      .describe(
+        'End of the date range, as an ISO 8601 date or datetime. Defaults to now.',
+      ),
+    timezone: z
+      .string()
+      .optional()
+      .describe(
+        'IANA timezone (e.g. "America/New_York") used to bucket periods when "period" is in dimensions. Defaults to UTC.',
+      ),
+    granularity: z
+      .enum(['hourly', 'daily', 'weekly', 'monthly'])
+      .optional()
+      .describe(
+        'Bucket size used when "period" is in dimensions. Defaults to "daily".',
+      ),
+    metrics: z
+      .array(
+        z.enum([
+          'received',
+          'delivered',
+          'complained',
+          'suppressed',
+          'bounced',
+          'bounced_transient',
+          'bounced_permanent',
+          'bounced_undetermined',
+          'opened',
+          'clicked',
+          'unsubscribed',
+          'delivery_delayed',
+          'failed',
+          'sent',
+          'unique_opened',
+          'unique_clicked',
+          'delivery_rate',
+          'open_rate',
+          'click_rate',
+          'bounce_rate',
+          'complaint_rate',
+          'unsubscribe_rate',
+        ]),
+      )
+      .optional()
+      .describe('Metrics to include in the response. Defaults to all metrics.'),
+    dimensions: z
+      .array(z.enum(['period', 'domain', 'email', 'broadcast']))
+      .optional()
+      .describe(
+        'Dimensions to break the response down by. "email" and "broadcast" cannot be combined. Defaults to none, which returns totals only.',
+      ),
+    domainId: z
+      .array(z.uuid())
+      .max(100)
+      .optional()
+      .describe('Restrict the response to these sending domain IDs (max 100).'),
+    emailId: z
+      .array(z.uuid())
+      .max(100)
+      .optional()
+      .describe(
+        'Restrict the response to these email IDs (max 100). Cannot be combined with the "broadcast" dimension or broadcastId.',
+      ),
+    broadcastId: z
+      .array(z.uuid())
+      .max(100)
+      .optional()
+      .describe(
+        'Restrict the response to these broadcast IDs (max 100). Cannot be combined with the "email" dimension or emailId.',
+      ),
+  },
+} as const;
+
+const LIST_SENT_EMAIL_ATTACHMENTS_TOOL = {
+  title: 'List Sent Email Attachments',
+  annotations: { readOnlyHint: true },
+  description:
+    'List all attachments from a specific sent email (from send-email or list-emails). Returns attachment metadata including filename, size, content type, and a time-limited download URL.',
+  inputSchema: {
+    emailId: z.string().describe('The sent email ID'),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe(
+        'Number of attachments to retrieve. Default: 20, Max: 100, Min: 1',
+      ),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'Attachment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'Attachment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const GET_SENT_EMAIL_ATTACHMENT_TOOL = {
+  title: 'Get Sent Email Attachment',
+  annotations: { readOnlyHint: true },
+  description:
+    'Retrieve details of a specific attachment from a sent email, including a time-limited download URL.',
+  inputSchema: {
+    emailId: z.string().describe('The sent email ID'),
+    id: z.string().describe('The attachment ID'),
+  },
+} as const;
+
+const SEND_BATCH_EMAILS_TOOL = {
+  title: 'Send Batch Emails',
+  description: `**Purpose:** Send up to 100 transactional emails in one API call. Each item has the same fields as send-email (to, subject, text, from, etc.).
+
+**NOT for:** Sending one email (use send-email) or the same content to a segment (use create-broadcast + send-broadcast).
+
+**When to use:** User wants to send many individual emails in bulk (e.g. 50 password resets, 100 receipts). Not for one-to-many broadcasts.`,
+  inputSchema: {
+    emails: z
+      .array(
+        z.object({
+          to: z
+            .array(z.email())
+            .min(1)
+            .max(50)
+            .describe('Array of recipient email addresses (1-50 recipients)'),
+          subject: z.string().describe('Email subject line'),
+          text: z.string().describe('Plain text email content'),
+          html: z.string().optional().describe('HTML email content'),
+          from: z
+            .string()
+            .optional()
+            .describe(
+              'Sender email address. Falls back to the configured default sender if not provided.',
+            ),
+          replyTo: z
+            .array(z.string())
+            .optional()
+            .describe(
+              'Reply-to email addresses (e.g. "support@example.com" or "Support Team <support@example.com>")',
+            ),
+          cc: z.array(z.email()).optional().describe('CC email addresses'),
+          bcc: z.array(z.email()).optional().describe('BCC email addresses'),
+          scheduledAt: z
+            .string()
+            .optional()
+            .describe(
+              "Optional schedule time. Uses natural language (e.g., 'tomorrow at 10am') or ISO 8601.",
+            ),
+          tags: z
+            .array(
+              z.object({
+                name: z.string().describe('Tag name (key)'),
+                value: z.string().describe('Tag value'),
+              }),
+            )
+            .optional()
+            .describe('Custom tags for tracking/analytics'),
+          topicId: z
+            .string()
+            .optional()
+            .describe('Topic ID for subscription-based sending'),
+          headers: z
+            .record(z.string(), z.string())
+            .optional()
+            .describe(
+              'Optional custom email headers as key/value pairs (e.g. {"List-Unsubscribe": "<https://example.com/unsubscribe>", "X-Entity-Ref-ID": "unique-id"}).',
+            ),
+        }),
+      )
+      .min(1)
+      .max(100)
+      .describe('Array of email objects to send (1-100 emails)'),
+    idempotencyKey: z
+      .string()
+      .min(1)
+      .max(256)
+      .optional()
+      .describe(
+        'Optional unique key for the whole batch that prevents duplicate batch sends on retries (sent as the Idempotency-Key header). Use the same key when retrying the same batch; use a new key for a different batch. Must be 1-256 characters.',
+      ),
+  },
+} as const;
+
+export function addEmailTools(
+  server: McpServer,
+  resend: Resend,
+  {
+    senderEmailAddress,
+    replierEmailAddresses,
+  }: {
+    senderEmailAddress?: string;
+    replierEmailAddresses: string[];
+  },
+) {
+  server.registerTool(
+    'send-email',
+    {
+      ...SEND_EMAIL_TOOL_BASE,
+      inputSchema: getSendEmailInputSchema(
+        senderEmailAddress,
+        replierEmailAddresses,
+      ),
     },
     async ({
       from,
@@ -310,44 +706,7 @@ export function addEmailTools(
 
   server.registerTool(
     'list-emails',
-    {
-      title: 'List Emails',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** List recently sent emails (transactional emails sent via send-email) with metadata: recipient, subject, status, timestamps.
-
-**NOT for:** Listing broadcast campaigns (use list-broadcasts). Not for composing or sending.
-
-**Returns:** Paginated list with to, subject, status, created_at, message_id, and ID per email.
-
-**When to use:**
-- User asks "what emails were sent?", "show recent emails", "did my email go out?"
-- Checking delivery status of sent messages
-- Finding an email ID to fetch full content (then use get-email)
-
-**Workflow:** list-emails → get-email( id ) when user needs full body or details.`,
-      inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of emails to retrieve. Default: 20, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'Email ID after which to retrieve more emails (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'Email ID before which to retrieve more emails (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_EMAILS_TOOL,
     async ({ limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -407,110 +766,68 @@ export function addEmailTools(
     },
   );
 
-  server.registerTool(
-    'get-email',
-    {
-      title: 'Get Email',
-      annotations: { readOnlyHint: true },
-      description:
-        'Retrieve full details of a specific sent transactional email by ID, including message_id, HTML and plain text content.',
-      inputSchema: {
-        id: z.string().describe('The email ID to retrieve'),
-      },
-    },
-    async ({ id }) => {
-      const response = await resend.emails.get(id);
+  server.registerTool('get-email', GET_EMAIL_TOOL, async ({ id }) => {
+    const response = await resend.emails.get(id);
 
-      if (response.error) {
-        throw new Error(
-          `Failed to retrieve email: ${JSON.stringify(response.error)}`,
-        );
-      }
+    if (response.error) {
+      throw new Error(
+        `Failed to retrieve email: ${JSON.stringify(response.error)}`,
+      );
+    }
 
-      const email = response.data;
+    const email = response.data;
 
-      if (!email) {
-        throw new Error(`Email with ID ${id} not found.`);
-      }
+    if (!email) {
+      throw new Error(`Email with ID ${id} not found.`);
+    }
 
-      const to = Array.isArray(email.to) ? email.to.join(', ') : email.to;
-      const cc = email.cc
-        ? Array.isArray(email.cc)
-          ? email.cc.join(', ')
-          : email.cc
-        : null;
-      const bcc = email.bcc
-        ? Array.isArray(email.bcc)
-          ? email.bcc.join(', ')
-          : email.bcc
-        : null;
-      const replyTo = email.reply_to
-        ? Array.isArray(email.reply_to)
-          ? email.reply_to.join(', ')
-          : email.reply_to
-        : null;
+    const to = Array.isArray(email.to) ? email.to.join(', ') : email.to;
+    const cc = email.cc
+      ? Array.isArray(email.cc)
+        ? email.cc.join(', ')
+        : email.cc
+      : null;
+    const bcc = email.bcc
+      ? Array.isArray(email.bcc)
+        ? email.bcc.join(', ')
+        : email.bcc
+      : null;
+    const replyTo = email.reply_to
+      ? Array.isArray(email.reply_to)
+        ? email.reply_to.join(', ')
+        : email.reply_to
+      : null;
 
-      let details = `Email Details:\n`;
-      details += `- ID: ${email.id}\n`;
-      details += `- Message ID: ${email.message_id}\n`;
-      details += `- From: ${email.from}\n`;
-      details += `- To: ${to}\n`;
-      if (cc) details += `- CC: ${cc}\n`;
-      if (bcc) details += `- BCC: ${bcc}\n`;
-      if (replyTo) details += `- Reply-To: ${replyTo}\n`;
-      details += `- Subject: ${email.subject}\n`;
-      details += `- Status: ${email.last_event}\n`;
-      details += `- Created: ${email.created_at}\n`;
-      if (email.scheduled_at) details += `- Scheduled: ${email.scheduled_at}\n`;
-      details += `\n--- Plain Text Content ---\n${email.text || '(none)'}\n`;
-      if (email.html) {
-        details += `\n--- HTML Content ---\n${email.html}\n`;
-      }
+    let details = `Email Details:\n`;
+    details += `- ID: ${email.id}\n`;
+    details += `- Message ID: ${email.message_id}\n`;
+    details += `- From: ${email.from}\n`;
+    details += `- To: ${to}\n`;
+    if (cc) details += `- CC: ${cc}\n`;
+    if (bcc) details += `- BCC: ${bcc}\n`;
+    if (replyTo) details += `- Reply-To: ${replyTo}\n`;
+    details += `- Subject: ${email.subject}\n`;
+    details += `- Status: ${email.last_event}\n`;
+    details += `- Created: ${email.created_at}\n`;
+    if (email.scheduled_at) details += `- Scheduled: ${email.scheduled_at}\n`;
+    details += `\n--- Plain Text Content ---\n${email.text || '(none)'}\n`;
+    if (email.html) {
+      details += `\n--- HTML Content ---\n${email.html}\n`;
+    }
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: details,
-          },
-        ],
-      };
-    },
-  );
+    return {
+      content: [
+        {
+          type: 'text',
+          text: details,
+        },
+      ],
+    };
+  });
 
   server.registerTool(
     'list-received-emails',
-    {
-      title: 'List Received Emails',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** List emails received (inbox) by your Resend receiving address. Use for "show my inbox", "what emails did I get?", "list incoming mail".
-
-**NOT for:** Listing emails you sent (use list-emails). Not for listing broadcasts (use list-broadcasts).
-
-**Returns:** Paginated metadata: from, to, subject, message_id, received time. Use get-received-email with an ID for full content.`,
-      inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of emails to retrieve. Default: 20, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'Email ID after which to retrieve more emails (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'Email ID before which to retrieve more emails (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_RECEIVED_EMAILS_TOOL,
     async ({ limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -571,15 +888,7 @@ export function addEmailTools(
 
   server.registerTool(
     'get-received-email',
-    {
-      title: 'Get Received Email',
-      annotations: { readOnlyHint: true },
-      description:
-        'Retrieve full details of a specific received email by ID, including HTML and plain text content, headers, and raw email download URL.',
-      inputSchema: {
-        id: z.string().describe('The received email ID to retrieve'),
-      },
-    },
+    GET_RECEIVED_EMAIL_TOOL,
     async ({ id }) => {
       const response = await resend.emails.receiving.get(id);
 
@@ -646,35 +955,7 @@ export function addEmailTools(
 
   server.registerTool(
     'list-received-email-attachments',
-    {
-      title: 'List Received Email Attachments',
-      annotations: { readOnlyHint: true },
-      description:
-        'List all attachments from a specific received (inbox) email. Returns attachment metadata including filename, size, content type, and a time-limited download URL. Use for emails listed by list-received-emails.',
-      inputSchema: {
-        emailId: z.string().describe('The received email ID'),
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of attachments to retrieve. Default: 20, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'Attachment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'Attachment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_RECEIVED_EMAIL_ATTACHMENTS_TOOL,
     async ({ emailId, limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -731,16 +1012,7 @@ export function addEmailTools(
 
   server.registerTool(
     'get-received-email-attachment',
-    {
-      title: 'Get Received Email Attachment',
-      annotations: { readOnlyHint: true },
-      description:
-        'Retrieve details of a specific attachment from a received email, including a time-limited download URL.',
-      inputSchema: {
-        emailId: z.string().describe('The received email ID'),
-        id: z.string().describe('The attachment ID'),
-      },
-    },
+    GET_RECEIVED_EMAIL_ATTACHMENT_TOOL,
     async ({ emailId, id }) => {
       const response = await resend.emails.receiving.attachments.get({
         emailId,
@@ -782,51 +1054,28 @@ export function addEmailTools(
     },
   );
 
-  server.registerTool(
-    'cancel-email',
-    {
-      title: 'Cancel Email',
-      description:
-        'Cancel a scheduled email that has not yet been sent. Only works for emails that were scheduled using the scheduledAt parameter.',
-      inputSchema: {
-        id: z.string().describe('The ID of the scheduled email to cancel'),
-      },
-    },
-    async ({ id }) => {
-      const response = await resend.emails.cancel(id);
+  server.registerTool('cancel-email', CANCEL_EMAIL_TOOL, async ({ id }) => {
+    const response = await resend.emails.cancel(id);
 
-      if (response.error) {
-        throw new Error(
-          `Failed to cancel email: ${JSON.stringify(response.error)}`,
-        );
-      }
+    if (response.error) {
+      throw new Error(
+        `Failed to cancel email: ${JSON.stringify(response.error)}`,
+      );
+    }
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Email ${response.data?.id} has been cancelled successfully.`,
-          },
-        ],
-      };
-    },
-  );
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Email ${response.data?.id} has been cancelled successfully.`,
+        },
+      ],
+    };
+  });
 
   server.registerTool(
     'update-email',
-    {
-      title: 'Update Email',
-      description:
-        'Reschedule a scheduled email by updating its scheduled send time. Only works for emails that were scheduled and have not yet been sent.',
-      inputSchema: {
-        id: z.string().describe('The ID of the scheduled email to update'),
-        scheduledAt: z
-          .string()
-          .describe(
-            'The new scheduled time in ISO 8601 format (e.g., "2024-08-05T11:52:01.858Z").',
-          ),
-      },
-    },
+    UPDATE_EMAIL_TOOL,
     async ({ id, scheduledAt }) => {
       const response = await resend.emails.update({ id, scheduledAt });
 
@@ -849,22 +1098,7 @@ export function addEmailTools(
 
   server.registerTool(
     'share-email',
-    {
-      title: 'Share Email',
-      description:
-        'Create a shareable link for a sent or received email, so anyone with the link can view it without Resend dashboard access. Works for any email ID, sent or received.',
-      inputSchema: {
-        id: z
-          .string()
-          .describe('The ID of the sent or received email to share'),
-        expiresIn: z
-          .string()
-          .optional()
-          .describe(
-            'How long the share link stays valid, as a human-readable duration (e.g. "10m", "2 hours", "1 day", "1h 30m"). Defaults to 48 hours; capped at 48 hours.',
-          ),
-      },
-    },
+    SHARE_EMAIL_TOOL,
     async ({ id, expiresIn }) => {
       const response = await resend.emails.share(
         id,
@@ -890,96 +1124,7 @@ export function addEmailTools(
 
   server.registerTool(
     'get-email-metrics',
-    {
-      title: 'Email Metrics',
-      annotations: { readOnlyHint: true },
-      description:
-        'Retrieve account-level email delivery and engagement metrics (sent, delivered, bounced, opened, clicked, etc.) for a date range, optionally broken down by period, domain, email, or broadcast.',
-      inputSchema: {
-        startDate: z
-          .string()
-          .optional()
-          .describe(
-            'Start of the date range, as an ISO 8601 date or datetime. Defaults to 6 days before endDate.',
-          ),
-        endDate: z
-          .string()
-          .optional()
-          .describe(
-            'End of the date range, as an ISO 8601 date or datetime. Defaults to now.',
-          ),
-        timezone: z
-          .string()
-          .optional()
-          .describe(
-            'IANA timezone (e.g. "America/New_York") used to bucket periods when "period" is in dimensions. Defaults to UTC.',
-          ),
-        granularity: z
-          .enum(['hourly', 'daily', 'weekly', 'monthly'])
-          .optional()
-          .describe(
-            'Bucket size used when "period" is in dimensions. Defaults to "daily".',
-          ),
-        metrics: z
-          .array(
-            z.enum([
-              'received',
-              'delivered',
-              'complained',
-              'suppressed',
-              'bounced',
-              'bounced_transient',
-              'bounced_permanent',
-              'bounced_undetermined',
-              'opened',
-              'clicked',
-              'unsubscribed',
-              'delivery_delayed',
-              'failed',
-              'sent',
-              'unique_opened',
-              'unique_clicked',
-              'delivery_rate',
-              'open_rate',
-              'click_rate',
-              'bounce_rate',
-              'complaint_rate',
-              'unsubscribe_rate',
-            ]),
-          )
-          .optional()
-          .describe(
-            'Metrics to include in the response. Defaults to all metrics.',
-          ),
-        dimensions: z
-          .array(z.enum(['period', 'domain', 'email', 'broadcast']))
-          .optional()
-          .describe(
-            'Dimensions to break the response down by. "email" and "broadcast" cannot be combined. Defaults to none, which returns totals only.',
-          ),
-        domainId: z
-          .array(z.uuid())
-          .max(100)
-          .optional()
-          .describe(
-            'Restrict the response to these sending domain IDs (max 100).',
-          ),
-        emailId: z
-          .array(z.uuid())
-          .max(100)
-          .optional()
-          .describe(
-            'Restrict the response to these email IDs (max 100). Cannot be combined with the "broadcast" dimension or broadcastId.',
-          ),
-        broadcastId: z
-          .array(z.uuid())
-          .max(100)
-          .optional()
-          .describe(
-            'Restrict the response to these broadcast IDs (max 100). Cannot be combined with the "email" dimension or emailId.',
-          ),
-      },
-    },
+    GET_EMAIL_METRICS_TOOL,
     async ({
       startDate,
       endDate,
@@ -1069,35 +1214,7 @@ export function addEmailTools(
 
   server.registerTool(
     'list-sent-email-attachments',
-    {
-      title: 'List Sent Email Attachments',
-      annotations: { readOnlyHint: true },
-      description:
-        'List all attachments from a specific sent email (from send-email or list-emails). Returns attachment metadata including filename, size, content type, and a time-limited download URL.',
-      inputSchema: {
-        emailId: z.string().describe('The sent email ID'),
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of attachments to retrieve. Default: 20, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'Attachment ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'Attachment ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_SENT_EMAIL_ATTACHMENTS_TOOL,
     async ({ emailId, limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -1153,16 +1270,7 @@ export function addEmailTools(
 
   server.registerTool(
     'get-sent-email-attachment',
-    {
-      title: 'Get Sent Email Attachment',
-      annotations: { readOnlyHint: true },
-      description:
-        'Retrieve details of a specific attachment from a sent email, including a time-limited download URL.',
-      inputSchema: {
-        emailId: z.string().describe('The sent email ID'),
-        id: z.string().describe('The attachment ID'),
-      },
-    },
+    GET_SENT_EMAIL_ATTACHMENT_TOOL,
     async ({ emailId, id }) => {
       const response = await resend.emails.attachments.get({
         emailId,
@@ -1206,84 +1314,7 @@ export function addEmailTools(
 
   server.registerTool(
     'send-batch-emails',
-    {
-      title: 'Send Batch Emails',
-      description: `**Purpose:** Send up to 100 transactional emails in one API call. Each item has the same fields as send-email (to, subject, text, from, etc.).
-
-**NOT for:** Sending one email (use send-email) or the same content to a segment (use create-broadcast + send-broadcast).
-
-**When to use:** User wants to send many individual emails in bulk (e.g. 50 password resets, 100 receipts). Not for one-to-many broadcasts.`,
-      inputSchema: {
-        emails: z
-          .array(
-            z.object({
-              to: z
-                .array(z.email())
-                .min(1)
-                .max(50)
-                .describe(
-                  'Array of recipient email addresses (1-50 recipients)',
-                ),
-              subject: z.string().describe('Email subject line'),
-              text: z.string().describe('Plain text email content'),
-              html: z.string().optional().describe('HTML email content'),
-              from: z
-                .string()
-                .optional()
-                .describe(
-                  'Sender email address. Falls back to the configured default sender if not provided.',
-                ),
-              replyTo: z
-                .array(z.string())
-                .optional()
-                .describe(
-                  'Reply-to email addresses (e.g. "support@example.com" or "Support Team <support@example.com>")',
-                ),
-              cc: z.array(z.email()).optional().describe('CC email addresses'),
-              bcc: z
-                .array(z.email())
-                .optional()
-                .describe('BCC email addresses'),
-              scheduledAt: z
-                .string()
-                .optional()
-                .describe(
-                  "Optional schedule time. Uses natural language (e.g., 'tomorrow at 10am') or ISO 8601.",
-                ),
-              tags: z
-                .array(
-                  z.object({
-                    name: z.string().describe('Tag name (key)'),
-                    value: z.string().describe('Tag value'),
-                  }),
-                )
-                .optional()
-                .describe('Custom tags for tracking/analytics'),
-              topicId: z
-                .string()
-                .optional()
-                .describe('Topic ID for subscription-based sending'),
-              headers: z
-                .record(z.string(), z.string())
-                .optional()
-                .describe(
-                  'Optional custom email headers as key/value pairs (e.g. {"List-Unsubscribe": "<https://example.com/unsubscribe>", "X-Entity-Ref-ID": "unique-id"}).',
-                ),
-            }),
-          )
-          .min(1)
-          .max(100)
-          .describe('Array of email objects to send (1-100 emails)'),
-        idempotencyKey: z
-          .string()
-          .min(1)
-          .max(256)
-          .optional()
-          .describe(
-            'Optional unique key for the whole batch that prevents duplicate batch sends on retries (sent as the Idempotency-Key header). Use the same key when retrying the same batch; use a new key for a different batch. Must be 1-256 characters.',
-          ),
-      },
-    },
+    SEND_BATCH_EMAILS_TOOL,
     async ({ emails, idempotencyKey }) => {
       const emailRequests = emails.map((email) => {
         const fromAddress = email.from ?? senderEmailAddress;

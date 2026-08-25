@@ -5,6 +5,381 @@ import { EMAIL_HTML_RULES } from '../lib/email-html-rules.js';
 import type { ResendEditorClient } from '../lib/resend-editor-client.js';
 import { extractIdFromUrl } from '../lib/url-parser.js';
 
+const CREATE_BROADCAST_TOOL_BASE = {
+  title: 'Create Broadcast',
+  description: `**Purpose:** Create a broadcast campaign (one email sent to an entire segment). Defines subject, body, and segment; does NOT send yet. Use send-broadcast to send it.
+
+**NOT for:** Sending a one-off email to specific people (use send-email). Not for adding contacts (use create-contact).
+
+**Returns:** Broadcast ID. Use this ID with send-broadcast to send, or get-broadcast/update-broadcast to manage.
+
+**When to use:**
+- User wants to "email my list", "send a newsletter", "broadcast to my segment", "email all contacts in X"
+- Newsletter, announcement, or bulk message to one segment
+- Supports personalization: {{{FIRST_NAME}}}, {{{LAST_NAME}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}
+
+**"All contacts" note:** Broadcasts require a segment. There is no "all contacts" option in the API. If the user wants to send to all contacts, check list-segments for an existing segment that covers everyone. If none exists, suggest creating one with create-segment.
+
+**Workflow:** list-segments (if needed) → create-broadcast → get-tiptap-json-content (with include_schema: true) → compose-broadcast → send-broadcast.
+
+**Content options after creating:**
+- **compose-broadcast** (recommended): Sets TipTap content that the user can visually edit in the Resend dashboard. Use this when the user wants to collaborate on or refine the email in the editor.
+- **update-broadcast with html/text**: Sets static HTML/text content. Use this only when the user explicitly wants to set raw HTML. Switching between compose and html/text modes is lossy — some content or formatting may be lost. Ask the user before switching.`,
+} as const;
+
+let cachedCreateBroadcastSchemaKey: string | undefined;
+let cachedCreateBroadcastInputSchema: ReturnType<
+  typeof buildCreateBroadcastInputSchema
+>;
+
+function buildCreateBroadcastInputSchema(
+  senderEmailAddress: string | undefined,
+  replierEmailAddresses: string[],
+) {
+  return {
+    name: z
+      .string()
+      .nonempty()
+      .describe(
+        'Name for the broadcast. If the user does not provide a name, go ahead and create a descriptive name for them, based on the email subject/content and the context of your conversation.',
+      ),
+    segmentId: z.string().nonempty().describe('Segment ID to send to'),
+    subject: z.string().nonempty().describe('Email subject'),
+    text: z
+      .string()
+      .optional()
+      .describe(
+        'Plain text version of the email content. The following placeholders may be used to personalize the email content: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}. If omitted, HTML will be used to generate it. Pass an empty string to disable automatic text generation.',
+      ),
+    html: z
+      .string()
+      .optional()
+      .describe(
+        `HTML version of the email content. Placeholders: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}.\n\n${EMAIL_HTML_RULES}`,
+      ),
+    previewText: z.string().optional().describe('Preview text for the email'),
+    ...(!senderEmailAddress
+      ? {
+          from: z
+            .string()
+            .nonempty()
+            .describe(
+              'From email address (e.g. "onboarding@resend.com" or "Resend <onboarding@resend.com>")',
+            ),
+        }
+      : {}),
+    ...(replierEmailAddresses.length === 0
+      ? {
+          replyTo: z
+            .array(z.string())
+            .optional()
+            .describe('Reply-to email address(es)'),
+        }
+      : {}),
+  };
+}
+
+function getCreateBroadcastInputSchema(
+  senderEmailAddress: string | undefined,
+  replierEmailAddresses: string[],
+) {
+  const key = `${senderEmailAddress ?? ''}|${replierEmailAddresses.join(',')}`;
+  if (cachedCreateBroadcastSchemaKey !== key) {
+    cachedCreateBroadcastInputSchema = buildCreateBroadcastInputSchema(
+      senderEmailAddress,
+      replierEmailAddresses,
+    );
+    cachedCreateBroadcastSchemaKey = key;
+  }
+  return cachedCreateBroadcastInputSchema;
+}
+
+const SEND_BROADCAST_TOOL = {
+  title: 'Send Broadcast',
+  description: `**Purpose:** Send (or schedule) an existing broadcast by ID. The broadcast must have been created with create-broadcast first.
+
+**NOT for:** Sending a new one-off email (use send-email). Not for creating the broadcast content (use create-broadcast).
+
+**Returns:** Send confirmation and broadcast ID.
+
+**When to use:**
+- User has created a broadcast and says "send it", "go ahead and send", "schedule this for tomorrow"
+- After create-broadcast; call send-broadcast with the returned ID to deliver to the audience
+- Optional scheduledAt: natural language or ISO 8601 for scheduled send
+
+**Workflow:** create-broadcast → send-broadcast. Use list-broadcasts to find existing draft/sent broadcasts.`,
+  inputSchema: {
+    broadcastId: z
+      .string()
+      .nonempty()
+      .describe(
+        'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+      ),
+    scheduledAt: z
+      .string()
+      .optional()
+      .describe(
+        'When to send the broadcast. Value may be in ISO 8601 format (e.g., 2024-08-05T11:52:01.858Z) or in natural language (e.g., "tomorrow at 10am", "in 2 hours", "next day at 9am PST", "Friday at 3pm ET"). If not provided, the broadcast will be sent immediately.',
+      ),
+  },
+} as const;
+
+const LIST_BROADCASTS_TOOL = {
+  title: 'List Broadcasts',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** List all broadcast campaigns (newsletters/bulk emails to audiences) with ID, name, audience, status, timestamps.
+
+**NOT for:** Listing transactional emails (use list-emails). Not for listing segments or contacts (use list-segments, list-contacts).
+
+**Returns:** For each broadcast: id, name, segment_id, status, created_at, scheduled_at, sent_at.
+
+**When to use:** User asks "show my broadcasts", "what newsletters did I send?", "list campaigns". Use get-broadcast for full details of one.`,
+  inputSchema: {},
+} as const;
+
+const GET_BROADCAST_TOOL = {
+  title: 'Get Broadcast',
+  annotations: { readOnlyHint: true },
+  description:
+    'Retrieve full details of a specific broadcast by ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>), including HTML and plain text content.',
+  inputSchema: {
+    broadcastId: z
+      .string()
+      .nonempty()
+      .describe(
+        'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+      ),
+  },
+} as const;
+
+const CANCEL_BROADCAST_TOOL = {
+  title: 'Cancel Broadcast',
+  description: `**Purpose:** Cancel a queued or scheduled broadcast by ID or Resend dashboard URL, without removing it. Cancelling a queued broadcast stops it mid-send (emails already sent are not affected). Cancelling a scheduled broadcast reverts it to draft.
+
+**NOT for:** Removing a broadcast entirely (use remove-broadcast). Draft and sent broadcasts cannot be cancelled — sent broadcasts are immutable, and drafts have nothing to cancel.
+
+**When to use:** User wants to "stop", "cancel", or "pause" a broadcast that is currently sending or scheduled to send.`,
+  inputSchema: {
+    broadcastId: z
+      .string()
+      .nonempty()
+      .describe(
+        'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+      ),
+  },
+} as const;
+
+const REMOVE_BROADCAST_TOOL = {
+  title: 'Remove Broadcast',
+  description:
+    'Remove a broadcast by ID or Resend dashboard URL. Before using this tool, you MUST double-check with the user that they want to remove this broadcast. Reference the NAME of the broadcast when double-checking, and warn the user that removing a broadcast is irreversible. You may only use this tool if the user explicitly confirms they want to remove the broadcast after you double-check.',
+  inputSchema: {
+    broadcastId: z
+      .string()
+      .nonempty()
+      .describe(
+        'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+      ),
+  },
+} as const;
+
+const COMPOSE_BROADCAST_TOOL = {
+  title: 'Compose Broadcast',
+  description: `**Purpose:** Set the TipTap JSON content of a broadcast, enabling it to be edited visually in the Resend dashboard editor. Automatically connects and disconnects from the editor. Can also update metadata (subject, preview text, name) in the same call.
+
+**This is the recommended way to set email content.** Content set via compose-broadcast can be visually edited by the user in the dashboard. Use this for newsletters and any broadcast where the user may want to refine the content.
+
+**Workflow:** get-tiptap-json-content (with include_schema: true) → compose-broadcast
+
+**When to use:**
+- After create-broadcast, to set the email body
+- When the user wants to write, edit, or style email content
+- When the user wants to collaborate on the email in the dashboard editor
+
+**Important:** Always call get-tiptap-json-content first to retrieve the existing TipTap JSON, then build your changes on top of it. Skipping this will overwrite all existing content.
+
+**Note:** Switching between compose (TipTap) and update (raw HTML) modes is lossy — some content or formatting may be lost. If the broadcast already has HTML content, ask the user before switching to compose mode.`,
+  inputSchema: {
+    broadcastId: z
+      .string()
+      .nonempty()
+      .describe(
+        'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+      ),
+    content: z
+      .preprocess(
+        (val) => {
+          if (typeof val === 'string') {
+            try {
+              return JSON.parse(val);
+            } catch {
+              return val;
+            }
+          }
+          return val;
+        },
+        z.record(z.string(), z.unknown()),
+      )
+      .describe(
+        'TipTap JSON content. Call get-tiptap-json-content (with include_schema: true) first to get the existing content and the schema reference.',
+      ),
+    subject: z.string().optional().describe('Update the email subject line.'),
+    previewText: z
+      .string()
+      .optional()
+      .describe(
+        'Update the preview text (shown in inbox before opening the email).',
+      ),
+    name: z
+      .string()
+      .optional()
+      .describe('Update the broadcast name (internal label).'),
+  },
+} as const;
+
+const UPDATE_BROADCAST_TOOL = {
+  title: 'Update Broadcast',
+  description: `Update broadcast metadata by ID or Resend dashboard URL (name, subject, from, html, text, segment, preview text, reply-to). To edit TipTap content, use compose-broadcast instead.
+
+**Important:** The API requires \`from\` and \`segmentId\` to be set on the broadcast. If the broadcast was created from the dashboard, these may be empty. Always call get-broadcast first to check, and include \`from\` and \`segmentId\` in your update if they are not already set. Use list-domains to find verified domains for the from address, and list-segments to find segment IDs.
+
+**Note on html/text fields:** Setting html or text via this tool replaces any content previously set via compose-broadcast. This switch is lossy — some content or formatting may be lost. Prefer compose-broadcast for content changes. If the broadcast was composed with TipTap content, ask the user before overwriting it with raw HTML.`,
+  inputSchema: {
+    broadcastId: z
+      .string()
+      .nonempty()
+      .describe(
+        'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+      ),
+    name: z.string().optional().describe('Name for the broadcast'),
+    segmentId: z.string().optional().describe('Segment ID to send to'),
+    from: z
+      .string()
+      .optional()
+      .describe(
+        'From email address (e.g. "onboarding@resend.com" or "Resend <onboarding@resend.com>")',
+      ),
+    html: z
+      .string()
+      .optional()
+      .describe(`HTML content of the email.\n\n${EMAIL_HTML_RULES}`),
+    text: z.string().optional().describe('Plain text content of the email'),
+    subject: z.string().optional().describe('Email subject'),
+    replyTo: z
+      .array(z.string())
+      .optional()
+      .describe('Reply-to email address(es)'),
+    previewText: z.string().optional().describe('Preview text for the email'),
+  },
+} as const;
+
+const LIST_BROADCAST_CLICKED_LINKS_TOOL = {
+  title: 'List Broadcast Clicked Links',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** List the links clicked in a broadcast, ranked by total clicks.
+
+**Returns:** For each link: id (opaque pagination cursor for that row, not an entity id), url, clicks (total), unique_clicks. Use pagination (limit, after/before) for large lists.
+
+**When to use:**
+- User asks "what links were clicked in this broadcast?", "top clicked links", "click breakdown for this campaign"
+- Use get-broadcast for overall broadcast details; use this for per-link click data.`,
+  inputSchema: {
+    broadcastId: z
+      .string()
+      .nonempty()
+      .describe(
+        'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+      ),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Number of links to retrieve. Default: 20, Max: 100, Min: 1'),
+    after: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe(
+        'Cursor after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe(
+        'Cursor before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const LIST_BROADCAST_RECIPIENTS_TOOL = {
+  title: 'List Broadcast Recipients',
+  annotations: { readOnlyHint: true },
+  description: `**Purpose:** List the individual recipients of a broadcast for a given event type (sent, delivered, opened, clicked, bounced, complained, unsubscribed, suppressed).
+
+**NOT for:** Aggregate broadcast performance (use get-broadcast). Not for listing broadcasts themselves (use list-broadcasts). This tool returns per-recipient rows, one per contact per event type.
+
+**Returns:** For each recipient: email, id (opaque pagination cursor), contact_id (when known). Also includes count for "opened"/"clicked", bounce_type for "bounced", and clicked_links (url + click count) for "clicked". Use pagination (limit, after/before) for large lists.
+
+**When to use:** User asks "who opened this broadcast?", "who bounced?", "who clicked this link?", "who unsubscribed from this campaign?", or wants the list of contacts behind a specific broadcast engagement metric. Use get-broadcast first if you need the broadcast ID from a name.`,
+  inputSchema: {
+    broadcastId: z
+      .string()
+      .nonempty()
+      .describe(
+        'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
+      ),
+    type: z
+      .enum([
+        'sent',
+        'delivered',
+        'opened',
+        'clicked',
+        'bounced',
+        'complained',
+        'unsubscribed',
+        'suppressed',
+      ])
+      .describe('Recipient event type to list recipients for.'),
+    email: z
+      .string()
+      .optional()
+      .describe('Filter recipients by a substring of their email address.'),
+    bounceType: z
+      .enum(['permanent', 'transient', 'undetermined'])
+      .optional()
+      .describe(
+        'Filter by bounce type. Only meaningful when "type" is "bounced".',
+      ),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe(
+        'Number of recipients to retrieve. Default: 20, Max: 100, Min: 1',
+      ),
+    after: z
+      .string()
+      .nonempty()
+      .optional()
+      .describe(
+        'Cursor to fetch the page after this recipient (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .nonempty()
+      .optional()
+      .describe(
+        'Cursor to fetch the page before this recipient (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
 export function addBroadcastTools(
   server: McpServer,
   resend: Resend,
@@ -26,69 +401,11 @@ export function addBroadcastTools(
   server.registerTool(
     'create-broadcast',
     {
-      title: 'Create Broadcast',
-      description: `**Purpose:** Create a broadcast campaign (one email sent to an entire segment). Defines subject, body, and segment; does NOT send yet. Use send-broadcast to send it.
-
-**NOT for:** Sending a one-off email to specific people (use send-email). Not for adding contacts (use create-contact).
-
-**Returns:** Broadcast ID. Use this ID with send-broadcast to send, or get-broadcast/update-broadcast to manage.
-
-**When to use:**
-- User wants to "email my list", "send a newsletter", "broadcast to my segment", "email all contacts in X"
-- Newsletter, announcement, or bulk message to one segment
-- Supports personalization: {{{FIRST_NAME}}}, {{{LAST_NAME}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}
-
-**"All contacts" note:** Broadcasts require a segment. There is no "all contacts" option in the API. If the user wants to send to all contacts, check list-segments for an existing segment that covers everyone. If none exists, suggest creating one with create-segment.
-
-**Workflow:** list-segments (if needed) → create-broadcast → get-tiptap-json-content (with include_schema: true) → compose-broadcast → send-broadcast.
-
-**Content options after creating:**
-- **compose-broadcast** (recommended): Sets TipTap content that the user can visually edit in the Resend dashboard. Use this when the user wants to collaborate on or refine the email in the editor.
-- **update-broadcast with html/text**: Sets static HTML/text content. Use this only when the user explicitly wants to set raw HTML. Switching between compose and html/text modes is lossy — some content or formatting may be lost. Ask the user before switching.`,
-      inputSchema: {
-        name: z
-          .string()
-          .nonempty()
-          .describe(
-            'Name for the broadcast. If the user does not provide a name, go ahead and create a descriptive name for them, based on the email subject/content and the context of your conversation.',
-          ),
-        segmentId: z.string().nonempty().describe('Segment ID to send to'),
-        subject: z.string().nonempty().describe('Email subject'),
-        text: z
-          .string()
-          .optional()
-          .describe(
-            'Plain text version of the email content. The following placeholders may be used to personalize the email content: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}. If omitted, HTML will be used to generate it. Pass an empty string to disable automatic text generation.',
-          ),
-        html: z
-          .string()
-          .optional()
-          .describe(
-            `HTML version of the email content. Placeholders: {{{FIRST_NAME|fallback}}}, {{{LAST_NAME|fallback}}}, {{{EMAIL}}}, {{{RESEND_UNSUBSCRIBE_URL}}}.\n\n${EMAIL_HTML_RULES}`,
-          ),
-        previewText: z
-          .string()
-          .optional()
-          .describe('Preview text for the email'),
-        ...(!senderEmailAddress
-          ? {
-              from: z
-                .string()
-                .nonempty()
-                .describe(
-                  'From email address (e.g. "onboarding@resend.com" or "Resend <onboarding@resend.com>")',
-                ),
-            }
-          : {}),
-        ...(replierEmailAddresses.length === 0
-          ? {
-              replyTo: z
-                .array(z.string())
-                .optional()
-                .describe('Reply-to email address(es)'),
-            }
-          : {}),
-      },
+      ...CREATE_BROADCAST_TOOL_BASE,
+      inputSchema: getCreateBroadcastInputSchema(
+        senderEmailAddress,
+        replierEmailAddresses,
+      ),
     },
     async ({
       name,
@@ -182,35 +499,7 @@ export function addBroadcastTools(
 
   server.registerTool(
     'send-broadcast',
-    {
-      title: 'Send Broadcast',
-      description: `**Purpose:** Send (or schedule) an existing broadcast by ID. The broadcast must have been created with create-broadcast first.
-
-**NOT for:** Sending a new one-off email (use send-email). Not for creating the broadcast content (use create-broadcast).
-
-**Returns:** Send confirmation and broadcast ID.
-
-**When to use:**
-- User has created a broadcast and says "send it", "go ahead and send", "schedule this for tomorrow"
-- After create-broadcast; call send-broadcast with the returned ID to deliver to the audience
-- Optional scheduledAt: natural language or ISO 8601 for scheduled send
-
-**Workflow:** create-broadcast → send-broadcast. Use list-broadcasts to find existing draft/sent broadcasts.`,
-      inputSchema: {
-        broadcastId: z
-          .string()
-          .nonempty()
-          .describe(
-            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
-          ),
-        scheduledAt: z
-          .string()
-          .optional()
-          .describe(
-            'When to send the broadcast. Value may be in ISO 8601 format (e.g., 2024-08-05T11:52:01.858Z) or in natural language (e.g., "tomorrow at 10am", "in 2 hours", "next day at 9am PST", "Friday at 3pm ET"). If not provided, the broadcast will be sent immediately.',
-          ),
-      },
-    },
+    SEND_BROADCAST_TOOL,
     async ({ broadcastId: rawBroadcastId, scheduledAt }) => {
       const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
       const response = await resend.broadcasts.send(broadcastId, {
@@ -234,18 +523,7 @@ export function addBroadcastTools(
 
   server.registerTool(
     'list-broadcasts',
-    {
-      title: 'List Broadcasts',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** List all broadcast campaigns (newsletters/bulk emails to audiences) with ID, name, audience, status, timestamps.
-
-**NOT for:** Listing transactional emails (use list-emails). Not for listing segments or contacts (use list-segments, list-contacts).
-
-**Returns:** For each broadcast: id, name, segment_id, status, created_at, scheduled_at, sent_at.
-
-**When to use:** User asks "show my broadcasts", "what newsletters did I send?", "list campaigns". Use get-broadcast for full details of one.`,
-      inputSchema: {},
-    },
+    LIST_BROADCASTS_TOOL,
     async (_args, _ctx) => {
       const response = await resend.broadcasts.list();
 
@@ -293,20 +571,7 @@ export function addBroadcastTools(
 
   server.registerTool(
     'get-broadcast',
-    {
-      title: 'Get Broadcast',
-      annotations: { readOnlyHint: true },
-      description:
-        'Retrieve full details of a specific broadcast by ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>), including HTML and plain text content.',
-      inputSchema: {
-        broadcastId: z
-          .string()
-          .nonempty()
-          .describe(
-            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
-          ),
-      },
-    },
+    GET_BROADCAST_TOOL,
     async ({ broadcastId: rawBroadcastId }) => {
       const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
       const response = await resend.broadcasts.get(broadcastId);
@@ -367,22 +632,7 @@ export function addBroadcastTools(
 
   server.registerTool(
     'cancel-broadcast',
-    {
-      title: 'Cancel Broadcast',
-      description: `**Purpose:** Cancel a queued or scheduled broadcast by ID or Resend dashboard URL, without removing it. Cancelling a queued broadcast stops it mid-send (emails already sent are not affected). Cancelling a scheduled broadcast reverts it to draft.
-
-**NOT for:** Removing a broadcast entirely (use remove-broadcast). Draft and sent broadcasts cannot be cancelled — sent broadcasts are immutable, and drafts have nothing to cancel.
-
-**When to use:** User wants to "stop", "cancel", or "pause" a broadcast that is currently sending or scheduled to send.`,
-      inputSchema: {
-        broadcastId: z
-          .string()
-          .nonempty()
-          .describe(
-            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
-          ),
-      },
-    },
+    CANCEL_BROADCAST_TOOL,
     async ({ broadcastId: rawBroadcastId }) => {
       const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
       const response = await resend.broadcasts.cancel(broadcastId);
@@ -404,19 +654,7 @@ export function addBroadcastTools(
 
   server.registerTool(
     'remove-broadcast',
-    {
-      title: 'Remove Broadcast',
-      description:
-        'Remove a broadcast by ID or Resend dashboard URL. Before using this tool, you MUST double-check with the user that they want to remove this broadcast. Reference the NAME of the broadcast when double-checking, and warn the user that removing a broadcast is irreversible. You may only use this tool if the user explicitly confirms they want to remove the broadcast after you double-check.',
-      inputSchema: {
-        broadcastId: z
-          .string()
-          .nonempty()
-          .describe(
-            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
-          ),
-      },
-    },
+    REMOVE_BROADCAST_TOOL,
     async ({ broadcastId: rawBroadcastId }) => {
       const broadcastId = extractIdFromUrl(rawBroadcastId, 'broadcasts');
       const response = await resend.broadcasts.remove(broadcastId);
@@ -438,62 +676,7 @@ export function addBroadcastTools(
 
   server.registerTool(
     'compose-broadcast',
-    {
-      title: 'Compose Broadcast',
-      description: `**Purpose:** Set the TipTap JSON content of a broadcast, enabling it to be edited visually in the Resend dashboard editor. Automatically connects and disconnects from the editor. Can also update metadata (subject, preview text, name) in the same call.
-
-**This is the recommended way to set email content.** Content set via compose-broadcast can be visually edited by the user in the dashboard. Use this for newsletters and any broadcast where the user may want to refine the content.
-
-**Workflow:** get-tiptap-json-content (with include_schema: true) → compose-broadcast
-
-**When to use:**
-- After create-broadcast, to set the email body
-- When the user wants to write, edit, or style email content
-- When the user wants to collaborate on the email in the dashboard editor
-
-**Important:** Always call get-tiptap-json-content first to retrieve the existing TipTap JSON, then build your changes on top of it. Skipping this will overwrite all existing content.
-
-**Note:** Switching between compose (TipTap) and update (raw HTML) modes is lossy — some content or formatting may be lost. If the broadcast already has HTML content, ask the user before switching to compose mode.`,
-      inputSchema: {
-        broadcastId: z
-          .string()
-          .nonempty()
-          .describe(
-            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
-          ),
-        content: z
-          .preprocess(
-            (val) => {
-              if (typeof val === 'string') {
-                try {
-                  return JSON.parse(val);
-                } catch {
-                  return val;
-                }
-              }
-              return val;
-            },
-            z.record(z.string(), z.unknown()),
-          )
-          .describe(
-            'TipTap JSON content. Call get-tiptap-json-content (with include_schema: true) first to get the existing content and the schema reference.',
-          ),
-        subject: z
-          .string()
-          .optional()
-          .describe('Update the email subject line.'),
-        previewText: z
-          .string()
-          .optional()
-          .describe(
-            'Update the preview text (shown in inbox before opening the email).',
-          ),
-        name: z
-          .string()
-          .optional()
-          .describe('Update the broadcast name (internal label).'),
-      },
-    },
+    COMPOSE_BROADCAST_TOOL,
     async (
       { broadcastId: rawBroadcastId, content, subject, previewText, name },
       ctx,
@@ -638,44 +821,7 @@ export function addBroadcastTools(
 
   server.registerTool(
     'update-broadcast',
-    {
-      title: 'Update Broadcast',
-      description: `Update broadcast metadata by ID or Resend dashboard URL (name, subject, from, html, text, segment, preview text, reply-to). To edit TipTap content, use compose-broadcast instead.
-
-**Important:** The API requires \`from\` and \`segmentId\` to be set on the broadcast. If the broadcast was created from the dashboard, these may be empty. Always call get-broadcast first to check, and include \`from\` and \`segmentId\` in your update if they are not already set. Use list-domains to find verified domains for the from address, and list-segments to find segment IDs.
-
-**Note on html/text fields:** Setting html or text via this tool replaces any content previously set via compose-broadcast. This switch is lossy — some content or formatting may be lost. Prefer compose-broadcast for content changes. If the broadcast was composed with TipTap content, ask the user before overwriting it with raw HTML.`,
-      inputSchema: {
-        broadcastId: z
-          .string()
-          .nonempty()
-          .describe(
-            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
-          ),
-        name: z.string().optional().describe('Name for the broadcast'),
-        segmentId: z.string().optional().describe('Segment ID to send to'),
-        from: z
-          .string()
-          .optional()
-          .describe(
-            'From email address (e.g. "onboarding@resend.com" or "Resend <onboarding@resend.com>")',
-          ),
-        html: z
-          .string()
-          .optional()
-          .describe(`HTML content of the email.\n\n${EMAIL_HTML_RULES}`),
-        text: z.string().optional().describe('Plain text content of the email'),
-        subject: z.string().optional().describe('Email subject'),
-        replyTo: z
-          .array(z.string())
-          .optional()
-          .describe('Reply-to email address(es)'),
-        previewText: z
-          .string()
-          .optional()
-          .describe('Preview text for the email'),
-      },
-    },
+    UPDATE_BROADCAST_TOOL,
     async ({
       broadcastId: rawBroadcastId,
       name,
@@ -760,49 +906,7 @@ export function addBroadcastTools(
 
   server.registerTool(
     'list-broadcast-clicked-links',
-    {
-      title: 'List Broadcast Clicked Links',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** List the links clicked in a broadcast, ranked by total clicks.
-
-**Returns:** For each link: id (opaque pagination cursor for that row, not an entity id), url, clicks (total), unique_clicks. Use pagination (limit, after/before) for large lists.
-
-**When to use:**
-- User asks "what links were clicked in this broadcast?", "top clicked links", "click breakdown for this campaign"
-- Use get-broadcast for overall broadcast details; use this for per-link click data.`,
-      inputSchema: {
-        broadcastId: z
-          .string()
-          .nonempty()
-          .describe(
-            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
-          ),
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of links to retrieve. Default: 20, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .trim()
-          .min(1)
-          .optional()
-          .describe(
-            'Cursor after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .trim()
-          .min(1)
-          .optional()
-          .describe(
-            'Cursor before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_BROADCAST_CLICKED_LINKS_TOOL,
     async ({ broadcastId: rawBroadcastId, limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -871,70 +975,7 @@ export function addBroadcastTools(
 
   server.registerTool(
     'list-broadcast-recipients',
-    {
-      title: 'List Broadcast Recipients',
-      annotations: { readOnlyHint: true },
-      description: `**Purpose:** List the individual recipients of a broadcast for a given event type (sent, delivered, opened, clicked, bounced, complained, unsubscribed, suppressed).
-
-**NOT for:** Aggregate broadcast performance (use get-broadcast). Not for listing broadcasts themselves (use list-broadcasts). This tool returns per-recipient rows, one per contact per event type.
-
-**Returns:** For each recipient: email, id (opaque pagination cursor), contact_id (when known). Also includes count for "opened"/"clicked", bounce_type for "bounced", and clicked_links (url + click count) for "clicked". Use pagination (limit, after/before) for large lists.
-
-**When to use:** User asks "who opened this broadcast?", "who bounced?", "who clicked this link?", "who unsubscribed from this campaign?", or wants the list of contacts behind a specific broadcast engagement metric. Use get-broadcast first if you need the broadcast ID from a name.`,
-      inputSchema: {
-        broadcastId: z
-          .string()
-          .nonempty()
-          .describe(
-            'Broadcast ID or Resend dashboard URL (e.g. https://resend.com/broadcasts/<id>)',
-          ),
-        type: z
-          .enum([
-            'sent',
-            'delivered',
-            'opened',
-            'clicked',
-            'bounced',
-            'complained',
-            'unsubscribed',
-            'suppressed',
-          ])
-          .describe('Recipient event type to list recipients for.'),
-        email: z
-          .string()
-          .optional()
-          .describe('Filter recipients by a substring of their email address.'),
-        bounceType: z
-          .enum(['permanent', 'transient', 'undetermined'])
-          .optional()
-          .describe(
-            'Filter by bounce type. Only meaningful when "type" is "bounced".',
-          ),
-        limit: z
-          .number()
-          .int()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe(
-            'Number of recipients to retrieve. Default: 20, Max: 100, Min: 1',
-          ),
-        after: z
-          .string()
-          .nonempty()
-          .optional()
-          .describe(
-            'Cursor to fetch the page after this recipient (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .nonempty()
-          .optional()
-          .describe(
-            'Cursor to fetch the page before this recipient (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_BROADCAST_RECIPIENTS_TOOL,
     async ({
       broadcastId: rawBroadcastId,
       type,

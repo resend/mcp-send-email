@@ -2,29 +2,76 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import type { Resend } from 'resend';
 import { z } from 'zod';
 
+const CREATE_API_KEY_TOOL = {
+  title: 'Create API Key',
+  description:
+    'Create a new API key in Resend. The token is only shown once upon creation, so you MUST display it to the user.',
+  inputSchema: {
+    name: z.string().nonempty().describe('API key name'),
+    permission: z
+      .enum(['full_access', 'sending_access'])
+      .optional()
+      .describe(
+        'Access level. "full_access" grants complete resource management. "sending_access" restricts to email delivery only.',
+      ),
+    domainId: z
+      .string()
+      .optional()
+      .describe(
+        'Restrict API key to send emails from a specific domain. Only applicable when permission is "sending_access".',
+      ),
+  },
+} as const;
+
+const LIST_API_KEYS_TOOL = {
+  title: 'List API Keys',
+  annotations: { readOnlyHint: true },
+  description:
+    "List all API keys from Resend. Returns API key names, IDs, and creation dates. Don't bother telling the user the IDs or creation dates unless they ask for them.",
+  inputSchema: {
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Number of API keys to retrieve. Max: 100, Min: 1'),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        'API key ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
+      ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'API key ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
+      ),
+  },
+} as const;
+
+const UPDATE_API_KEY_TOOL = {
+  title: 'Update API Key',
+  description: 'Rename an existing API key in Resend.',
+  inputSchema: {
+    id: z.string().nonempty().describe('API key ID'),
+    name: z.string().nonempty().describe('New API key name'),
+  },
+} as const;
+
+const REMOVE_API_KEY_TOOL = {
+  title: 'Remove API Key',
+  description:
+    'Remove an API key by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this API key. Reference the NAME of the API key when double-checking, and warn the user that removing an API key is irreversible and any services using it will lose access. You may only use this tool if the user explicitly confirms they want to remove the API key after you double-check.',
+  inputSchema: {
+    id: z.string().nonempty().describe('API key ID'),
+  },
+} as const;
+
 export function addApiKeyTools(server: McpServer, resend: Resend) {
   server.registerTool(
     'create-api-key',
-    {
-      title: 'Create API Key',
-      description:
-        'Create a new API key in Resend. The token is only shown once upon creation, so you MUST display it to the user.',
-      inputSchema: {
-        name: z.string().nonempty().describe('API key name'),
-        permission: z
-          .enum(['full_access', 'sending_access'])
-          .optional()
-          .describe(
-            'Access level. "full_access" grants complete resource management. "sending_access" restricts to email delivery only.',
-          ),
-        domainId: z
-          .string()
-          .optional()
-          .describe(
-            'Restrict API key to send emails from a specific domain. Only applicable when permission is "sending_access".',
-          ),
-      },
-    },
+    CREATE_API_KEY_TOOL,
     async ({ name, permission, domainId }) => {
       const response = await resend.apiKeys.create({
         name,
@@ -57,32 +104,7 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'list-api-keys',
-    {
-      title: 'List API Keys',
-      annotations: { readOnlyHint: true },
-      description:
-        "List all API keys from Resend. Returns API key names, IDs, and creation dates. Don't bother telling the user the IDs or creation dates unless they ask for them.",
-      inputSchema: {
-        limit: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe('Number of API keys to retrieve. Max: 100, Min: 1'),
-        after: z
-          .string()
-          .optional()
-          .describe(
-            'API key ID after which to retrieve more (for forward pagination). Cannot be used with "before".',
-          ),
-        before: z
-          .string()
-          .optional()
-          .describe(
-            'API key ID before which to retrieve more (for backward pagination). Cannot be used with "after".',
-          ),
-      },
-    },
+    LIST_API_KEYS_TOOL,
     async ({ limit, after, before }) => {
       if (after && before) {
         throw new Error(
@@ -140,14 +162,7 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
 
   server.registerTool(
     'update-api-key',
-    {
-      title: 'Update API Key',
-      description: 'Rename an existing API key in Resend.',
-      inputSchema: {
-        id: z.string().nonempty().describe('API key ID'),
-        name: z.string().nonempty().describe('New API key name'),
-      },
-    },
+    UPDATE_API_KEY_TOOL,
     async ({ id, name }) => {
       const response = await resend.apiKeys.update(id, { name });
 
@@ -166,28 +181,17 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
     },
   );
 
-  server.registerTool(
-    'remove-api-key',
-    {
-      title: 'Remove API Key',
-      description:
-        'Remove an API key by ID from Resend. Before using this tool, you MUST double-check with the user that they want to remove this API key. Reference the NAME of the API key when double-checking, and warn the user that removing an API key is irreversible and any services using it will lose access. You may only use this tool if the user explicitly confirms they want to remove the API key after you double-check.',
-      inputSchema: {
-        id: z.string().nonempty().describe('API key ID'),
-      },
-    },
-    async ({ id }) => {
-      const response = await resend.apiKeys.remove(id);
+  server.registerTool('remove-api-key', REMOVE_API_KEY_TOOL, async ({ id }) => {
+    const response = await resend.apiKeys.remove(id);
 
-      if (response.error) {
-        throw new Error(
-          `Failed to remove API key: ${JSON.stringify(response.error)}`,
-        );
-      }
+    if (response.error) {
+      throw new Error(
+        `Failed to remove API key: ${JSON.stringify(response.error)}`,
+      );
+    }
 
-      return {
-        content: [{ type: 'text', text: 'API key removed successfully.' }],
-      };
-    },
-  );
+    return {
+      content: [{ type: 'text', text: 'API key removed successfully.' }],
+    };
+  });
 }
