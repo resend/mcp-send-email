@@ -59,7 +59,7 @@ describe('update-segment', () => {
     vi.clearAllMocks();
   });
 
-  it('renames a segment and returns the updated name and ID', async () => {
+  it('renames a segment and returns the ID', async () => {
     update.mockResolvedValue({
       data: { object: 'segment', id: 'seg_1' },
       error: null,
@@ -74,7 +74,6 @@ describe('update-segment', () => {
     expect(update).toHaveBeenCalledWith('seg_1', { name: 'New name' });
     const text = textOf(result as never);
     expect(text).toContain('Segment updated successfully.');
-    expect(text).toContain('Name: New name');
     expect(text).toContain('ID: seg_1');
   });
 

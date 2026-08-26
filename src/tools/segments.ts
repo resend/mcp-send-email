@@ -189,7 +189,7 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       return {
         content: [
           { type: 'text', text: 'Segment updated successfully.' },
-          { type: 'text', text: `Name: ${name}\nID: ${updated.id}` },
+          { type: 'text', text: `ID: ${updated.id}` },
         ],
       };
     },
