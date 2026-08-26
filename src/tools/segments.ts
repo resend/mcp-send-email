@@ -180,7 +180,6 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       const response = await resend.patch<{
         object: 'segment';
         id: string;
-        name: string;
       }>(`/segments/${id}`, { name });
 
       if (response.error) {
@@ -193,7 +192,7 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       return {
         content: [
           { type: 'text', text: 'Segment updated successfully.' },
-          { type: 'text', text: `Name: ${updated.name}\nID: ${updated.id}` },
+          { type: 'text', text: `Name: ${name}\nID: ${updated.id}` },
         ],
       };
     },

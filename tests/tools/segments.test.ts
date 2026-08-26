@@ -62,7 +62,7 @@ describe('update-segment', () => {
 
   it('renames a segment and returns the updated name and ID', async () => {
     patch.mockResolvedValue({
-      data: { object: 'segment', id: 'seg_1', name: 'New name' },
+      data: { object: 'segment', id: 'seg_1' },
       error: null,
     });
 
