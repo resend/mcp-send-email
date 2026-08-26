@@ -7,12 +7,11 @@ import { addSegmentTools } from '../../src/tools/segments.js';
 const create = vi.fn();
 const list = vi.fn();
 const get = vi.fn();
+const update = vi.fn();
 const remove = vi.fn();
-const patch = vi.fn();
 
 const resend = {
-  segments: { create, list, get, remove },
-  patch,
+  segments: { create, list, get, update, remove },
 } as unknown as Resend;
 
 async function makeClient() {
@@ -61,7 +60,7 @@ describe('update-segment', () => {
   });
 
   it('renames a segment and returns the updated name and ID', async () => {
-    patch.mockResolvedValue({
+    update.mockResolvedValue({
       data: { object: 'segment', id: 'seg_1' },
       error: null,
     });
@@ -72,9 +71,7 @@ describe('update-segment', () => {
       arguments: { id: 'seg_1', name: 'New name' },
     });
 
-    expect(patch).toHaveBeenCalledWith('/segments/seg_1', {
-      name: 'New name',
-    });
+    expect(update).toHaveBeenCalledWith('seg_1', { name: 'New name' });
     const text = textOf(result as never);
     expect(text).toContain('Segment updated successfully.');
     expect(text).toContain('Name: New name');
@@ -89,11 +86,11 @@ describe('update-segment', () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(patch).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
   });
 
   it('surfaces API errors', async () => {
-    patch.mockResolvedValueOnce({
+    update.mockResolvedValueOnce({
       error: { message: 'segment not found' },
       data: null,
     });

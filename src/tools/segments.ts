@@ -177,10 +177,7 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
     'update-segment',
     UPDATE_SEGMENT_TOOL,
     async ({ id, name }) => {
-      const response = await resend.patch<{
-        object: 'segment';
-        id: string;
-      }>(`/segments/${id}`, { name });
+      const response = await resend.segments.update(id, { name });
 
       if (response.error) {
         throw new Error(
