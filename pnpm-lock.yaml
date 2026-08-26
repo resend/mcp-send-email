@@ -27,8 +27,8 @@ importers:
         specifier: 1.2.8
         version: 1.2.8
       resend:
-        specifier: 6.22.0
-        version: 6.22.0
+        specifier: 6.23.0
+        version: 6.23.0
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -806,8 +806,8 @@ packages:
     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
     engines: {node: '>= 0.10'}
 
-  resend@6.22.0:
-    resolution: {integrity: sha512-dP1jyl0n1Dx7GYDb0bcsbv9Yx0oBRLhUtSyNFRIOsSzV9MvCVbua/3WP6YUP2JptAU5BciEWGInV+hFjUuYLUw==}
+  resend@6.23.0:
+    resolution: {integrity: sha512-Yzdq6egQDmhkHzkYOiD0e0zj2m8TUxAPH6vzhF+KQWUhcK1BYgoUjr1dcazLu41+I4A2YLDEY3b0Df25wCVwiA==}
     engines: {node: '>=20'}
     peerDependencies:
       '@react-email/render': '*'
@@ -1622,7 +1622,7 @@ snapshots:
       iconv-lite: 0.7.1
       unpipe: 1.0.0
 
-  resend@6.22.0:
+  resend@6.23.0:
     dependencies:
       postal-mime: 2.7.5
       standardwebhooks: 1.0.0
