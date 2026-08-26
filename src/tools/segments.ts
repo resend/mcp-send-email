@@ -54,6 +54,15 @@ const GET_SEGMENT_TOOL = {
   },
 } as const;
 
+const UPDATE_SEGMENT_TOOL = {
+  title: 'Update Segment',
+  description: 'Rename an existing segment in Resend.',
+  inputSchema: {
+    id: z.string().nonempty().describe('Segment ID'),
+    name: z.string().nonempty().describe('New name for the segment'),
+  },
+} as const;
+
 const REMOVE_SEGMENT_TOOL = {
   title: 'Remove Segment',
   description:
@@ -163,6 +172,32 @@ export function addSegmentTools(server: McpServer, resend: Resend) {
       ],
     };
   });
+
+  server.registerTool(
+    'update-segment',
+    UPDATE_SEGMENT_TOOL,
+    async ({ id, name }) => {
+      const response = await resend.patch<{
+        object: 'segment';
+        id: string;
+        name: string;
+      }>(`/segments/${id}`, { name });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to update segment: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const updated = response.data;
+      return {
+        content: [
+          { type: 'text', text: 'Segment updated successfully.' },
+          { type: 'text', text: `Name: ${updated.name}\nID: ${updated.id}` },
+        ],
+      };
+    },
+  );
 
   server.registerTool('remove-segment', REMOVE_SEGMENT_TOOL, async ({ id }) => {
     const response = await resend.segments.remove(id);
