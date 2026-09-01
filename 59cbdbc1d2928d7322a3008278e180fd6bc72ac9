@@ -1,0 +1,40 @@
+src/tools/domains.ts
+  s_36e7ba179b46ed::t_fe4ff83d002d5d 400,402-429,432-439,449-451,457-468,480-485,490-492,497-504,516-521,526-528,533-540
+  s_36e7ba179b46ed::t_9b7fc51e9a400d 394-399,401,430-431,440-448,452-456,469-479,486-489,493-496,505-515,522-525,529-532,541-544
+  s_36e7ba179b46ed::t_2b868083cb94f6 26-34
+package.json
+  s_36e7ba179b46ed::t_b9bab7d519a92e 37
+pnpm-workspace.yaml
+  s_36e7ba179b46ed::t_0482a1d2c9a405 3-4
+tests/transports/stdio.test.ts
+  s_36e7ba179b46ed::t_a140d5b48d74d0 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "59cbdbc1d2928d7322a3008278e180fd6bc72ac9",
+  "prompts": {
+    "dc3edad1ae859f4d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0f1f3f3-ae0f-4890-aebe-c8d6ac030910",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "João Melo <jopcmelo@gmail.com>",
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_36e7ba179b46ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ff51b36b-3da1-40de-a886-d8b653d37ff3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "João Melo <jopcmelo@gmail.com>"
+    }
+  }
+}
