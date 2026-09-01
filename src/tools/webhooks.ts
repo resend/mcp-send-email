@@ -90,7 +90,7 @@ const LIST_WEBHOOK_EVENTS_TOOL = {
 
 **NOT for:** Listing the event types a webhook subscribes to (use get-webhook). Not for listing emails (use list-emails) or the Events product (use list-events).
 
-**Returns:** For each event: id, type (e.g. email.sent), created_at, and status — pending (queued), attempting (a retry is scheduled), success, or failed (retries exhausted).
+**Returns:** For each event: id, type (e.g. email.sent), created_at, and status — one of pending, attempting, success, or failed.
 
 **When to use:** User asks "did my webhook receive this?", "why is my endpoint missing events?", or wants the delivery history of a webhook. Use get-webhook-event next for the payload, and list-webhook-event-attempts for what their endpoint returned.`,
   inputSchema: {
