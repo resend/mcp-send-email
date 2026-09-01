@@ -282,9 +282,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       const events = response.data.data;
       if (events.length === 0) {
         return {
-          content: [
-            { type: 'text', text: 'No events delivered to this webhook yet.' },
-          ],
+          content: [{ type: 'text', text: 'No webhook events found.' }],
         };
       }
 
@@ -292,12 +290,20 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
         content: [
           {
             type: 'text',
-            text: `Found ${events.length} event${events.length === 1 ? '' : 's'}${response.data.has_more ? ' (more available, paginate with "after")' : ''}:`,
+            text: `Found ${events.length} webhook event${events.length === 1 ? '' : 's'}:`,
           },
           ...events.map(({ id, type, status, created_at }) => ({
             type: 'text' as const,
             text: `Type: ${type}\nStatus: ${status}\nID: ${id}\nCreated at: ${created_at}`,
           })),
+          ...(response.data.has_more
+            ? [
+                {
+                  type: 'text' as const,
+                  text: 'There are more webhook events available. Use the "after" parameter with the last ID to retrieve more.',
+                },
+              ]
+            : []),
         ],
       };
     },
@@ -354,9 +360,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
       const attempts = response.data.data;
       if (attempts.length === 0) {
         return {
-          content: [
-            { type: 'text', text: 'No delivery attempts for this event yet.' },
-          ],
+          content: [{ type: 'text', text: 'No delivery attempts found.' }],
         };
       }
 
@@ -364,7 +368,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
         content: [
           {
             type: 'text',
-            text: `Found ${attempts.length} attempt${attempts.length === 1 ? '' : 's'}${response.data.has_more ? ' (more available, paginate with "after")' : ''}:`,
+            text: `Found ${attempts.length} delivery attempt${attempts.length === 1 ? '' : 's'}:`,
           },
           ...attempts.map(
             ({ id, http_status_code, response: body, sent_at }) => ({
@@ -372,6 +376,14 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
               text: `HTTP status: ${http_status_code}\nSent at: ${sent_at}\nID: ${id}\nResponse: ${body}`,
             }),
           ),
+          ...(response.data.has_more
+            ? [
+                {
+                  type: 'text' as const,
+                  text: 'There are more delivery attempts available. Use the "after" parameter with the last ID to retrieve more.',
+                },
+              ]
+            : []),
         ],
       };
     },

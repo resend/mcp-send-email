@@ -93,7 +93,9 @@ describe('webhook event tools', () => {
     });
     const text = textOf(result as never);
     expect(text).toContain('email.sent');
-    expect(text).toContain('more available');
+    expect(text).toContain(
+      'There are more webhook events available. Use the "after" parameter with the last ID to retrieve more.',
+    );
   });
 
   it('get-webhook-event renders next_attempt_at and the payload', async () => {
