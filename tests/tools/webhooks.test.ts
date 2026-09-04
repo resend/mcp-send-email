@@ -6,6 +6,7 @@ import { addWebhookTools } from '../../src/tools/webhooks.js';
 
 const listEvents = vi.fn();
 const getEvent = vi.fn();
+const replayEvent = vi.fn();
 const listAttempts = vi.fn();
 
 const resend = {
@@ -18,6 +19,7 @@ const resend = {
     events: {
       list: listEvents,
       get: getEvent,
+      replay: replayEvent,
       attempts: { list: listAttempts },
     },
   },
@@ -148,6 +150,25 @@ describe('webhook event tools', () => {
     });
 
     expect(textOf(result as never)).toContain('none scheduled');
+  });
+
+  it('replay-webhook-event sends webhookId and eventId to the SDK', async () => {
+    replayEvent.mockResolvedValue({
+      data: { object: 'webhook_event', id: EVENT_ID },
+      error: null,
+    });
+
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'replay-webhook-event',
+      arguments: { webhookId: WEBHOOK_ID, eventId: EVENT_ID },
+    });
+
+    expect(replayEvent).toHaveBeenCalledWith({
+      webhookId: WEBHOOK_ID,
+      eventId: EVENT_ID,
+    });
+    expect(textOf(result as never)).toContain(EVENT_ID);
   });
 
   it('list-webhook-event-attempts surfaces what the endpoint returned', async () => {

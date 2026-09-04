@@ -128,6 +128,19 @@ const GET_WEBHOOK_EVENT_TOOL = {
   },
 } as const;
 
+const REPLAY_WEBHOOK_EVENT_TOOL = {
+  title: 'Replay Webhook Event',
+  description: `**Purpose:** Queue one more delivery of a webhook event to its endpoint — the same action as the dashboard's Replay button.
+
+**NOT for:** Inspecting an event (use get-webhook-event) or its past attempts (use list-webhook-event-attempts). A manual replay does not schedule further automatic retries.
+
+**When to use:** User wants to resend a specific webhook event after fixing their endpoint, or re-trigger a delivery that failed or was missed. The webhook must be enabled — a disabled webhook fails this call. Get the event ID from list-webhook-events first.`,
+  inputSchema: {
+    webhookId: z.string().nonempty().describe('Webhook ID'),
+    eventId: z.string().nonempty().describe('Webhook event ID'),
+  },
+} as const;
+
 const LIST_WEBHOOK_EVENT_ATTEMPTS_TOOL = {
   title: 'List Webhook Event Attempts',
   annotations: { readOnlyHint: true },
@@ -337,6 +350,30 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
             type: 'text',
             text: `Payload:\n${JSON.stringify(event.payload, null, 2)}`,
           },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
+    'replay-webhook-event',
+    REPLAY_WEBHOOK_EVENT_TOOL,
+    async ({ webhookId, eventId }) => {
+      const response = await resend.webhooks.events.replay({
+        webhookId,
+        eventId,
+      });
+
+      if (response.error) {
+        throw new Error(
+          `Failed to replay webhook event: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      return {
+        content: [
+          { type: 'text', text: 'Webhook event replay queued.' },
+          { type: 'text', text: `ID: ${response.data.id}` },
         ],
       };
     },
