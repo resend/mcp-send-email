@@ -134,7 +134,7 @@ const REPLAY_WEBHOOK_EVENT_TOOL = {
 
 **NOT for:** Inspecting an event (use get-webhook-event) or its past attempts (use list-webhook-event-attempts). A manual replay does not schedule further automatic retries.
 
-**When to use:** User wants to resend a specific webhook event after fixing their endpoint, or re-trigger a delivery that failed or was missed. Get the event ID from list-webhook-events first.`,
+**When to use:** User wants to resend a specific webhook event after fixing their endpoint, or re-trigger a delivery that failed or was missed. The webhook must be enabled — a disabled webhook fails this call. Get the event ID from list-webhook-events first.`,
   inputSchema: {
     webhookId: z.string().nonempty().describe('Webhook ID'),
     eventId: z.string().nonempty().describe('Webhook event ID'),
