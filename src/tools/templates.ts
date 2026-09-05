@@ -273,7 +273,7 @@ export function addTemplateTools(
       const response = await resend.templates.create({
         name,
         html,
-        ...(subject && { subject }),
+        ...(subject !== undefined && { subject }),
         ...(from && { from }),
         ...(replyTo && { replyTo }),
         ...(text !== undefined && { text }),
@@ -544,7 +544,7 @@ export function addTemplateTools(
       const response = await resend.templates.update(id, {
         ...(name && { name }),
         ...(html && { html }),
-        ...(subject && { subject }),
+        ...(subject !== undefined && { subject }),
         ...(from && { from }),
         ...(replyTo && { replyTo }),
         ...(text !== undefined && { text }),
