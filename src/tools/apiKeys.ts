@@ -75,8 +75,8 @@ export function addApiKeyTools(server: McpServer, resend: Resend) {
     async ({ name, permission, domainId }) => {
       const response = await resend.apiKeys.create({
         name,
-        ...(permission && { permission }),
-        ...(domainId && { domain_id: domainId }),
+        permission,
+        domain_id: domainId,
       });
 
       if (response.error) {

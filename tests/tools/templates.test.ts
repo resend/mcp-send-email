@@ -27,7 +27,7 @@ async function makeClient() {
   return client;
 }
 
-describe('template text content', () => {
+describe('template empty string fields', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     create.mockResolvedValue({
@@ -71,5 +71,16 @@ describe('template text content', () => {
 
     expect(result.isError).toBeFalsy();
     expect(update).toHaveBeenCalledWith('tmpl_1', { text: '' });
+  });
+
+  it('passes empty subject through update-template', async () => {
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'update-template',
+      arguments: { id: 'tmpl_1', subject: '' },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(update).toHaveBeenCalledWith('tmpl_1', { subject: '' });
   });
 });

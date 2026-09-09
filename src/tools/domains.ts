@@ -256,13 +256,13 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     }) => {
       const response = await resend.domains.create({
         name,
-        ...(region && { region }),
-        ...(customReturnPath && { customReturnPath }),
-        ...(openTracking !== undefined && { openTracking }),
-        ...(clickTracking !== undefined && { clickTracking }),
-        ...(tls && { tls }),
-        ...(trackingSubdomain && { trackingSubdomain }),
-        ...(capabilities && { capabilities }),
+        region,
+        customReturnPath,
+        openTracking,
+        clickTracking,
+        tls,
+        trackingSubdomain,
+        capabilities,
       });
 
       if (response.error) {
@@ -387,11 +387,11 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     }) => {
       const response = await resend.domains.update({
         id,
-        ...(clickTracking !== undefined && { clickTracking }),
-        ...(openTracking !== undefined && { openTracking }),
-        ...(tls && { tls }),
-        ...(trackingSubdomain && { trackingSubdomain }),
-        ...(capabilities && { capabilities }),
+        clickTracking,
+        openTracking,
+        tls,
+        trackingSubdomain,
+        capabilities,
       });
 
       if (response.error) {
@@ -459,11 +459,11 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     }) => {
       const response = await resend.domains.claims.create({
         name,
-        ...(region && { region }),
-        ...(customReturnPath && { customReturnPath }),
-        ...(openTracking !== undefined && { openTracking }),
-        ...(clickTracking !== undefined && { clickTracking }),
-        ...(trackingSubdomain && { trackingSubdomain }),
+        region,
+        customReturnPath,
+        openTracking,
+        clickTracking,
+        trackingSubdomain,
       });
       if (response.error) {
         throw new Error(
