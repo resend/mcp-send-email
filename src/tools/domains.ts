@@ -256,13 +256,13 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     }) => {
       const response = await resend.domains.create({
         name,
-        ...(region && { region }),
-        ...(customReturnPath && { customReturnPath }),
+        ...(region !== undefined && { region }),
+        ...(customReturnPath !== undefined && { customReturnPath }),
         ...(openTracking !== undefined && { openTracking }),
         ...(clickTracking !== undefined && { clickTracking }),
-        ...(tls && { tls }),
-        ...(trackingSubdomain && { trackingSubdomain }),
-        ...(capabilities && { capabilities }),
+        ...(tls !== undefined && { tls }),
+        ...(trackingSubdomain !== undefined && { trackingSubdomain }),
+        ...(capabilities !== undefined && { capabilities }),
       });
 
       if (response.error) {
@@ -389,9 +389,9 @@ export function addDomainTools(server: McpServer, resend: Resend) {
         id,
         ...(clickTracking !== undefined && { clickTracking }),
         ...(openTracking !== undefined && { openTracking }),
-        ...(tls && { tls }),
-        ...(trackingSubdomain && { trackingSubdomain }),
-        ...(capabilities && { capabilities }),
+        ...(tls !== undefined && { tls }),
+        ...(trackingSubdomain !== undefined && { trackingSubdomain }),
+        ...(capabilities !== undefined && { capabilities }),
       });
 
       if (response.error) {
@@ -459,11 +459,11 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     }) => {
       const response = await resend.domains.claims.create({
         name,
-        ...(region && { region }),
-        ...(customReturnPath && { customReturnPath }),
+        ...(region !== undefined && { region }),
+        ...(customReturnPath !== undefined && { customReturnPath }),
         ...(openTracking !== undefined && { openTracking }),
         ...(clickTracking !== undefined && { clickTracking }),
-        ...(trackingSubdomain && { trackingSubdomain }),
+        ...(trackingSubdomain !== undefined && { trackingSubdomain }),
       });
       if (response.error) {
         throw new Error(
