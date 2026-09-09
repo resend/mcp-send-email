@@ -1,5 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/server';
-import type { Resend } from 'resend';
+import type { CreateWebhookResponse, Resend } from 'resend';
 import { z } from 'zod';
 
 const webhookEventSchema = z.enum([
@@ -138,6 +138,18 @@ const REPLAY_WEBHOOK_EVENT_TOOL = {
   inputSchema: {
     webhookId: z.string().nonempty().describe('Webhook ID'),
     eventId: z.string().nonempty().describe('Webhook event ID'),
+  },
+} as const;
+
+const ROTATE_WEBHOOK_SIGNING_SECRET_TOOL = {
+  title: 'Rotate Webhook Signing Secret',
+  description: `**Purpose:** Replace a webhook's signing secret with a new one — the same action as the dashboard's Rotate button. Returns the new secret.
+
+**NOT for:** Changing the endpoint URL or subscribed events (use update-webhook), or reading the current secret (use get-webhook).
+
+**When to use:** User believes the signing secret leaked, or wants to rotate it as routine hygiene. Payloads delivered after the rotation are signed with the new secret, so the user must update their endpoint's verification code with it.`,
+  inputSchema: {
+    webhookId: z.string().nonempty().describe('Webhook ID'),
   },
 } as const;
 
@@ -374,6 +386,39 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
         content: [
           { type: 'text', text: 'Webhook event replay queued.' },
           { type: 'text', text: `ID: ${response.data.id}` },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
+    'rotate-webhook-signing-secret',
+    ROTATE_WEBHOOK_SIGNING_SECRET_TOOL,
+    async ({ webhookId }) => {
+      const response = await (
+        resend.webhooks as unknown as {
+          rotateSigningSecret: (id: string) => Promise<CreateWebhookResponse>;
+        }
+      ).rotateSigningSecret(webhookId);
+
+      if (response.error) {
+        throw new Error(
+          `Failed to rotate webhook signing secret: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const rotated = response.data;
+      return {
+        content: [
+          { type: 'text', text: 'Webhook signing secret rotated.' },
+          {
+            type: 'text',
+            text: `ID: ${rotated.id}\nSigning Secret: ${rotated.signing_secret}`,
+          },
+          {
+            type: 'text',
+            text: 'IMPORTANT: Make sure to tell the user the new signing secret — their endpoint must verify payloads with it from now on.',
+          },
         ],
       };
     },

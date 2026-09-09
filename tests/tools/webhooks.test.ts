@@ -7,6 +7,7 @@ import { addWebhookTools } from '../../src/tools/webhooks.js';
 const listEvents = vi.fn();
 const getEvent = vi.fn();
 const replayEvent = vi.fn();
+const rotateSigningSecret = vi.fn();
 const listAttempts = vi.fn();
 
 const resend = {
@@ -16,6 +17,7 @@ const resend = {
     get: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
+    rotateSigningSecret,
     events: {
       list: listEvents,
       get: getEvent,
@@ -169,6 +171,26 @@ describe('webhook event tools', () => {
       eventId: EVENT_ID,
     });
     expect(textOf(result as never)).toContain(EVENT_ID);
+  });
+
+  it('rotate-webhook-signing-secret returns the new secret', async () => {
+    rotateSigningSecret.mockResolvedValue({
+      data: {
+        object: 'webhook',
+        id: WEBHOOK_ID,
+        signing_secret: 'whsec_rotated',
+      },
+      error: null,
+    });
+
+    const client = await makeClient();
+    const result = await client.callTool({
+      name: 'rotate-webhook-signing-secret',
+      arguments: { webhookId: WEBHOOK_ID },
+    });
+
+    expect(rotateSigningSecret).toHaveBeenCalledWith(WEBHOOK_ID);
+    expect(textOf(result as never)).toContain('whsec_rotated');
   });
 
   it('list-webhook-event-attempts surfaces what the endpoint returned', async () => {
