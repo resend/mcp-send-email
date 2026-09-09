@@ -147,7 +147,7 @@ const ROTATE_WEBHOOK_SIGNING_SECRET_TOOL = {
 
 **NOT for:** Changing the endpoint URL or subscribed events (use update-webhook), or reading the current secret (use get-webhook).
 
-**When to use:** User believes the signing secret leaked, or wants to rotate it as routine hygiene. Payloads delivered after the rotation are signed with the new secret, so the user must update their endpoint's verification code with it.`,
+**When to use:** User believes the signing secret leaked, or wants to rotate it as routine hygiene. Payloads delivered after the rotation are signed with the new secret. The previous secret keeps working for 24 hours, so the user has that window to update their endpoint's verification code.`,
   inputSchema: {
     webhookId: z.string().nonempty().describe('Webhook ID'),
   },
@@ -417,7 +417,7 @@ export function addWebhookTools(server: McpServer, resend: Resend) {
           },
           {
             type: 'text',
-            text: 'IMPORTANT: Make sure to tell the user the new signing secret — their endpoint must verify payloads with it from now on.',
+            text: 'IMPORTANT: Make sure to tell the user the new signing secret. The previous secret keeps working for 24 hours; after that only the new one verifies payloads.',
           },
         ],
       };
