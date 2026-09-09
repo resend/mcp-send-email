@@ -50,7 +50,7 @@
     "typescript": "5.9.3",
     "vitest": "4.1.7"
   },
-  "packageManager": "pnpm@11.2.2",
+  "packageManager": "pnpm@11.26.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/resend/resend-mcp"
