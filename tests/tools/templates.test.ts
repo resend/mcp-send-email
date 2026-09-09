@@ -27,7 +27,7 @@ async function makeClient() {
   return client;
 }
 
-describe('template text content', () => {
+describe('template empty string fields', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     create.mockResolvedValue({
