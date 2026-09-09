@@ -47,7 +47,7 @@
     "@modelcontextprotocol/client": "2.0.0",
     "@types/minimist": "1.2.5",
     "@types/node": "25.9.1",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "vitest": "4.1.7"
   },
   "packageManager": "pnpm@11.2.2",
