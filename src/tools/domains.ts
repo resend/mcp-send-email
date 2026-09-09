@@ -256,13 +256,13 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     }) => {
       const response = await resend.domains.create({
         name,
-        ...(region !== undefined && { region }),
-        ...(customReturnPath !== undefined && { customReturnPath }),
-        ...(openTracking !== undefined && { openTracking }),
-        ...(clickTracking !== undefined && { clickTracking }),
-        ...(tls !== undefined && { tls }),
-        ...(trackingSubdomain !== undefined && { trackingSubdomain }),
-        ...(capabilities !== undefined && { capabilities }),
+        region,
+        customReturnPath,
+        openTracking,
+        clickTracking,
+        tls,
+        trackingSubdomain,
+        capabilities,
       });
 
       if (response.error) {
@@ -387,11 +387,11 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     }) => {
       const response = await resend.domains.update({
         id,
-        ...(clickTracking !== undefined && { clickTracking }),
-        ...(openTracking !== undefined && { openTracking }),
-        ...(tls !== undefined && { tls }),
-        ...(trackingSubdomain !== undefined && { trackingSubdomain }),
-        ...(capabilities !== undefined && { capabilities }),
+        clickTracking,
+        openTracking,
+        tls,
+        trackingSubdomain,
+        capabilities,
       });
 
       if (response.error) {
@@ -459,11 +459,11 @@ export function addDomainTools(server: McpServer, resend: Resend) {
     }) => {
       const response = await resend.domains.claims.create({
         name,
-        ...(region !== undefined && { region }),
-        ...(customReturnPath !== undefined && { customReturnPath }),
-        ...(openTracking !== undefined && { openTracking }),
-        ...(clickTracking !== undefined && { clickTracking }),
-        ...(trackingSubdomain !== undefined && { trackingSubdomain }),
+        region,
+        customReturnPath,
+        openTracking,
+        clickTracking,
+        trackingSubdomain,
       });
       if (response.error) {
         throw new Error(

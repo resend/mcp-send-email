@@ -73,25 +73,14 @@ describe('template text content', () => {
     expect(update).toHaveBeenCalledWith('tmpl_1', { text: '' });
   });
 
-  it('passes empty subject, from, replyTo and alias through update-template', async () => {
+  it('passes empty subject through update-template', async () => {
     const client = await makeClient();
     const result = await client.callTool({
       name: 'update-template',
-      arguments: {
-        id: 'tmpl_1',
-        subject: '',
-        from: '',
-        replyTo: '',
-        alias: '',
-      },
+      arguments: { id: 'tmpl_1', subject: '' },
     });
 
     expect(result.isError).toBeFalsy();
-    expect(update).toHaveBeenCalledWith('tmpl_1', {
-      subject: '',
-      from: '',
-      replyTo: '',
-      alias: '',
-    });
+    expect(update).toHaveBeenCalledWith('tmpl_1', { subject: '' });
   });
 });

@@ -79,7 +79,7 @@ export function addTopicTools(server: McpServer, resend: Resend) {
       const response = await resend.topics.create({
         name,
         defaultSubscription,
-        ...(description !== undefined && { description }),
+        description,
       });
 
       if (response.error) {
@@ -158,8 +158,8 @@ export function addTopicTools(server: McpServer, resend: Resend) {
     async ({ id, name, description }) => {
       const response = await resend.topics.update({
         id,
-        ...(name !== undefined && { name }),
-        ...(description !== undefined && { description }),
+        name,
+        description,
       });
 
       if (response.error) {

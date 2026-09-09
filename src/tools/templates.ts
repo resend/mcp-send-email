@@ -273,12 +273,12 @@ export function addTemplateTools(
       const response = await resend.templates.create({
         name,
         html,
-        ...(subject !== undefined && { subject }),
-        ...(from !== undefined && { from }),
-        ...(replyTo !== undefined && { replyTo }),
-        ...(text !== undefined && { text }),
-        ...(alias !== undefined && { alias }),
-        ...(variables !== undefined && { variables }),
+        subject,
+        from,
+        replyTo,
+        text,
+        alias,
+        variables,
       } as CreateTemplateOptions);
 
       if (response.error) {
@@ -542,14 +542,14 @@ export function addTemplateTools(
     }) => {
       const id = extractIdFromUrl(rawId, 'templates');
       const response = await resend.templates.update(id, {
-        ...(name !== undefined && { name }),
-        ...(html !== undefined && { html }),
-        ...(subject !== undefined && { subject }),
-        ...(from !== undefined && { from }),
-        ...(replyTo !== undefined && { replyTo }),
-        ...(text !== undefined && { text }),
-        ...(alias !== undefined && { alias }),
-        ...(variables !== undefined && { variables }),
+        name,
+        html,
+        subject,
+        from,
+        replyTo,
+        text,
+        alias,
+        variables,
       } as UpdateTemplateOptions);
 
       if (response.error) {
